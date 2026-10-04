@@ -1,0 +1,15 @@
+{
+  "name": "Project S6 — Audi S6 C5 Avant restoration",
+  "short_name": "Project S6",
+  "description": "Help restore a 2003 Audi S6 C5 Avant, one part at a time.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#060b10",
+  "theme_color": "#060b10",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

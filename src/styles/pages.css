@@ -1,0 +1,84 @@
+/* Secondary pages share the shell and palette; a dimmed garage photo keeps continuity. */
+.app:not([data-route='garage']) main {
+  min-height: calc(100dvh - var(--header-h));
+  background:
+    linear-gradient(180deg, rgba(6, 11, 16, 0.86), rgba(6, 11, 16, 0.97) 420px),
+    url('/assets/car/thumbs/exterior-a.webp') center top / cover no-repeat fixed;
+}
+.page { max-width: 1200px; margin: 0 auto; padding: 32px 24px 64px; display: grid; gap: 20px; align-content: start; }
+.page--narrow { max-width: 760px; }
+.page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.page h1 { font-size: 34px; font-weight: 800; letter-spacing: 0.01em; }
+.page .panel { padding: 18px 20px; }
+.page .panel h2 { font-size: 18px; display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.page .panel h2 svg { width: 18px; height: 18px; color: var(--blue-bright); }
+.section-title { font-size: 20px; margin: 8px 0 12px; }
+.search--page { width: min(340px, 100%); }
+.tabs--page { grid-template-columns: repeat(4, minmax(0, 140px)); }
+
+.parts-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.part-card { width: 100%; display: grid; gap: 8px; padding: 10px; text-align: left; transition: border-color 0.15s, transform 0.15s; }
+.page .part-card { padding: 10px; }
+.part-card:hover { border-color: var(--blue); transform: translateY(-2px); }
+.part-card__name { font-size: 15px; font-weight: 600; }
+.part-card__meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.part-card__price { font-size: 17px; font-weight: 600; }
+.part-card__cond { font-size: 12.5px; }
+
+.summary-card__totals { font-size: 20px; margin: 4px 0 0; }
+.summary-card__totals strong { font-size: 30px; }
+.supporters { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; }
+.supporters li { display: grid; grid-template-columns: 1fr auto auto auto; gap: 14px; align-items: center; padding: 10px 12px; border: 1px solid #263749; border-radius: var(--radius-sm); }
+.supporters__name { font-weight: 600; }
+.supporters__amt { font-weight: 700; }
+
+.prose p, .prose li { color: #d6dee8; font-size: 15px; line-height: 1.6; }
+.prose h2 { margin: 24px 0 8px; font-size: 20px; }
+.prose .lead { font-size: 16px; color: var(--muted); margin-top: 4px; }
+.prose ul { padding-left: 20px; }
+
+.stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+.stat { display: grid; gap: 4px; }
+.stat__label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+.stat__value { font-size: 24px; font-weight: 700; }
+.milestones { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.milestones li { display: grid; grid-template-columns: 20px 1fr auto; gap: 10px; align-items: center; }
+.milestones svg { width: 18px; height: 18px; color: var(--dim); }
+.milestones li.is-reached svg { color: var(--green); }
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.timeline__item time { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12.5px; }
+.timeline__item time svg { width: 14px; height: 14px; }
+.timeline__item h3 { margin: 6px 0; font-size: 17px; }
+.timeline__item p { margin: 0 0 8px; color: #d6dee8; }
+.timeline__photos { display: flex; gap: 10px; flex-wrap: wrap; }
+.timeline__photos img { width: 220px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+
+.return-card { display: grid; justify-items: center; gap: 12px; text-align: center; padding: 36px 24px !important; }
+.return-card h1 { font-size: 26px; }
+.return-card p { margin: 0; color: #d6dee8; max-width: 520px; }
+.return-card__icon { width: 44px; height: 44px; color: var(--blue-bright); }
+.return-card__icon.is-good { color: var(--green); }
+.return-card__icon.is-bad { color: var(--red); }
+
+.admin-signin { max-width: 420px; }
+.admin-section h3 { margin: 18px 0 4px; font-size: 15px; }
+.table-wrap { overflow-x: auto; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.admin-table th { text-align: left; color: var(--muted); font-weight: 500; padding: 6px; }
+.admin-table td { padding: 4px; vertical-align: middle; }
+.admin-table input, .admin-table select { min-height: 32px; padding: 4px 8px; }
+.admin-updates { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 6px; }
+.admin-updates li { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid #263749; border-radius: 6px; flex-wrap: wrap; }
+.admin-updates__actions { margin-left: auto; display: flex; gap: 6px; }
+
+.presets--dialog { flex-wrap: wrap; margin-bottom: 10px; }
+.presets--dialog .preset { flex: 1; }
+.donate-form .field--inline > span:first-child { min-width: 120px; }
+
+@media (max-width: 640px) {
+  .page { padding: 20px 14px 48px; }
+  .page h1 { font-size: 26px; }
+  .tabs--page { grid-template-columns: repeat(4, 1fr); }
+  .supporters li { grid-template-columns: 1fr auto; }
+  .donate-form .field--inline { grid-template-columns: 1fr; }
+}
