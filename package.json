@@ -12,7 +12,8 @@
     "start:api": "node server/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "screenshots": "node scripts/screenshots.js"
+    "screenshots": "node scripts/screenshots.js",
+    "verify:orbit": "node scripts/verify-orbit.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2",
@@ -24,7 +25,8 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-router-dom": "7.18.4",
-    "stripe": "23.0.0"
+    "stripe": "23.0.0",
+    "three": "^0.186.1"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.5.8",

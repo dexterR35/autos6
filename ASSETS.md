@@ -2,9 +2,33 @@
 
 The original files in the repository root are **never modified**. They were copied byte-for-byte to stable names under `public/assets/car/`. Optimized derivatives are generated from those copies by `scripts/make-derivatives.py` (Python 3 + Pillow).
 
+## Interactive 3D garage
+
+The default viewer loads real car and garage geometry with Three.js and OrbitControls. Drag to orbit freely through 360 degrees, scroll or pinch to zoom, and right-drag or use two fingers to pan. Camera thumbnails move the camera to presets in the same scene.
+
+`scripts/export_s6_web.py` exports the editable scene to `public/models/s6-c5.glb` and `public/models/garage.glb`. It converts curves and modifiers, simplifies dense details, and combines static surfaces by material. Car groups retain part identifiers for picking. The car is centered at the origin with its nose along +X and +Y up. The garage is offset to match that origin. Browser lighting recreates the polished paint and neon workshop without an external environment download.
+
+The image viewer remains available explicitly through `?viewer=image` or the fallback button when WebGL or a model cannot load. It is not presented as interactive 3D. Model geometry is a visual reconstruction, not OEM CAD.
+
+## Blender renders and fallback imagery
+
+The glossy **2003 Audi S6 C5 Avant** Blender renders provide camera thumbnails and fallback imagery. The editable scene is `output/s6/audi_s6_c5_2003.blend`. `scripts/build_s6_c5.py` builds the scene and renders its cameras; `scripts/publish_s6_renders.py` prepares the website derivatives and writes `src/data/s6RenderManifest.json`.
+
+| Path | Purpose |
+| --- | --- |
+| `public/assets/car/s6/<view>.png` | Full-resolution Blender render |
+| `public/assets/car/s6/<view>.webp` | Optimized stage image |
+| `public/assets/car/s6/<view>-thumb.webp` | Angle-strip thumbnail |
+| `public/assets/car/s6/parts/<part>.webp` | Crops of visible model parts |
+| `src/data/s6RenderManifest.json` | Image dimensions, car bounds, and camera-projected anchors |
+
+The eight existing camera choices retain their part callout settings. Each view takes its image and anchor coordinates from the generated manifest; an old anchor is omitted if its part is not visible in the new render. The camera panel identifies the imagery as a Blender render. Coilovers and interior retain icons without exterior hotspots.
+
+The original references and their derivatives below remain intact. They provide fallback imagery if a view has no generated manifest entry; the two additional exterior render variants are available as assets without adding duplicate camera choices to the strip.
+
 ## Originals → local names
 
-All car images are 1672 × 941 RGB PNGs. Each is a full garage scene, not a cut-out.
+All original car images are 1672 × 941 RGB PNGs. Each is a full garage scene, not a cut-out.
 
 | Original filename | Local file | View id / label | Content (verified visually) |
 | --- | --- | --- | --- |

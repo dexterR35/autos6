@@ -1,4 +1,7 @@
-// Camera views for the 2D image viewer.
+import s6Renders from './s6RenderManifest.json';
+
+// Camera views for the 2D image viewer. Blender exports override the source imagery
+// and anchor coordinates while retaining the catalogue's existing callout layout.
 //
 // Hotspot x/y are NORMALIZED SOURCE-IMAGE coordinates (0..1, origin top-left of the
 // original 1672 × 941 image) — never stage/percentage positions. They are projected
@@ -15,29 +18,50 @@
 export const IMAGE_WIDTH = 1672;
 export const IMAGE_HEIGHT = 941;
 
-const view = (id, label, alt, focus, hotspots, extra = {}) => ({
-  id,
-  label,
-  alt,
-  src: `/assets/car/web/${id}.webp`,
-  original: `/assets/car/${id}.png`,
-  thumb: `/assets/car/thumbs/${id}.webp`,
-  width: IMAGE_WIDTH,
-  height: IMAGE_HEIGHT,
-  available: true,
-  objectPosition: { x: 0.5, y: 0.3 },
-  // Approximate car bounding box (normalized) used to zoom on small screens.
-  focus: { x0: focus[0], y0: focus[1], x1: focus[2], y1: focus[3] },
-  hotspots: hotspots.map(([partId, x, y, side, dx, dy, featured = true]) => ({
+const view = (id, label, alt, focus, hotspots, extra = {}) => {
+  const render = s6Renders[id];
+  const anchors = hotspots.map(([partId, x, y, side, dx, dy, featured = true]) => ({
     id: `${id}--${partId}`,
     partId,
     x,
     y,
     featured,
     callout: { side, dx, dy },
-  })),
-  ...extra,
-});
+  }));
+  const renderedAnchors = new Map((render?.hotspots ?? []).map((anchor) => [anchor.partId, anchor]));
+
+  return {
+    id,
+    label,
+    alt,
+    src: `/assets/car/web/${id}.webp`,
+    original: `/assets/car/${id}.png`,
+    thumb: `/assets/car/thumbs/${id}.webp`,
+    width: IMAGE_WIDTH,
+    height: IMAGE_HEIGHT,
+    available: true,
+    objectPosition: { x: 0.5, y: 0.3 },
+    // Approximate car bounding box (normalized) used to zoom on small screens.
+    focus: { x0: focus[0], y0: focus[1], x1: focus[2], y1: focus[3] },
+    hotspots: anchors,
+    ...extra,
+    ...(render ? {
+      src: render.src,
+      original: render.original,
+      thumb: render.thumb,
+      width: render.width,
+      height: render.height,
+      focus: render.focus,
+      alt: `Blender render of a glossy 2003 Audi S6 C5 Avant, ${label.toLowerCase()} view`,
+      renderNote: '2003 S6 C5 Avant · Blender render',
+      // An old anchor must never survive on a new image without a matching projection.
+      hotspots: anchors.filter((anchor) => renderedAnchors.has(anchor.partId)).map((anchor) => {
+        const projected = renderedAnchors.get(anchor.partId);
+        return { ...anchor, x: projected.x, y: projected.y };
+      }),
+    } : {}),
+  };
+};
 
 export const views = [
   view('exterior-a', 'Exterior', 'Dark blue Audi S6 Avant, front three-quarter view, parked in a neon-lit garage with a roof box', [0.14, 0.15, 0.74, 0.73], [

@@ -1,0 +1,76 @@
+{
+  "source": "output/s6/audi_s6_c5_2003.blend",
+  "coordinates": {
+    "unit": "metres",
+    "up": "+Y",
+    "vehicleNose": "+X",
+    "driverSide": "+Z",
+    "ground": 0
+  },
+  "foregroundPropsRelocated": 221,
+  "car": {
+    "file": "/models/s6-c5.glb",
+    "bytes": 4792280,
+    "meshes": 50,
+    "drawCalls": 50,
+    "triangles": 207962,
+    "bounds": {
+      "min": [
+        -2.499499797821045,
+        -0.00011999999696854502,
+        -1.059999942779541
+      ],
+      "max": [
+        2.4607057571411133,
+        1.8349690437316895,
+        1.059999942779541
+      ]
+    },
+    "materials": 24,
+    "parts": [
+      "body",
+      "brake-kit",
+      "exhaust",
+      "front-bumper",
+      "hood",
+      "rear-bumper",
+      "roof-box",
+      "side-skirts",
+      "wheels"
+    ],
+    "extensions": [
+      "KHR_materials_clearcoat"
+    ]
+  },
+  "garage": {
+    "file": "/models/garage.glb",
+    "bytes": 5101492,
+    "meshes": 31,
+    "drawCalls": 31,
+    "triangles": 100876,
+    "bounds": {
+      "min": [
+        -15.5,
+        -0.23999999463558197,
+        -25.5
+      ],
+      "max": [
+        15.5,
+        7.349999904632568,
+        14.5
+      ]
+    },
+    "materials": 31,
+    "parts": [],
+    "extensions": [
+      "KHR_materials_clearcoat",
+      "KHR_materials_emissive_strength"
+    ]
+  },
+  "notes": [
+    "Procedural visual reconstruction, not OEM CAD.",
+    "Original authored Blender file preserved.",
+    "No exported lights or cameras; web scene supplies lighting.",
+    "PBR approximations replace unsupported procedural Blender shaders."
+  ]
+}

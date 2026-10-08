@@ -16,7 +16,7 @@ export const SITE = {
   themeColor: '#060b10',
   twitterSite: '', // e.g. '@projects6' — left empty until a real handle exists
   ogImage: { path: '/og-image.jpg', width: 1200, height: 630, alt: 'Dark blue Audi S6 Avant in a neon-lit garage — Project S6' },
-  vehicle: { name: 'Audi S6 C5 Avant 2.7 BiTurbo (2003)', brand: 'Audi', model: 'S6 Avant', year: '2003' },
+  vehicle: { name: 'Audi S6 C5 Avant 4.2 V8 (2003)', brand: 'Audi', model: 'S6 Avant', year: '2003' },
 };
 
 /**

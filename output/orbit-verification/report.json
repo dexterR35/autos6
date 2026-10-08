@@ -1,0 +1,104 @@
+{
+  "base": "http://127.0.0.1:5173",
+  "checks": [
+    {
+      "name": "mouse drag orbits the real camera",
+      "movement": 8.40725240491803
+    },
+    {
+      "name": "wheel zoom",
+      "before": 10.434343199262711,
+      "after": 8.390757176798765
+    },
+    {
+      "name": "zoom button direction is correct"
+    },
+    {
+      "name": "Front preset moves the camera",
+      "position": [
+        8.623,
+        1.812,
+        0.492
+      ]
+    },
+    {
+      "name": "Garage view expands the orbit"
+    },
+    {
+      "name": "3D hotspot opens matching part details and selects catalogue row"
+    },
+    {
+      "name": "search and status filters apply to catalogue and 3D hotspots"
+    },
+    {
+      "name": "real car and garage GLBs loaded and rendered"
+    },
+    {
+      "name": "full horizontal orbit using keyboard",
+      "degrees": 479.9469256096222
+    },
+    {
+      "name": "right-drag pans camera and target",
+      "targetMovement": 0.5935056865776436
+    },
+    {
+      "name": "extreme zoom out and upward orbit stay inside workshop",
+      "position": [
+        4.594,
+        6.4,
+        -10.301
+      ],
+      "distance": 12.50055146783533
+    },
+    {
+      "name": "mobile touch drag orbits the real camera",
+      "movement": 9.011080179423553
+    },
+    {
+      "name": "explicit image fallback still supports angle changes"
+    },
+    {
+      "name": "failed GLB exposes error; Retry 3D reloads successfully"
+    },
+    {
+      "name": "unavailable WebGL offers explicit, accurately labeled image fallback"
+    }
+  ],
+  "assets": [
+    {
+      "url": "http://127.0.0.1:5173/models/s6-c5.glb",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:5173/models/garage.glb",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:5173/models/s6-c5.glb",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:5173/models/garage.glb",
+      "status": 200
+    }
+  ],
+  "screenshots": [
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\orbit-verification\\desktop-before-orbit.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\orbit-verification\\desktop-after-orbit.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\orbit-verification\\desktop-front-preset.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\orbit-verification\\desktop-garage-orbit.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\orbit-verification\\desktop-selected-part.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\orbit-verification\\desktop-extreme-orbit-bounds.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\orbit-verification\\mobile-before-orbit.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\orbit-verification\\mobile-after-orbit.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\orbit-verification\\asset-failure-recovery.png"
+  ],
+  "runtimeErrors": [],
+  "consoleErrors": [],
+  "renderer": {
+    "renderer": "three",
+    "drawCalls": 129,
+    "triangles": 499024
+  },
+  "passed": true
+}

@@ -42,7 +42,7 @@ const PartDetailsDrawer = forwardRef(function PartDetailsDrawer({ part, viewId, 
       {showVisibility && (
         <div className="part-drawer__views">
           {containing.length === 0 ? (
-            <p className="note"><EyeOff aria-hidden="true" /> No photo shows this part yet, so it has no dot on the car.</p>
+            <p className="note"><EyeOff aria-hidden="true" /> No view shows this part yet, so it has no dot on the car.</p>
           ) : (
             <>
               {!inView && <p className="note"><EyeOff aria-hidden="true" /> Not visible in this angle.</p>}

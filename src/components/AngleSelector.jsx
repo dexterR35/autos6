@@ -2,8 +2,9 @@ import { forwardRef } from 'react';
 import { availableViews } from '../data/views.js';
 import { preloadImage } from '../lib/imagePreload.js';
 
-/** Camera strip. Only views with a real photo are rendered as buttons. */
-const AngleSelector = forwardRef(function AngleSelector({ viewId, onChange, selectedPartId }, ref) {
+/** Camera strip. Only views with available imagery are rendered as buttons. */
+const AngleSelector = forwardRef(function AngleSelector({ viewId, onChange, selectedPartId, mode = 'image' }, ref) {
+  const renderNote = mode === 'three' ? '360° orbit · Drag the scene' : availableViews.find((view) => view.id === viewId)?.renderNote;
   const onKeyDown = (e) => {
     if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
     const i = availableViews.findIndex((v) => v.id === viewId);
@@ -14,7 +15,10 @@ const AngleSelector = forwardRef(function AngleSelector({ viewId, onChange, sele
   };
   return (
     <section ref={ref} className="panel angle-panel" aria-labelledby="angle-title">
-      <h2 id="angle-title" className="panel-kicker">View angle</h2>
+      <h2 id="angle-title" className="panel-kicker">
+        {mode === 'three' ? 'Camera presets' : 'View angle'}
+        {renderNote && <span className="angle-panel__render-note">{renderNote}</span>}
+      </h2>
       <div className="angle-strip" role="group" aria-label="Camera angles" onKeyDown={onKeyDown}>
         {availableViews.map((v) => {
           const hasSelected = selectedPartId && v.hotspots.some((h) => h.partId === selectedPartId);
@@ -26,8 +30,8 @@ const AngleSelector = forwardRef(function AngleSelector({ viewId, onChange, sele
               className={`angle ${v.id === viewId ? 'is-active' : ''}`}
               aria-pressed={v.id === viewId}
               onClick={() => onChange(v.id)}
-              onPointerEnter={() => preloadImage(v.src).catch(() => {})}
-              onFocus={() => preloadImage(v.src).catch(() => {})}
+              onPointerEnter={() => { if (mode === 'image') preloadImage(v.src).catch(() => {}); }}
+              onFocus={() => { if (mode === 'image') preloadImage(v.src).catch(() => {}); }}
             >
               <span className="angle__thumb">
                 <img src={v.thumb} alt="" loading="lazy" decoding="async" draggable="false" />

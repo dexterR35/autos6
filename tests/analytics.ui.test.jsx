@@ -24,8 +24,11 @@ afterEach(cleanup);
 const events = (name) => window.dataLayer.filter((e) => e && e.event === name);
 
 function renderApp(path = '/') {
+  // Analytics behavior is renderer-independent. Keep this jsdom suite on the
+  // explicit image fallback; scripts/verify-orbit.mjs checks actual 3D behavior.
+  const initialPath = path === '/' ? '/?viewer=image' : path;
   render(
-    <MemoryRouter initialEntries={[path]}>
+    <MemoryRouter initialEntries={[initialPath]}>
       <ProjectDataProvider mode="demo">
         <GarageStateProvider>
           <App />

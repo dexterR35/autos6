@@ -1,0 +1,432 @@
+{
+  "exterior-a": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0.16392,
+      "y0": 0.18671000000000001,
+      "x1": 0.9064800000000001,
+      "y1": 0.8648600000000001
+    },
+    "hotspots": [
+      {
+        "partId": "roof-box",
+        "x": 0.42177,
+        "y": 0.22324
+      },
+      {
+        "partId": "hood",
+        "x": 0.64895,
+        "y": 0.48838
+      },
+      {
+        "partId": "front-bumper",
+        "x": 0.78191,
+        "y": 0.61293
+      },
+      {
+        "partId": "wheels",
+        "x": 0.57504,
+        "y": 0.67717
+      },
+      {
+        "partId": "side-skirts",
+        "x": 0.41078,
+        "y": 0.62892
+      },
+      {
+        "partId": "brake-kit",
+        "x": 0.28151,
+        "y": 0.57721
+      }
+    ],
+    "src": "/assets/car/s6/exterior-a.webp",
+    "original": "/assets/car/s6/exterior-a.png",
+    "thumb": "/assets/car/s6/exterior-a-thumb.webp"
+  },
+  "exterior-b": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0.18254,
+      "y0": 0.16302,
+      "x1": 0.93171,
+      "y1": 0.91661
+    },
+    "hotspots": [
+      {
+        "partId": "roof-box",
+        "x": 0.42284,
+        "y": 0.20105
+      },
+      {
+        "partId": "hood",
+        "x": 0.62039,
+        "y": 0.49401
+      },
+      {
+        "partId": "front-bumper",
+        "x": 0.74156,
+        "y": 0.64149
+      },
+      {
+        "partId": "wheels",
+        "x": 0.52469,
+        "y": 0.69586
+      },
+      {
+        "partId": "side-skirts",
+        "x": 0.38755,
+        "y": 0.6319
+      },
+      {
+        "partId": "brake-kit",
+        "x": 0.28129,
+        "y": 0.56953
+      }
+    ],
+    "src": "/assets/car/s6/exterior-b.webp",
+    "original": "/assets/car/s6/exterior-b.png",
+    "thumb": "/assets/car/s6/exterior-b-thumb.webp"
+  },
+  "exterior-c": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0.1351,
+      "y0": 0.18698,
+      "x1": 0.89925,
+      "y1": 0.84128
+    },
+    "hotspots": [
+      {
+        "partId": "roof-box",
+        "x": 0.41811,
+        "y": 0.22303
+      },
+      {
+        "partId": "hood",
+        "x": 0.67357,
+        "y": 0.48238
+      },
+      {
+        "partId": "front-bumper",
+        "x": 0.81587,
+        "y": 0.59639
+      },
+      {
+        "partId": "wheels",
+        "x": 0.61431,
+        "y": 0.67093
+      },
+      {
+        "partId": "side-skirts",
+        "x": 0.42599,
+        "y": 0.63376
+      },
+      {
+        "partId": "brake-kit",
+        "x": 0.27331,
+        "y": 0.58878
+      }
+    ],
+    "src": "/assets/car/s6/exterior-c.webp",
+    "original": "/assets/car/s6/exterior-c.png",
+    "thumb": "/assets/car/s6/exterior-c-thumb.webp"
+  },
+  "exterior-d": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0.25777,
+      "y0": 0.18615,
+      "x1": 0.87083,
+      "y1": 0.9010400000000001
+    },
+    "hotspots": [
+      {
+        "partId": "roof-box",
+        "x": 0.4397,
+        "y": 0.22371
+      },
+      {
+        "partId": "hood",
+        "x": 0.55857,
+        "y": 0.49926
+      },
+      {
+        "partId": "front-bumper",
+        "x": 0.63309,
+        "y": 0.64656
+      },
+      {
+        "partId": "wheels",
+        "x": 0.45948,
+        "y": 0.68031
+      },
+      {
+        "partId": "side-skirts",
+        "x": 0.38441,
+        "y": 0.6129
+      },
+      {
+        "partId": "brake-kit",
+        "x": 0.32393,
+        "y": 0.55114
+      }
+    ],
+    "src": "/assets/car/s6/exterior-d.webp",
+    "original": "/assets/car/s6/exterior-d.png",
+    "thumb": "/assets/car/s6/exterior-d-thumb.webp"
+  },
+  "front": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0.26504999999999995,
+      "y0": 0.16248,
+      "x1": 0.735,
+      "y1": 0.90906
+    },
+    "hotspots": [
+      {
+        "partId": "roof-box",
+        "x": 0.4669,
+        "y": 0.20166
+      },
+      {
+        "partId": "hood",
+        "x": 0.43676,
+        "y": 0.49921
+      },
+      {
+        "partId": "front-bumper",
+        "x": 0.40939,
+        "y": 0.66346
+      }
+    ],
+    "src": "/assets/car/s6/front.webp",
+    "original": "/assets/car/s6/front.png",
+    "thumb": "/assets/car/s6/front-thumb.webp"
+  },
+  "side-a": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0.10663,
+      "y0": 0.20351,
+      "x1": 0.886,
+      "y1": 0.73571
+    },
+    "hotspots": [
+      {
+        "partId": "roof-box",
+        "x": 0.42505,
+        "y": 0.2373
+      },
+      {
+        "partId": "hood",
+        "x": 0.70012,
+        "y": 0.461
+      },
+      {
+        "partId": "front-bumper",
+        "x": 0.82578,
+        "y": 0.53683
+      },
+      {
+        "partId": "wheels",
+        "x": 0.69562,
+        "y": 0.62808
+      },
+      {
+        "partId": "side-skirts",
+        "x": 0.49289,
+        "y": 0.63472
+      },
+      {
+        "partId": "rear-bumper",
+        "x": 0.17681,
+        "y": 0.54115
+      },
+      {
+        "partId": "brake-kit",
+        "x": 0.30015,
+        "y": 0.62465
+      }
+    ],
+    "src": "/assets/car/s6/side-a.webp",
+    "original": "/assets/car/s6/side-a.png",
+    "thumb": "/assets/car/s6/side-a-thumb.webp"
+  },
+  "side-b": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0.11400000000000002,
+      "y0": 0.20351,
+      "x1": 0.89337,
+      "y1": 0.73571
+    },
+    "hotspots": [
+      {
+        "partId": "roof-box",
+        "x": 0.57495,
+        "y": 0.2373
+      },
+      {
+        "partId": "hood",
+        "x": 0.29988,
+        "y": 0.461
+      },
+      {
+        "partId": "front-bumper",
+        "x": 0.17422,
+        "y": 0.53684
+      },
+      {
+        "partId": "wheels",
+        "x": 0.30439,
+        "y": 0.62809
+      },
+      {
+        "partId": "side-skirts",
+        "x": 0.50712,
+        "y": 0.63472
+      },
+      {
+        "partId": "rear-bumper",
+        "x": 0.82319,
+        "y": 0.54114
+      },
+      {
+        "partId": "brake-kit",
+        "x": 0.69986,
+        "y": 0.62464
+      }
+    ],
+    "src": "/assets/car/s6/side-b.webp",
+    "original": "/assets/car/s6/side-b.png",
+    "thumb": "/assets/car/s6/side-b-thumb.webp"
+  },
+  "rear-quarter-a": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0.18124,
+      "y0": 0.18282,
+      "x1": 0.9141900000000001,
+      "y1": 0.87785
+    },
+    "hotspots": [
+      {
+        "partId": "roof-box",
+        "x": 0.53534,
+        "y": 0.22148
+      },
+      {
+        "partId": "rear-bumper",
+        "x": 0.76544,
+        "y": 0.62551
+      },
+      {
+        "partId": "exhaust",
+        "x": 0.74991,
+        "y": 0.7366
+      },
+      {
+        "partId": "wheels",
+        "x": 0.289,
+        "y": 0.5763
+      },
+      {
+        "partId": "brake-kit",
+        "x": 0.56008,
+        "y": 0.67649
+      },
+      {
+        "partId": "side-skirts",
+        "x": 0.41452,
+        "y": 0.63027
+      }
+    ],
+    "src": "/assets/car/s6/rear-quarter-a.webp",
+    "original": "/assets/car/s6/rear-quarter-a.png",
+    "thumb": "/assets/car/s6/rear-quarter-a-thumb.webp"
+  },
+  "rear-quarter-b": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0.08915999999999999,
+      "y0": 0.18392,
+      "x1": 0.84994,
+      "y1": 0.854
+    },
+    "hotspots": [
+      {
+        "partId": "roof-box",
+        "x": 0.45187,
+        "y": 0.2216
+      },
+      {
+        "partId": "rear-bumper",
+        "x": 0.1949,
+        "y": 0.60839
+      },
+      {
+        "partId": "exhaust",
+        "x": 0.20042,
+        "y": 0.71534
+      },
+      {
+        "partId": "wheels",
+        "x": 0.72115,
+        "y": 0.58805
+      },
+      {
+        "partId": "brake-kit",
+        "x": 0.39655,
+        "y": 0.67084
+      },
+      {
+        "partId": "side-skirts",
+        "x": 0.56878,
+        "y": 0.63508
+      }
+    ],
+    "src": "/assets/car/s6/rear-quarter-b.webp",
+    "original": "/assets/car/s6/rear-quarter-b.png",
+    "thumb": "/assets/car/s6/rear-quarter-b-thumb.webp"
+  },
+  "rear": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0.26299999999999996,
+      "y0": 0.15587,
+      "x1": 0.73704,
+      "y1": 0.91529
+    },
+    "hotspots": [
+      {
+        "partId": "roof-box",
+        "x": 0.46162,
+        "y": 0.1989
+      },
+      {
+        "partId": "rear-bumper",
+        "x": 0.41796,
+        "y": 0.67219
+      },
+      {
+        "partId": "exhaust",
+        "x": 0.36265,
+        "y": 0.78605
+      }
+    ],
+    "src": "/assets/car/s6/rear.webp",
+    "original": "/assets/car/s6/rear.png",
+    "thumb": "/assets/car/s6/rear-thumb.webp"
+  }
+}

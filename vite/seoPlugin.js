@@ -73,11 +73,10 @@ export default function seoPlugin(env) {
         if (route.path === '/') continue;
         const dir = path.join(outDir, route.path);
         mkdirSync(dir, { recursive: true });
-        // The hero photo preload only helps the garage page's LCP.
-        const page = renderPage(template, route, { siteUrl, noindex }).replace(/\s*<link rel="preload" as="image"[^>]*>/, '');
+        const page = renderPage(template, route, { siteUrl, noindex });
         writeFileSync(path.join(dir, 'index.html'), page);
       }
-      writeFileSync(path.join(outDir, '404.html'), renderPage(template, NOT_FOUND, { siteUrl, noindex }).replace(/\s*<link rel="preload" as="image"[^>]*>/, ''));
+      writeFileSync(path.join(outDir, '404.html'), renderPage(template, NOT_FOUND, { siteUrl, noindex }));
       writeFileSync(path.join(outDir, 'robots.txt'), renderRobots(siteUrl, { noindex }));
       if (siteUrl && !noindex) writeFileSync(path.join(outDir, 'sitemap.xml'), renderSitemap(siteUrl, new Date().toISOString().slice(0, 10)));
     },

@@ -27,7 +27,9 @@ beforeAll(() => {
 });
 afterEach(cleanup);
 
-function renderApp(path = '/') {
+// jsdom covers the explicit image fallback; the actual WebGL renderer is exercised
+// in scripts/verify-orbit.mjs with a browser and the exported Blender models.
+function renderApp(path = '/?viewer=image') {
   const utils = render(
     <MemoryRouter initialEntries={[path]}>
       <ProjectDataProvider mode="demo">
@@ -53,7 +55,7 @@ async function switchView(label) {
   });
 }
 
-describe('garage dashboard (demo mode)', () => {
+describe('garage image fallback dashboard (demo mode)', () => {
   it('renders the reference content from data', () => {
     renderApp();
     expect(screen.getByRole('button', { name: 'All (10)' })).toBeInTheDocument();
@@ -62,7 +64,7 @@ describe('garage dashboard (demo mode)', () => {
     expect(screen.getByRole('progressbar', { name: 'Campaign funding' })).toHaveAttribute('aria-valuenow', '33');
     expect(screen.getAllByText(/Demo data/i).length).toBeGreaterThan(0);
     expect(layer().dataset.view).toBe('exterior-a');
-    expect(dotParts()).toEqual(['brake-kit', 'exhaust', 'front-bumper', 'hood', 'roof-box', 'side-skirts', 'wheels']);
+    expect(dotParts()).toEqual(['brake-kit', 'front-bumper', 'hood', 'roof-box', 'side-skirts', 'wheels']);
     expect(document.querySelectorAll('.callout').length).toBeGreaterThan(0);
   });
 
@@ -105,11 +107,11 @@ describe('garage dashboard (demo mode)', () => {
     expect(document.querySelector('.hotspot[data-part-id="rear-bumper"]')).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('a part with no photo keeps the camera and explains why there is no dot', () => {
+  it('a part with no available view keeps the camera and explains why there is no dot', () => {
     renderApp();
     fireEvent.click(document.querySelector('[data-part-row="coilovers"]'));
     expect(layer().dataset.view).toBe('exterior-a');
-    expect(screen.getByText(/No photo shows this part yet/)).toBeInTheDocument();
+    expect(screen.getByText(/No view shows this part yet/)).toBeInTheDocument();
   });
 
   it('shows "Not visible in this angle" when the selected part leaves the frame', async () => {
@@ -156,10 +158,10 @@ describe('donation dialog (demo mode)', () => {
 
   it('"Fund this part" preselects the part', async () => {
     renderApp();
-    fireEvent.click(document.querySelector('.hotspot[data-part-id="exhaust"]'));
+    fireEvent.click(document.querySelector('.hotspot[data-part-id="hood"]'));
     fireEvent.click(screen.getByRole('button', { name: /Fund this part/i }));
     const dialog = await screen.findByRole('dialog', { hidden: true });
-    expect(within(dialog).getByRole('combobox', { hidden: true })).toHaveValue('exhaust');
+    expect(within(dialog).getByRole('combobox', { hidden: true })).toHaveValue('hood');
     expect(within(dialog).getByText(/isn’t a parts purchase/)).toBeInTheDocument();
   });
 });

@@ -15,24 +15,33 @@ const sizes = [
 ];
 const shots = (process.env.SHOTS || 'garage,front,selected,parts,donate').split(',');
 
-const browser = await chromium.launch();
+const browser = await chromium.launch({
+  channel: process.env.PLAYWRIGHT_CHANNEL || (process.platform === 'win32' ? 'msedge' : undefined),
+  args: ['--enable-unsafe-swiftshader'],
+});
+async function waitForViewer(page, viewId) {
+  await page.waitForFunction((expected) => {
+    const live = document.querySelector('[data-testid="three-viewer"]');
+    if (live) return live.dataset.loaded === 'true' && (!expected || live.dataset.viewId === expected);
+    return Boolean(document.querySelector(expected ? `.hotspot-layer[data-view="${expected}"]` : '.hotspot-layer'));
+  }, viewId, { timeout: 60000 });
+  // Allow the camera preset's eased movement and material compilation to finish.
+  await page.waitForTimeout(900);
+}
 const errors = [];
 for (const [w, h] of sizes) {
   const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
   page.on('console', (m) => m.type() === 'error' && errors.push(`${w}x${h}: ${m.text()}`));
   page.on('pageerror', (e) => errors.push(`${w}x${h}: ${e.message}`));
   await page.goto(base + '/', { waitUntil: 'networkidle' });
-  await page.waitForSelector('.hotspot');
-  await page.waitForTimeout(400);
+  await waitForViewer(page);
   if (shots.includes('garage')) await page.screenshot({ path: `${out}/garage-${w}x${h}.png`, fullPage: w < 1100 });
   if (shots.includes('front')) {
     await page.click('[data-angle="front"]');
-    await page.waitForSelector('.hotspot-layer[data-view="front"]');
-    await page.waitForTimeout(500);
+    await waitForViewer(page, 'front');
     await page.screenshot({ path: `${out}/front-${w}x${h}.png`, fullPage: w < 1100 });
     await page.click('[data-angle="exterior-a"]');
-    await page.waitForSelector('.hotspot-layer[data-view="exterior-a"]');
-    await page.waitForTimeout(400);
+    await waitForViewer(page, 'exterior-a');
   }
   if (shots.includes('selected')) {
     await page.click('[data-part-row="hood"]');
@@ -42,6 +51,7 @@ for (const [w, h] of sizes) {
   }
   if (shots.includes('donate')) {
     await page.goto(base + '/', { waitUntil: 'networkidle' });
+    await waitForViewer(page);
     await page.click('.funding-panel .btn--donate');
     await page.waitForTimeout(300);
     await page.screenshot({ path: `${out}/donate-${w}x${h}.png` });

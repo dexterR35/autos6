@@ -19,9 +19,25 @@ export default function GarageStage() {
   const fundingRef = useRef(null);
   const drawerRef = useRef(null);
   const [viewError, setViewError] = useState(null);
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
+  const [imageFallback, setImageFallback] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
   const stacked = useMediaQuery('(max-width: 900px)');
   const calibrate = import.meta.env.DEV && params.get('calibrate') === '1';
+  const mode = calibrate || imageFallback || params.get('viewer') === 'image' ? 'image' : 'three';
+  const choosePreset = (id) => {
+    g.setViewId(id);
+    setResetKey((value) => value + 1);
+  };
+  const enable3D = () => {
+    setImageFallback(false);
+    setViewError(null);
+    setParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete('viewer');
+      return next;
+    }, { replace: true });
+  };
 
   // Search and status filter hide the same parts on the car as in the list.
   const visiblePartIds = useMemo(
@@ -35,10 +51,11 @@ export default function GarageStage() {
   const view = getView(g.viewId);
 
   return (
-    <section className="garage-stage" aria-label="Garage">
+    <section className="garage-stage" aria-label="Garage" data-viewer-mode={mode}>
       <div className="stage">
         <CarViewer
-          mode="image"
+          mode={mode}
+          resetKey={resetKey}
           viewId={g.viewId}
           partsById={partsById}
           visiblePartIds={visiblePartIds}
@@ -52,12 +69,19 @@ export default function GarageStage() {
           currency={currency}
           calibrate={calibrate}
           onViewError={setViewError}
+          onFallback={() => { setViewError(null); setImageFallback(true); }}
         />
+        {mode === 'image' && !calibrate && (
+          <div className="viewer-mode-banner">
+            <span>Image view</span>
+            <button type="button" onClick={enable3D}>Open interactive 3D</button>
+          </div>
+        )}
         <p className="visually-hidden" aria-live="polite">
           {view ? `Showing ${view.label} view.` : ''}
           {selected ? ` Selected ${selected.name}.` : ''}
         </p>
-        {viewError && (
+        {mode === 'image' && viewError && (
           <p className="toast" role="status">
             That camera angle could not be loaded.{' '}
             <button type="button" className="link-btn" onClick={() => setViewError(null)}>Dismiss</button>
@@ -72,10 +96,11 @@ export default function GarageStage() {
             onClose={g.clearSelection}
             onFund={(partId) => g.openDonation({ partId })}
             onViewChange={g.setViewId}
+            showVisibility={mode === 'image'}
           />
         )}
         <div className="stage-bottom">
-          <AngleSelector ref={angleRef} viewId={g.viewId} onChange={g.setViewId} selectedPartId={g.selectedPartId} />
+          <AngleSelector ref={angleRef} mode={mode} viewId={g.viewId} onChange={choosePreset} selectedPartId={g.selectedPartId} />
           <FundingPanel ref={fundingRef} />
         </div>
       </div>

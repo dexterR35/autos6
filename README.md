@@ -1,6 +1,6 @@
 # PROJECT S6: restoration crowdfunding garage
 
-A neon-garage dashboard for crowdfunding an Audi S6 C5 Avant restoration. Visitors switch camera angles, click blue hotspots on the car's parts, and contribute through Stripe Checkout. Campaign content and payment records live in Supabase.
+A neon-garage dashboard for crowdfunding an Audi S6 C5 Avant restoration. Visitors orbit the car and garage in real 3D, zoom and pan, select parts, and contribute through Stripe Checkout. Campaign content and payment records live in Supabase.
 
 - **Frontend:** React 19 + Vite 8 (JavaScript/JSX), React Router, plain CSS with design tokens, Lucide icons
 - **Payments API:** Node.js + Express 5 (`server/`): Stripe Checkout sessions, signed webhooks, scoped status lookup
@@ -36,6 +36,7 @@ Open http://localhost:5173. With no `.env`, the site runs in **demo mode**:
 | `npm run preview` | Serve the built frontend |
 | `npm run start:api` | Run the API without watch mode |
 | `npm run screenshots` | Playwright screenshots at 1983×793, 1440×900, 1024×768 and 390×844 into `docs/screenshots/` (needs `npm run dev:web` running) |
+| `npm run verify:orbit` | Real-browser 3D orbit, zoom, camera presets, part selection, touch and fallback checks (needs the frontend running; uses installed Edge) |
 | `python3 scripts/make-derivatives.py` | Regenerate WebP stage images, thumbnails and part crops |
 
 ## Environment
@@ -244,7 +245,7 @@ supabase/      migrations/ (schema, RLS, payment functions, storage), seed.sql
 tests/         see "Tests"
 ```
 
-`<CarViewer mode="image" viewId selectedPartId onPartSelect … />` is the only contact point between the shell and the car renderer. A future Three.js renderer can implement the same props with its own 3D anchor metadata. Donations, the catalogue and part ids don't depend on pixel positions.
+`<CarViewer mode="three" viewId selectedPartId onPartSelect … />` loads the Three.js renderer by default. It loads the actual car and garage GLBs, uses OrbitControls, and projects physical part anchors with occlusion checks. The eight presets move the camera around that scene. Mouse, touch and keyboard controls support orbit, zoom and pan. A failed model load or unavailable WebGL shows retry and explicit image-fallback actions; `?viewer=image` selects that fallback directly. Development calibration still uses the image renderer. Donations and the catalogue share the same renderer-independent part IDs.
 
 ## Tests
 
@@ -267,4 +268,6 @@ The webhook tests sign payloads with the real `stripe` library, and the payment 
 
 ## Assets
 
-See [ASSETS.md](ASSETS.md) for the original → local mapping, derivatives and gaps. In short: the six requested angles plus two extra rear three-quarter photos are used. There are **no** interior, engine, top-view or verified opposite-side photos, so those slots aren't selectable and nothing was fabricated.
+The interactive garage displays a glossy **2003 Audi S6 C5 Avant** procedural visual reconstruction. The editable scene is `output/s6/audi_s6_c5_2003.blend`. Run Blender with `--background --python scripts/export_s6_web.py` to produce the optimized car and garage GLBs in `public/models/`. The render pipeline `scripts/build_s6_c5.py` → `scripts/publish_s6_renders.py` produces camera thumbnails and image fallback assets. This model is intended for visual presentation and does not provide OEM CAD accuracy.
+
+See [ASSETS.md](ASSETS.md) for the generated assets, original → local mapping, and gaps. Original images remain intact. Interior, engine, and top-view slots remain unavailable, and hidden parts retain icons rather than exterior anchors.

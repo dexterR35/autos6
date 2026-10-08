@@ -60,6 +60,11 @@
 .garage-stage { position: relative; min-width: 0; }
 .stage { position: relative; height: 100%; overflow: hidden; background: #05090e; }
 
+.angle-panel__render-note {
+  margin-left: 12px; color: var(--muted); font-size: 10px; font-weight: 400;
+  letter-spacing: 0; text-transform: none;
+}
+
 /* ---------- viewer ---------- */
 .viewer { position: absolute; inset: 0; overflow: hidden; isolation: isolate; }
 .viewer__backdrop {
@@ -103,6 +108,59 @@
 @keyframes shimmer { to { background-position: -200% 0; } }
 .viewer__error { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; gap: 8px; color: var(--muted); }
 .viewer.is-calibrating { cursor: crosshair; }
+
+/* ---------- live car and garage ---------- */
+.viewer--three { background: #080d16; }
+.three-canvas-mount { position: absolute; inset: 0; width: 100%; height: 100%; }
+.three-canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+.three-canvas canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+canvas.three-canvas { display: block; cursor: grab; outline-offset: -4px; }
+canvas.three-canvas:active { cursor: grabbing; }
+.three-canvas:focus-visible { outline: 2px solid var(--blue-bright); }
+.three-toolbar {
+  position: absolute; top: calc(var(--header-h) + 16px); left: 20px; right: 20px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px; z-index: 4;
+  pointer-events: none;
+}
+.three-toolbar button, .three-error button, .viewer-mode-banner button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  min-height: 36px; padding: 8px 12px; border-radius: 7px;
+  color: #e6efff; border: 1px solid #41536b; background: rgba(7, 15, 26, .90);
+  font-size: 12px; font-weight: 600; backdrop-filter: blur(12px); pointer-events: auto;
+}
+.three-toolbar button svg { width: 16px; height: 16px; }
+.three-toolbar button:hover, .three-toolbar button.is-active, .three-toolbar button[aria-pressed='true'] {
+  background: #102c49; border-color: var(--blue-bright);
+}
+.three-toolbar button:disabled { opacity: .45; cursor: wait; }
+.three-hint {
+  position: absolute; top: calc(var(--header-h) + 61px); left: 22px; z-index: 4;
+  margin: 0; max-width: calc(100% - 44px); padding: 5px 8px; border-radius: 5px;
+  font-size: 11px; color: #d2deef; background: rgba(5, 11, 18, .72); pointer-events: none;
+}
+.three-loading, .three-error {
+  position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 12px; padding: 30px; text-align: center;
+  background: radial-gradient(ellipse at 50% 45%, #142135, #050a12 70%); color: #dce9fb;
+}
+.three-loading progress { accent-color: var(--blue); width: 200px; height: 5px; }
+.three-loading p, .three-error p { margin: 0; max-width: 400px; font-size: 14px; }
+.three-error button:hover { border-color: var(--blue-bright); }
+.three-hotspots { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.three-hotspot-anchor { position: absolute; top: 0; left: 0; display: none; width: 0; height: 0; pointer-events: none; }
+.three-hotspots .hotspot { animation: none; }
+.viewer-mode-banner {
+  position: absolute; top: calc(var(--header-h) + 14px); left: 18px; z-index: 5;
+  display: flex; align-items: center; gap: 10px; font-size: 12px; color: #d2deef;
+  padding: 5px 6px 5px 12px; border-radius: 8px; background: rgba(5, 11, 18, .86);
+}
+@media (max-width: 900px) {
+  .viewer.viewer--three { min-height: 390px; height: min(58dvh, 520px); aspect-ratio: auto; }
+  .three-toolbar { top: 12px; left: 12px; right: 12px; gap: 5px; }
+  .three-toolbar button { font-size: 11px; min-height: 38px; padding: 8px 10px; }
+  .three-hint { top: 60px; left: 12px; font-size: 10px; max-width: calc(100% - 24px); }
+  .viewer-mode-banner { top: 10px; left: 10px; }
+}
 
 /* ---------- hotspots ---------- */
 .hotspot-layer { position: absolute; inset: 0; z-index: 3; pointer-events: none; }

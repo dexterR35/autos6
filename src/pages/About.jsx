@@ -48,8 +48,8 @@ export default function About() {
           </p>
         </>
       )}
-      <h2>Photos</h2>
-      <p className="fine">[Placeholder: say where the garage images come from.] Interior, engine and top-down views will be added when real photos are available.</p>
+      <h2>Garage imagery</h2>
+      <p className="fine">Explore the 2003 Audi S6 C5 Avant and its garage in 3D: drag to orbit, zoom in, and select a part. The editable model is a visual reconstruction of the project car. Rendered images are available as a fallback.</p>
     </div>
   );
 }

@@ -53,8 +53,8 @@ describe('production build', () => {
     expect(html.indexOf('ns.html?id=GTM-TEST123')).toBeGreaterThan(html.indexOf('<body>'));
   });
 
-  it('only the garage page preloads the hero photo', () => {
-    expect(read('index.html')).toContain('rel="preload" as="image"');
+  it('does not compete with 3D loading by preloading an unused hero photo', () => {
+    expect(read('index.html')).not.toContain('rel="preload" as="image"');
     expect(read('parts/index.html')).not.toContain('rel="preload" as="image"');
   });
 });
