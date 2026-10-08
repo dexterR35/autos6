@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { RotateCcw, Plus, Minus, Warehouse } from 'lucide-react';
+import { RotateCcw, Plus, Minus, Warehouse, Lightbulb } from 'lucide-react';
 import HotspotButton from './HotspotButton.jsx';
 import { cameraPreset, GARAGE_TARGET, findMeshPart, partAnchors3D } from '../lib/garage3d.js';
+import { createGarageLook } from '../lib/garageLook.js';
+import { extendGarage } from '../lib/garageExtension.js';
+import { RayIndex } from '../lib/rayIndex.js';
 
 const ANCHORS = partAnchors3D();
 const MODEL_URLS = ['/models/s6-c5.glb', '/models/garage.glb'];
@@ -82,6 +84,7 @@ export default function ThreeCarViewer({
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState({ state: 'loading', progress: 0 });
   const [garageView, setGarageView] = useState(false);
+  const [ceilingLights, setCeilingLights] = useState(false);
 
   useEffect(() => {
     const host = mountRef.current;
@@ -92,9 +95,7 @@ export default function ThreeCarViewer({
     let renderer;
     let controls;
     let resizeObserver;
-    let environmentTarget;
-    let environmentScene;
-    let pmrem;
+    let look;
     let car;
     let tween;
     let width = 1;
@@ -102,11 +103,10 @@ export default function ThreeCarViewer({
     let sceneReady = false;
     let pointerStart = null;
     const occluders = [];
+    let rayIndex = null;
     const cleanups = [];
     const abortController = new AbortController();
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#080d16');
-    scene.fog = new THREE.FogExp2('#0b1120', 0.018);
     const camera = new THREE.PerspectiveCamera(36, 1, 0.08, 90);
     const pointer = new THREE.Vector2();
     const raycaster = new THREE.Raycaster();
@@ -163,8 +163,7 @@ export default function ThreeCarViewer({
           toCamera.copy(point).sub(camera.position);
           const distance = toCamera.length();
           occlusionRay.set(camera.position, toCamera.normalize());
-          occlusionRay.far = Math.max(0, distance - 0.14);
-          if (occlusionRay.intersectObjects(occluders, true).length) continue;
+          if (rayIndex?.intersect(occlusionRay.ray, Math.max(0, distance - 0.14), true)) continue;
           screenPoint = { x, y };
           break;
         }
@@ -176,9 +175,52 @@ export default function ThreeCarViewer({
       }
     }
 
+    // Adaptive resolution for motion only. When consecutive frames miss a 60 Hz
+    // budget (large or high-DPI screens, weak GPUs), moving frames use a lower pixel
+    // ratio; once the camera settles, the still image is drawn at full resolution.
+    const motion = { scale: 1, applied: 1, last: 0, intervals: [], skip: 0, cooldownUntil: 0, settleTimer: 0 };
+    const basePixelRatio = () => Math.min(window.devicePixelRatio || 1, window.matchMedia?.('(max-width: 900px)').matches ? 1.25 : 1.5);
+    function applyScale(scale) {
+      if (scale === motion.applied || !look) return;
+      motion.applied = scale;
+      // Reallocating the targets costs one long frame; keep it out of the next sample.
+      motion.intervals.length = 0;
+      motion.skip = 2;
+      renderer.setPixelRatio(basePixelRatio() * scale);
+      renderer.setSize(width, height, false);
+      look.setSize(width, height);
+    }
+    function trackMotion(time) {
+      const interval = time - motion.last;
+      motion.last = time;
+      if (interval > 100) return;
+      clearTimeout(motion.settleTimer);
+      if (motion.skip > 0) { motion.skip--; applyScale(motion.scale); return; }
+      motion.intervals.push(interval);
+      if (motion.intervals.length >= 8) {
+        // Median, so one hitch (a first drag frame, a GC pause) cannot trigger a step.
+        // Typically below ~48 fps: step down. Every frame on time: try a step up.
+        const sorted = [...motion.intervals].sort((a, b) => a - b);
+        if (sorted[4] > 21 && motion.scale > 0.55) {
+          motion.scale = Math.max(0.55, motion.scale * 0.8);
+          motion.cooldownUntil = time + 2000;
+        } else if (sorted[7] < 19 && motion.scale < 1 && time > motion.cooldownUntil) {
+          motion.scale = Math.min(1, motion.scale * 1.25);
+        }
+        motion.intervals.length = 0;
+      }
+      applyScale(motion.scale);
+    }
+    function settle() {
+      if (motion.applied === 1) return;
+      clearTimeout(motion.settleTimer);
+      motion.settleTimer = setTimeout(() => { applyScale(1); requestFrame(); }, 140);
+    }
+
     function renderFrame(time) {
       frameId = 0;
       if (disposed || failed || document.hidden) return;
+      trackMotion(time);
       if (tween) {
         const t = Math.min(1, (time - tween.started) / tween.duration);
         const ease = 1 - (1 - t) ** 3;
@@ -201,22 +243,24 @@ export default function ThreeCarViewer({
       controls.target.z = THREE.MathUtils.clamp(controls.target.z, -10, 8);
       camera.position.add(previousTarget.sub(controls.target).negate());
       const distance = camera.position.distanceTo(controls.target);
-      // A full orbit stays inside the side and back walls, including after a pan.
-      controls.maxDistance = Math.min(12.5, 13.2 - Math.abs(controls.target.x), 14.1 + controls.target.z);
+      // A full orbit stays inside all four walls, including after a pan.
+      controls.maxDistance = Math.min(12.5, 13.2 - Math.abs(controls.target.x), 14.1 + controls.target.z, 13.1 - controls.target.z);
       controls.minPolarAngle = Math.max(0.12, Math.acos(THREE.MathUtils.clamp((6.4 - controls.target.y) / Math.max(0.1, distance), -1, 1)));
       const changed = controls.update();
       if (camera.position.y > 6.4) {
         camera.position.y = 6.4;
         camera.lookAt(controls.target);
       }
-      renderer.render(scene, camera);
+      const lightsChanging = look.render(time);
       stage.dataset.cameraPosition = camera.position.toArray().map((n) => n.toFixed(3)).join(',');
       stage.dataset.cameraTarget = controls.target.toArray().map((n) => n.toFixed(3)).join(',');
       stage.dataset.cameraFov = camera.fov.toFixed(2);
+      stage.dataset.renderScale = motion.applied.toFixed(2);
       stage.dataset.renderCalls = String(renderer.info.render.calls);
       stage.dataset.triangles = String(renderer.info.render.triangles);
       projectMarkers();
-      if (tween || changed) requestFrame();
+      if (tween || changed || lightsChanging) requestFrame();
+      else settle();
     }
 
     function flyTo(position, target, immediate = false, fov = 36) {
@@ -257,7 +301,7 @@ export default function ThreeCarViewer({
       pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
       raycaster.setFromCamera(pointer, camera);
       // Test the nearest surface only: never select a hidden part through the body.
-      const hit = raycaster.intersectObjects(occluders, true)[0];
+      const hit = rayIndex?.intersect(raycaster.ray, raycaster.far);
       const id = hit ? findMeshPart(hit.object) : null;
       const current = propsRef.current;
       return id && current.partsById[id] && (!current.visiblePartIds || current.visiblePartIds.has(id)) ? id : null;
@@ -269,13 +313,11 @@ export default function ThreeCarViewer({
     }
 
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
+      // The scene is antialiased in the composer's multisampled target; the canvas only
+      // receives the finished image, so its own MSAA buffer would be wasted.
+      renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, powerPreference: 'high-performance' });
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, propsRef.current.compact ? 1.25 : 1.5));
       renderer.outputColorSpace = THREE.SRGBColorSpace;
-      renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.05;
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       const canvas = renderer.domElement;
       canvas.className = 'three-canvas';
       canvas.tabIndex = 0;
@@ -301,44 +343,17 @@ export default function ThreeCarViewer({
       controls.addEventListener('change', requestFrame);
       controls.addEventListener('start', () => { tween = null; requestFrame(); });
 
-      pmrem = new THREE.PMREMGenerator(renderer);
-      environmentScene = new RoomEnvironment();
-      environmentTarget = pmrem.fromScene(environmentScene, 0.04);
-      scene.environment = environmentTarget.texture;
-      scene.environmentIntensity = 0.55;
-      scene.environmentRotation.set(0, Math.PI / 4, 0.15);
-      scene.add(new THREE.HemisphereLight('#b8d3ff', '#111525', 0.4));
-      const key = new THREE.DirectionalLight('#e3edff', 2.1);
-      key.position.set(3, 8, 5);
-      key.castShadow = true;
-      key.shadow.mapSize.set(1024, 1024);
-      key.shadow.camera.left = -6;
-      key.shadow.camera.right = 6;
-      key.shadow.camera.top = 6;
-      key.shadow.camera.bottom = -6;
-      key.shadow.normalBias = 0.035;
-      key.shadow.bias = -0.0001;
-      key.shadow.radius = 3;
-      scene.add(key);
-      const fill = new THREE.PointLight('#599dff', 45, 16, 2);
-      fill.position.set(-3, 3, 3);
-      scene.add(fill);
-      const rim = new THREE.PointLight('#a575ff', 38, 16, 2);
-      rim.position.set(2, 4, -5);
-      scene.add(rim);
-      const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.ShadowMaterial({ color: '#02040a', opacity: 0.3 }));
-      floor.rotation.x = -Math.PI / 2;
-      floor.position.y = 0.009;
-      floor.receiveShadow = true;
-      scene.add(floor);
+      // Neon practicals, wet reflective floor, workshop probe and bloom.
+      look = createGarageLook({ renderer, scene, camera, compact: propsRef.current.compact });
 
       function resize() {
         width = Math.max(1, host.clientWidth);
         height = Math.max(1, host.clientHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.matchMedia?.('(max-width: 900px)').matches ? 1.25 : 1.5));
+        renderer.setPixelRatio(basePixelRatio() * motion.applied);
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
         renderer.setSize(width, height, false);
+        look.setSize(width, height);
         requestFrame();
       }
       resizeObserver = new ResizeObserver(resize);
@@ -392,6 +407,7 @@ export default function ThreeCarViewer({
       runtimeRef.current = {
         reset, invalidate: requestFrame,
         zoom: (direction) => { tween = null; direction > 0 ? controls.dollyIn(1 / 1.2) : controls.dollyOut(1 / 1.2); requestFrame(); },
+        setCeilingLights: (on) => { look.setCeilingLights(on, reducedMotion); requestFrame(); },
         showGarage: (enabled) => {
           setGarageView(enabled);
           if (enabled) flyTo([6.5, 4.4, 8.1], GARAGE_TARGET, false, 50);
@@ -407,6 +423,8 @@ export default function ThreeCarViewer({
           if (!disposed && !failed) setStatus({ state: 'loading', progress: Math.floor((progress[0] + progress[1]) / 2 * 95) });
         });
         if (disposed || failed) { disposeObject(model); return; }
+        // Close the open front of the exported workshop so a full orbit shows a room.
+        if (index === 1) extendGarage(model);
         model.traverse((object) => {
           if (!object.isMesh) return;
           object.castShadow = index === 0;
@@ -424,7 +442,13 @@ export default function ThreeCarViewer({
         occluders.push(model);
         if (index === 0) car = model;
         requestFrame();
-      })).then(() => {
+      })).then(async () => {
+        if (disposed || failed) return;
+        look.attach({ car, garage: occluders.find((model) => model !== car) });
+        // Indexed rays for hotspot occlusion and picking (brute force cost ~50 ms a frame).
+        rayIndex = new RayIndex(occluders);
+        // Compile every material now, so first views of the room never hitch.
+        await renderer.compileAsync(scene, camera);
         if (disposed || failed) return;
         sceneReady = true;
         setStatus({ state: 'ready', progress: 100 });
@@ -443,12 +467,11 @@ export default function ThreeCarViewer({
       abortController.abort();
       cancelAnimationFrame(frameId);
       resizeObserver?.disconnect();
+      clearTimeout(motion.settleTimer);
       cleanups.forEach((cleanup) => cleanup());
       controls?.dispose();
       disposeObject(scene);
-      environmentScene?.dispose();
-      environmentTarget?.dispose();
-      pmrem?.dispose();
+      look?.dispose();
       renderer?.dispose();
       renderer?.domElement.remove();
       markersRef.current.forEach((marker) => { marker.style.display = 'none'; });
@@ -456,6 +479,7 @@ export default function ThreeCarViewer({
   }, [attempt]);
 
   useEffect(() => { runtimeRef.current?.reset(); }, [viewId, resetKey, compact]);
+  useEffect(() => { runtimeRef.current?.setCeilingLights(ceilingLights); }, [ceilingLights, attempt]);
   useEffect(() => { runtimeRef.current?.invalidate(); }, [selectedPartId, visiblePartIds, hoveredPartId, status.state, reservedRefs, overlayRefs]);
 
   const ready = status.state === 'ready';
@@ -494,6 +518,7 @@ export default function ThreeCarViewer({
             <button type="button" onClick={() => runtimeRef.current?.zoom(1)} aria-label="Zoom in" title="Zoom in"><Plus aria-hidden="true" /></button>
             <button type="button" onClick={() => runtimeRef.current?.zoom(-1)} aria-label="Zoom out" title="Zoom out"><Minus aria-hidden="true" /></button>
             <button type="button" className={garageView ? 'is-active' : ''} aria-pressed={garageView} onClick={() => runtimeRef.current?.showGarage(!garageView)} title="Garage view"><Warehouse aria-hidden="true" /><span>Garage view</span></button>
+            <button type="button" className="three-toolbar__lights" aria-pressed={ceilingLights} aria-label="Ceiling lights" onClick={() => setCeilingLights((on) => !on)} title={ceilingLights ? 'Turn the ceiling lights off' : 'Turn the ceiling lights on'}><Lightbulb aria-hidden="true" /><span>Lights</span></button>
           </div>
           <p ref={hintRef} className="three-hint">{compact ? 'Drag to orbit · Pinch to zoom · Two fingers to pan' : 'Drag to orbit · Scroll to zoom · Right-drag to pan'}</p>
         </>

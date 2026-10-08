@@ -37,6 +37,7 @@ Open http://localhost:5173. With no `.env`, the site runs in **demo mode**:
 | `npm run start:api` | Run the API without watch mode |
 | `npm run screenshots` | Playwright screenshots at 1983×793, 1440×900, 1024×768 and 390×844 into `docs/screenshots/` (needs `npm run dev:web` running) |
 | `npm run verify:orbit` | Real-browser 3D orbit, zoom, camera presets, part selection, touch and fallback checks (needs the frontend running; uses installed Edge) |
+| `node scripts/garage-lab-shot.mjs reference,garage` | Renders the browser garage at the Blender reference cameras into `output/garage/web-<shot>.png`, for comparing with the reference images (needs `npm run dev:web`) |
 | `python3 scripts/make-derivatives.py` | Regenerate WebP stage images, thumbnails and part crops |
 
 ## Environment

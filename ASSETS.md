@@ -8,6 +8,31 @@ The default viewer loads real car and garage geometry with Three.js and OrbitCon
 
 `scripts/export_s6_web.py` exports the editable scene to `public/models/s6-c5.glb` and `public/models/garage.glb`. It converts curves and modifiers, simplifies dense details, and combines static surfaces by material. Car groups retain part identifiers for picking. The car is centered at the origin with its nose along +X and +Y up. The garage is offset to match that origin. Browser lighting recreates the polished paint and neon workshop without an external environment download.
 
+### Workshop look in the browser
+
+The GLB only carries geometry and flat PBR values, so `src/lib/garageLook.js` rebuilds the look of the Blender renders at runtime:
+
+- **Neon and practicals.** The blue and red neon, the white wall fluorescents and the bulbs are HDR emissives. Each fixture found in those meshes gets a coloured point light that washes the wall behind it, within a fixed light budget. Spot "workshop bounce" lights from the room side light the cabinets, as in the Blender scene.
+- **Bloom and tone mapping.** `UnrealBloomPass` thresholds the brightest colour channel, so saturated blue neon glows while white paint highlights do not. Its fine mips carry most of the weight, giving a tight glow around each tube instead of a haze over the room. Khronos PBR Neutral tone mapping keeps the neon blue and red in hue; ACES pushed bright blue toward lavender-white.
+- **Audi sign.** Thicker tori are fitted over the four exported rings, which are found in the blue neon mesh. The sign has its own material, wall-wash light and additive blue halo, matching the reference sign and its glow on the masonry.
+- **Practical light levels.** Neon lights only tint the wall around each tube; the reference keeps the masonry dark. White spot washes light the red cabinets and lower shelves, and a cool blue-grey hemisphere keeps the rest of the room readable.
+- **Wet floor.** A planar mirror of the scene is sampled with vertical streaking, a puddle mask, Fresnel and procedural cracked-slab concrete.
+- **Masonry.** Procedural 0.85 × 0.42 m blocks with mortar relief, matching the Blender brick shader.
+- **Reflections.** An environment probe of the lit workshop is used by the garage and the car, so paint and glass reflect the neon and cabinets.
+
+- **Ceiling lights switch.** The **Lights** button in the 3D toolbar turns on the rows of twin-tube fluorescents under the trusses. They start row by row with a fluorescent flicker (instantly with reduced motion), and white ceiling lights, a brighter fill and a second environment probe of the lit room flood the garage and the car. The probe puts rows of tube reflections in the paint. Switching off fades back to the neon mood. The nine ceiling lights stay in the scene at zero intensity when off, so the switch never recompiles shaders.
+
+`src/lib/garageExtension.js` completes the room for a 360° orbit. The exported side walls stop beside the car, and the front is open. It adds the front wall (roller doors, the S6 flag, neon), the side-wall extensions (cabinets, shelves with bottles, prints, neon, piers), ceiling trusses and fluorescent battens. These reuse the GLB's own materials and artwork.
+
+Performance, with no visible change:
+
+- Hotspot occlusion and part picking use a bounding-volume hierarchy over the car and garage triangles (`src/lib/rayIndex.js`). three's brute-force raycast had to test ~300k triangles per ray, and that limited orbiting to ~18 fps.
+- The shader skips the BRDF for any point or spot light whose attenuated colour is zero at that pixel.
+- Every material is compiled at load (`compileAsync`), so the first view of each part of the room never hitches.
+- While the camera moves, the pixel ratio steps down if the median frame misses a 60 Hz budget. Once the camera settles, the still image is redrawn at full resolution. `data-render-scale` on the viewer shows the current scale.
+
+To compare the browser render with the references, run `npm run dev:web` and open `/scripts/garage-lab.html?shot=reference`. The shots are `reference`, `s6`, `garage`, `exterior`, `front`, `rear`, `side`, `sideb`, `rearq` and `top`. Add `&car=0` to hide the car. `node scripts/garage-lab-shot.mjs reference,garage` saves them to `output/garage/web-<shot>.png`.
+
 The image viewer remains available explicitly through `?viewer=image` or the fallback button when WebGL or a model cannot load. It is not presented as interactive 3D. Model geometry is a visual reconstruction, not OEM CAD.
 
 ## Blender renders and fallback imagery

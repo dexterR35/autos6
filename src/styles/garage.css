@@ -133,6 +133,7 @@ canvas.three-canvas:active { cursor: grabbing; }
   background: #102c49; border-color: var(--blue-bright);
 }
 .three-toolbar button:disabled { opacity: .45; cursor: wait; }
+.three-toolbar__lights[aria-pressed='true'] svg { color: #fff6d8; filter: drop-shadow(0 0 5px rgba(255, 244, 214, .9)); }
 .three-hint {
   position: absolute; top: calc(var(--header-h) + 61px); left: 22px; z-index: 4;
   margin: 0; max-width: calc(100% - 44px); padding: 5px 8px; border-radius: 5px;
@@ -158,6 +159,8 @@ canvas.three-canvas:active { cursor: grabbing; }
   .viewer.viewer--three { min-height: 390px; height: min(58dvh, 520px); aspect-ratio: auto; }
   .three-toolbar { top: 12px; left: 12px; right: 12px; gap: 5px; }
   .three-toolbar button { font-size: 11px; min-height: 38px; padding: 8px 10px; }
+  /* Icon only on phones, so the toolbar keeps to one row. */
+  .three-toolbar__lights span { display: none; }
   .three-hint { top: 60px; left: 12px; font-size: 10px; max-width: calc(100% - 24px); }
   .viewer-mode-banner { top: 10px; left: 10px; }
 }
