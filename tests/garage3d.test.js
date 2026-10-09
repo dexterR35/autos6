@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { CAR_TARGET, cameraPreset, bodyHeight, findMeshPart, partAnchors3D } from '../src/lib/garage3d.js';
+import { CAR_TARGET, cameraPreset, findMeshPart, partAnchors3D } from '../src/lib/garage3d.js';
 import { availableViews } from '../src/data/views.js';
 import { demoParts } from '../src/data/demoProject.js';
+import sceneInfo from '../public/models/scene-info.json';
 
 const distance = ({ position, target }) => Math.hypot(...position.map((value, index) => value - target[index]));
 
@@ -30,15 +31,6 @@ describe('3D garage coordinates', () => {
     expect(cameraPreset('missing')).toEqual(cameraPreset('exterior-a'));
   });
 
-  it('keeps body correction continuous while preserving wheels and the roof height', () => {
-    for (const boundary of [0.7, 1.075, 1.45]) {
-      expect(Math.abs(bodyHeight(boundary - 0.000001) - bodyHeight(boundary + 0.000001))).toBeLessThan(0.00001);
-    }
-    expect(bodyHeight(0.326)).toBe(0.326);
-    expect(bodyHeight(1.845)).toBe(1.845);
-    expect(bodyHeight(1.06)).toBeLessThan(1.06);
-  });
-
   it('only anchors exterior parts and provides finite positions and unit facing normals', () => {
     const anchors = partAnchors3D();
     const known = new Set(demoParts.map((part) => part.id));
@@ -58,6 +50,18 @@ describe('3D garage coordinates', () => {
     expect(anchors.wheels.map(({ normal }) => normal[2]).sort()).toEqual([-1, 1]);
     expect(anchors['front-bumper'].every(({ position }) => position[0] > 0)).toBe(true);
     expect(anchors['rear-bumper'].every(({ position }) => position[0] < 0)).toBe(true);
+  });
+
+  it('places every anchor on the exported car, not beside it', () => {
+    const { min, max } = sceneInfo.car.bounds;
+    for (const [id, candidates] of Object.entries(partAnchors3D())) {
+      for (const { position } of candidates) {
+        position.forEach((value, axis) => {
+          expect(value, `${id} axis ${axis}`).toBeGreaterThan(min[axis] - 0.05);
+          expect(value, `${id} axis ${axis}`).toBeLessThan(max[axis] + 0.05);
+        });
+      }
+    }
   });
 
   it('resolves exported part metadata through GLB mesh ancestors without inventing selections', () => {

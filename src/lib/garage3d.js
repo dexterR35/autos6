@@ -1,5 +1,6 @@
 // The GLB uses glTF's Y-up coordinates. The S6 nose points along +X.
-// These positions reference the editable Blender model, rather than a photograph.
+// These positions reference the editable Blender model, rather than a photograph:
+// scripts/build_s6_c5.py writes the same anchors to output/s6/anchors-3d.json.
 export const CAR_TARGET = [0, 0.82, 0];
 export const GARAGE_TARGET = [0, 1.25, -1.8];
 
@@ -24,31 +25,24 @@ export function cameraPreset(viewId, compact = false) {
   return { position, target: [...CAR_TARGET] };
 }
 
-export function bodyHeight(z) {
-  if (z <= 0.7) return z;
-  if (z < 1.075) return 0.7 + (z - 0.7) * 0.6;
-  if (z < 1.45) return 0.925 + (z - 1.075) * 0.525 / 0.375;
-  return z;
-}
-
 /** Multiple candidates let a part's marker follow the visible side of the real car. */
 export function partAnchors3D() {
   const sides = [-1, 1];
   const side = (x, y, z) => sides.map((s) => ({ position: [x, y, z * s], normal: [0, 0, s] }));
   return {
     'roof-box': [
-      { position: [-0.56, 1.845, 0], normal: [0, 1, 0] },
-      ...side(-0.56, 1.68, 0.49),
-      { position: [0.55, 1.655, 0], normal: [1, 0, 0] },
-      { position: [-1.77, 1.655, 0], normal: [-1, 0, 0] },
+      { position: [-0.48, 1.775, 0], normal: [0, 1, 0] },
+      ...side(-0.48, 1.6, 0.425),
+      { position: [0.55, 1.57, 0], normal: [1, 0, 0] },
+      { position: [-1.51, 1.6, 0], normal: [-1, 0, 0] },
     ],
-    hood: [{ position: [1.5, bodyHeight(1.06) + 0.035, 0], normal: [0, 1, 0] }],
-    'front-bumper': sides.map((s) => ({ position: [2.48, 0.605, 0.43 * s], normal: [1, 0, 0] })),
-    wheels: side(1.365, 0.326, 0.98),
-    'brake-kit': side(-1.394, 0.34, 0.98),
-    'side-skirts': side(-0.05, 0.29, 0.94),
-    'rear-bumper': sides.map((s) => ({ position: [-2.47, 0.58, 0.39 * s], normal: [-1, 0, 0] })),
-    exhaust: sides.map((s) => ({ position: [-2.55, 0.285, 0.65 * s], normal: [-1, 0, 0] })),
+    hood: [{ position: [1.72, 0.89, 0], normal: [0, 1, 0] }],
+    'front-bumper': sides.map((s) => ({ position: [2.427, 0.472, 0.431 * s], normal: [1, 0, 0] })),
+    wheels: side(1.5, 0.34, 0.935),
+    'brake-kit': side(-1.345, 0.35, 0.935),
+    'side-skirts': side(-0.05, 0.29, 0.921),
+    'rear-bumper': sides.map((s) => ({ position: [-2.378, 0.501, 0.391 * s], normal: [-1, 0, 0] })),
+    exhaust: sides.map((s) => ({ position: [-2.35, 0.262, 0.523 * s], normal: [-1, 0, 0] })),
   };
 }
 

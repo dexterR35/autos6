@@ -8,12 +8,17 @@ from collections import defaultdict
 import json
 from pathlib import Path
 import struct
+import sys
 
+import bmesh
 import bpy
 from mathutils import Matrix, Vector
 
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'scripts'))
+from s6c5.meshgen import weld_mesh_normals  # noqa: E402
+
 SOURCE = ROOT / 'output/s6/audi_s6_c5_2003.blend'
 DEST = ROOT / 'public/models'
 DEST.mkdir(parents=True, exist_ok=True)
@@ -63,7 +68,7 @@ def part_id(name):
         return 'front-bumper'
     if any(term in name for term in ('rear bumper', 'rear plate', 'tail lamp', 'tailgate')):
         return 'rear-bumper'
-    if 'lower door molding' in name or 'underbody' in name:
+    if any(term in name for term in ('lower door molding', 'underbody', 'side skirt')):
         return 'side-skirts'
     return 'body'
 
@@ -119,7 +124,7 @@ def web_material(original):
         bs.inputs['Metallic'].default_value = .12
         bs.inputs['Roughness'].default_value = .83
     if 'deep blue pearl' in lower:
-        bs.inputs['Base Color'].default_value = (.017, .055, .145, 1)
+        bs.inputs['Base Color'].default_value = (.010, .034, .118, 1)
         bs.inputs['Metallic'].default_value = .75
         bs.inputs['Roughness'].default_value = .18
         bs.inputs['Coat Weight'].default_value = 1
@@ -135,6 +140,12 @@ def web_material(original):
         bs.inputs['Metallic'].default_value = .3
         bs.inputs['Roughness'].default_value = .095
         bs.inputs['Coat Weight'].default_value = 1
+        mat.surface_render_method = 'BLENDED'
+    if 'red lamp lens' in lower:
+        bs.inputs['Base Color'].default_value = (.62, .015, .025, .55)
+        bs.inputs['Alpha'].default_value = .55
+        bs.inputs['Roughness'].default_value = .05
+        bs.inputs['Coat Weight'].default_value = .6
         mat.surface_render_method = 'BLENDED'
     if 'clear lightly blue lens' in lower:
         bs.inputs['Base Color'].default_value = (.76, .86, .94, .08)
@@ -181,19 +192,40 @@ def build_export(sources, category):
             bpy.data.meshes.remove(mesh)
             continue
         mesh.transform(offset @ source.matrix_world)
-        # All authored scene parts use one material. Preserve the native UVs
-        # of the flags and posters when evaluating and joining their geometry.
-        original = source.data.materials[0] if source.data.materials else None
-        if original is None:
-            original = bpy.data.materials['Black recess']
-        mesh.materials.clear()
-        mesh.materials.append(web_material(original))
-        for poly in mesh.polygons:
-            poly.material_index = 0
-        part = part_id(source.name) if category == 'car' else ('floor' if 'wet concrete' in original.name.lower() else 'room')
-        obj = bpy.data.objects.new(source.name + ' | evaluated', mesh)
-        collection.objects.link(obj)
-        groups[(original.name, part)].append(obj)
+        # Exact surface normals that agree around a vertex become one normal,
+        # so the glTF exporter can share the vertex.
+        weld_mesh_normals(mesh)
+        if category == 'car':
+            # Parameter-space UVs are a modelling aid; only the plates are textured.
+            for layer in [l for l in mesh.uv_layers if l.name != 'UVMap']:
+                mesh.uv_layers.remove(layer)
+        # Preserve the native UVs of the flags, posters and plates when
+        # evaluating and joining their geometry. Meshes with several material
+        # slots (bumpers with black lips, lamp lenses with clear bands) are
+        # split into one mesh per material first.
+        slots = [m for m in mesh.materials] or [None]
+        used = sorted({p.material_index for p in mesh.polygons})
+        for index in used:
+            original = slots[index] if index < len(slots) and slots[index] is not None else None
+            if original is None:
+                original = bpy.data.materials['Black recess']
+            if len(used) > 1:
+                piece = mesh.copy()
+                bm = bmesh.new()
+                bm.from_mesh(piece)
+                bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.material_index != index], context='FACES')
+                bm.to_mesh(piece)
+                bm.free()
+            else:
+                piece = mesh
+            piece.materials.clear()
+            piece.materials.append(web_material(original))
+            for poly in piece.polygons:
+                poly.material_index = 0
+            part = part_id(source.name) if category == 'car' else ('floor' if 'wet concrete' in original.name.lower() else 'room')
+            obj = bpy.data.objects.new(source.name + ' | evaluated', piece)
+            collection.objects.link(obj)
+            groups[(original.name, part)].append(obj)
         if index % 750 == 0:
             print('EVALUATED', category, index, '/', len(sources), flush=True)
 
@@ -217,8 +249,10 @@ def build_export(sources, category):
         triangles = sum(len(p.vertices) - 2 for p in obj.data.polygons)
         textured = any(n.type == 'TEX_IMAGE' for n in obj.data.materials[0].node_tree.nodes)
         ratio = 1.0
-        if category == 'car' and triangles > 2500:
-            ratio = .36 if 'rubber' in material_name.lower() else .48
+        # Thin trims, seams, badges and lettering keep every face; only large
+        # smooth surfaces of the car are simplified.
+        if category == 'car' and triangles > 12000:
+            ratio = .5
         elif category == 'garage' and triangles > 4000:
             ratio = .22 if not textured else .35
         if ratio < 1:

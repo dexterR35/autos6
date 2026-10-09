@@ -53,10 +53,13 @@ def param_mesh(name, u_values, v_values, mapper, regions=(), keep=None, material
         for j in range(nv - 1):
             bm.faces.new((grid[i][j], grid[i + 1][j], grid[i + 1][j + 1], grid[i][j + 1]))
     outlines = [r.polygon for r in regions] + ([keep] if keep else [])
+    du = (max(u_values) - min(u_values)) / max(nu - 1, 1)
+    dv = (max(v_values) - min(v_values)) / max(nv - 1, 1)
+    index = _FaceIndex(bm.faces, max(du * 4, 1e-6), max(dv * 4, 1e-6))
     for poly in outlines:
-        cut_polygon(bm, poly, closed=True)
+        cut_polygon(bm, poly, closed=True, index=index)
     for line in cut_lines:
-        cut_polygon(bm, line, closed=False)
+        cut_polygon(bm, line, closed=False, index=index)
 
     remove = []
     for f in bm.faces:
@@ -82,6 +85,19 @@ def param_mesh(name, u_values, v_values, mapper, regions=(), keep=None, material
     for f in bm.faces:
         for loop in f.loops:
             loop[uv_layer].uv = (loop.vert.co.x, loop.vert.co.y)
+    # Exact surface normals from the mapping, one-sided towards each face so
+    # real creases (window frames, cut edges) stay crisp. Applied by
+    # apply_param_normals() once the object's final orientation is known.
+    # (Adding a layer reallocates loop data: create it before collecting loops.)
+    layer = bm.loops.layers.float_vector.new('param_normal')
+    loops = [lp for f in bm.faces for lp in f.loops]
+    if loops:
+        centres = {f: f.calc_center_median() for f in bm.faces}
+        P = np.array([(lp.vert.co.x, lp.vert.co.y) for lp in loops])
+        C = np.array([(centres[lp.face].x, centres[lp.face].y) for lp in loops])
+        nrm = param_normals(mapper, P, C, (0.5 * du, 0.5 * dv))
+        for lp, n in zip(loops, nrm):
+            lp[layer] = n
     verts = list(bm.verts)
     uv = np.array([(v.co.x, v.co.y) for v in verts]) if verts else np.zeros((0, 2))
     pos = mapper(uv[:, 0], uv[:, 1]) if len(uv) else []
@@ -97,9 +113,125 @@ def param_mesh(name, u_values, v_values, mapper, regions=(), keep=None, material
     return bpy.data.objects.new(name, mesh)
 
 
-def cut_polygon(bm, poly, closed):
+class _FaceIndex:
+    """Uniform-grid bucket index of face bounding boxes in parameter space."""
+
+    def __init__(self, faces, cell_u, cell_v):
+        self.cu, self.cv = cell_u, cell_v
+        self.cells = {}
+        self.box = {}
+        for f in faces:
+            self.insert(f)
+
+    def _range(self, lo_x, hi_x, lo_y, hi_y):
+        return (range(int(math.floor(lo_x / self.cu)), int(math.floor(hi_x / self.cu)) + 1),
+                range(int(math.floor(lo_y / self.cv)), int(math.floor(hi_y / self.cv)) + 1))
+
+    def insert(self, f):
+        xs = [v.co.x for v in f.verts]
+        ys = [v.co.y for v in f.verts]
+        bb = (min(xs), max(xs), min(ys), max(ys))
+        self.box[f] = bb
+        rx, ry = self._range(*bb)
+        for i in rx:
+            for j in ry:
+                self.cells.setdefault((i, j), []).append(f)
+
+    def query(self, lo_x, hi_x, lo_y, hi_y):
+        rx, ry = self._range(lo_x, hi_x, lo_y, hi_y)
+        seen, out = set(), []
+        for i in rx:
+            for j in ry:
+                for f in self.cells.get((i, j), ()):
+                    if f in seen or not f.is_valid:
+                        continue
+                    seen.add(f)
+                    bb = self.box[f]
+                    if bb[1] < lo_x or bb[0] > hi_x or bb[3] < lo_y or bb[2] > hi_y:
+                        continue
+                    out.append(f)
+        return out
+
+
+def param_normals(mapper, P, C, eps=(2e-3, 2e-3)):
+    """Surface normals at parameter points P, differenced towards the face centres C.
+
+    eps is half the grid spacing: wide enough to ride over the fine linear
+    segments of the outline tables, one-sided so real creases stay sharp."""
+    d = C - P
+    su = np.where(d[:, 0] >= 0, 1.0, -1.0)
+    sv = np.where(d[:, 1] >= 0, 1.0, -1.0)
+    p0 = mapper(P[:, 0], P[:, 1])
+    pu = mapper(P[:, 0] + su * eps[0], P[:, 1])
+    pv = mapper(P[:, 0], P[:, 1] + sv * eps[1])
+    n = np.cross(pu - p0, pv - p0) * (su * sv)[:, None]
+    ln = np.linalg.norm(n, axis=1, keepdims=True)
+    return np.where(ln > 1e-14, n / np.maximum(ln, 1e-30), 0.0)
+
+
+def apply_param_normals(obj):
+    """Turn the stored analytic normals into custom split normals facing like their faces."""
+    me = obj.data
+    attr = me.attributes.get('param_normal')
+    if attr is None:
+        return
+    n = np.zeros(len(me.loops) * 3)
+    attr.data.foreach_get('vector', n)
+    n = n.reshape(-1, 3)
+    me.attributes.remove(attr)
+    if not len(n):
+        return
+    pn = np.zeros(len(me.polygons) * 3)
+    me.polygons.foreach_get('normal', pn)
+    pn = pn.reshape(-1, 3)
+    start = np.zeros(len(me.polygons), dtype=np.int64)
+    total = np.zeros(len(me.polygons), dtype=np.int64)
+    me.polygons.foreach_get('loop_start', start)
+    me.polygons.foreach_get('loop_total', total)
+    fn = np.repeat(pn, total, axis=0)
+    order = np.concatenate([np.arange(s, s + t) for s, t in zip(start, total)])
+    face_n = np.zeros_like(n)
+    face_n[order] = fn
+    dot = np.einsum('ij,ij->i', n, face_n)
+    n[dot < 0] *= -1
+    bad = np.linalg.norm(n, axis=1) < 0.5
+    n[bad] = face_n[bad]
+    vi = np.zeros(len(me.loops), dtype=np.int64)
+    me.loops.foreach_get('vertex_index', vi)
+    me.normals_split_custom_set([tuple(v) for v in weld_normals(n, vi, len(me.vertices))])
+
+
+def weld_normals(n, vi, n_verts, max_angle_deg=12.0):
+    """One shared normal per vertex unless its corners really differ (a crease).
+
+    Identical corner normals let exporters share the vertex instead of
+    duplicating it for every face around it."""
+    acc = np.zeros((n_verts, 3))
+    np.add.at(acc, vi, n)
+    mean = acc / (np.linalg.norm(acc, axis=1, keepdims=True) + 1e-12)
+    dots = np.einsum('ij,ij->i', n, mean[vi])
+    worst = np.ones(n_verts)
+    np.minimum.at(worst, vi, dots)
+    smooth = worst >= math.cos(math.radians(max_angle_deg))
+    return np.where(smooth[vi][:, None], mean[vi], n)
+
+
+def weld_mesh_normals(me, max_angle_deg=12.0):
+    """weld_normals() for an existing mesh with custom normals (used by the web export)."""
+    if not me.has_custom_normals or not len(me.loops):
+        return
+    n = np.zeros(len(me.loops) * 3)
+    me.corner_normals.foreach_get('vector', n)
+    vi = np.zeros(len(me.loops), dtype=np.int64)
+    me.loops.foreach_get('vertex_index', vi)
+    me.normals_split_custom_set([tuple(v) for v in weld_normals(n.reshape(-1, 3), vi, len(me.vertices), max_angle_deg)])
+
+
+def cut_polygon(bm, poly, closed, index=None):
     pts = [Vector((p[0], p[1], 0.0)) for p in poly]
     count = len(pts) if closed else len(pts) - 1
+    if index is None:
+        index = _FaceIndex(bm.faces, 0.05, 0.05)
     for i in range(count):
         a, b = pts[i], pts[(i + 1) % len(pts)]
         d = b - a
@@ -108,18 +240,20 @@ def cut_polygon(bm, poly, closed):
         normal = Vector((-d.y, d.x, 0.0)).normalized()
         lo_x, hi_x = min(a.x, b.x) - 1e-4, max(a.x, b.x) + 1e-4
         lo_y, hi_y = min(a.y, b.y) - 1e-4, max(a.y, b.y) + 1e-4
-        faces = []
-        for f in bm.faces:
-            xs = [v.co.x for v in f.verts]
-            ys = [v.co.y for v in f.verts]
-            if max(xs) < lo_x or min(xs) > hi_x or max(ys) < lo_y or min(ys) > hi_y:
-                continue
-            faces.append(f)
+        faces = index.query(lo_x, hi_x, lo_y, hi_y)
         if not faces:
             continue
         verts = {v for f in faces for v in f.verts}
         edges = {e for f in faces for e in f.edges}
-        bmesh.ops.bisect_plane(bm, geom=list(verts) + list(edges) + faces, dist=1e-7, plane_co=a, plane_no=normal)
+        res = bmesh.ops.bisect_plane(bm, geom=list(verts) + list(edges) + faces, dist=1e-7, plane_co=a, plane_no=normal)
+        for g in res['geom']:
+            if isinstance(g, bmesh.types.BMFace) and g not in index.box:
+                index.insert(g)
+            elif isinstance(g, bmesh.types.BMFace):
+                # Existing faces keep their slot but may have shrunk; refresh their box.
+                xs = [v.co.x for v in g.verts]
+                ys = [v.co.y for v in g.verts]
+                index.box[g] = (min(xs), max(xs), min(ys), max(ys))
 
 
 def mirror_y(obj, merge=0.0015):

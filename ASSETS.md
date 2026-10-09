@@ -39,6 +39,8 @@ The image viewer remains available explicitly through `?viewer=image` or the fal
 
 The glossy **2003 Audi S6 C5 Avant** Blender renders provide camera thumbnails and fallback imagery. The editable scene is `output/s6/audi_s6_c5_2003.blend`. `scripts/build_s6_c5.py` builds the scene and renders its cameras; `scripts/publish_s6_renders.py` prepares the website derivatives and writes `src/data/s6RenderManifest.json`.
 
+The car geometry comes from `scripts/s6c5/`: `spec.py` (dimensions and body sections, with the reference car's 2.845 m wheelbase and 20-inch wheels), `features.py` (lamp, grille, intake, plate and exhaust openings and the panel shut lines), `body.py`/`build.py` (body surfaces split into front bumper, wings and doors, side skirts, tailgate and rear bumper), and `front.py`, `rear.py`, `side.py`, `wheels.py`, `cabin.py`, `roof.py` for the details. The registration plate texture is `scripts/s6c5/textures/plate-ro-b08046.png`, drawn by `scripts/make-plate.py`.
+
 | Path | Purpose |
 | --- | --- |
 | `public/assets/car/s6/<view>.png` | Full-resolution Blender render |

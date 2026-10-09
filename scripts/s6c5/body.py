@@ -52,9 +52,18 @@ def rowwise_pchip(X, Y, q):
             + t * t * (3 - 2 * t) * y1 + t * t * (t - 1) * hh * d1)
 
 
+def smooth_mirrored(values, sigma):
+    """Gaussian smoothing of samples whose ends lie on the mirror plane."""
+    r = int(4 * sigma)
+    k = np.exp(-0.5 * (np.arange(-r, r + 1) / sigma) ** 2)
+    k /= k.sum()
+    padded = np.concatenate([values[r:0:-1], values, values[-2:-r - 2:-1]])
+    return np.convolve(padded, k, mode='valid')
+
+
 class Body:
     def __init__(self):
-        pts = symmetric_half(spec.EQUATOR, samples_per_segment=60)
+        pts = symmetric_half(spec.EQUATOR, samples_per_segment=200)
         self.outline = Polyline(pts)
         self.L = self.outline.length
         dense_s = np.linspace(0, self.L, 4000)
@@ -108,9 +117,9 @@ class Body:
     # ---- lower body --------------------------------------------------------
     def _top_from_edge(self):
         """Top knot of every section: where the inward normal meets TOP_EDGE in plan."""
-        edge = symmetric_half(spec.TOP_EDGE, samples_per_segment=40)
+        edge = symmetric_half(spec.TOP_EDGE, samples_per_segment=120)
         q0, q1 = edge[:-1, :2], edge[1:, :2]
-        s = np.linspace(0, self.L, 3000)
+        s = np.linspace(0, self.L, 5000)
         e, n = self.frame(s)
         d_top = np.empty(len(s))
         z_top = np.empty(len(s))
@@ -128,7 +137,9 @@ class Body:
             k = np.where(ok)[0][np.argmax(tau[ok])]
             d_top[i] = -tau[k]
             z_top[i] = edge[k, 2] + (edge[k + 1, 2] - edge[k, 2]) * min(max(mu[k], 0.0), 1.0)
-        self._tt = (s, d_top, z_top)
+        # The polyline intersection has tiny kinks every segment; a ~1 cm
+        # Gaussian (mirrored at both centre-line ends) keeps the panels fair.
+        self._tt = (s, smooth_mirrored(d_top, 9.0), smooth_mirrored(z_top, 9.0))
 
     def knots_at(self, s):
         s = np.atleast_1d(s)
@@ -192,10 +203,38 @@ class Body:
         # Parameter order (s along the outline, v up) gives inward normals on the left half.
         return -nrm
 
+    def wall_out(self, s, v):
+        """Unit outward normal of the lower body."""
+        return -self.wall_normal(np.asarray(s, dtype=float), np.asarray(v, dtype=float))
+
+    # ---- feature coordinates on the lower body -----------------------------
+    # Features are drawn in (s, z): s from s_front(y), s_rear(y) or
+    # s_of_side_x(x), z the height. sv() converts them to wall parameters.
+    def s_front(self, y):
+        idx = np.where((self._dp[:, 0] > 1.2) & (self._ds < self.L / 2))[0]
+        return np.interp(np.asarray(y, dtype=float), self._dp[idx, 1], self._ds[idx])
+
+    def s_rear(self, y):
+        idx = np.where((self._dp[:, 0] < -1.2) & (self._ds > self.L / 2))[0][::-1]
+        return np.interp(np.asarray(y, dtype=float), self._dp[idx, 1], self._ds[idx])
+
+    def sv(self, pts):
+        """(s, z) points -> (s, v) wall parameters."""
+        p = np.asarray(pts, dtype=float)
+        return np.stack([p[:, 0], self.v_of(p[:, 0], p[:, 1])], axis=1)
+
+    def on_wall(self, pts, offset=0.0):
+        """(s, z) points -> 3D points on the lower body, pushed out by offset."""
+        q = self.sv(pts)
+        pos = self.wall(q[:, 0], q[:, 1])
+        if offset:
+            pos = pos + self.wall_out(q[:, 0], q[:, 1]) * offset
+        return pos
+
     # ---- top edge of the lower body ---------------------------------------
     def _top_curve(self):
         # The designed top edge itself (the wall's top row lies on it).
-        top = symmetric_half(spec.TOP_EDGE, samples_per_segment=60)
+        top = symmetric_half(spec.TOP_EDGE, samples_per_segment=200)
         self.top = top
         side = np.where(top[:, 1] > 0.5)[0]
         k = side[np.argmin(np.abs(top[side, 0] - spec.A_PILLAR_BASE_X))]
@@ -224,7 +263,7 @@ class Body:
         xc = spec.COWL_X_CENTRE
         t = np.clip((xc - np.asarray(x, dtype=float)) / (xc - self.A[0]), 0, 1)
         y = yA * np.sqrt(t)
-        zc = spec.HOOD_CENTRE[-1][1]
+        zc = dict(spec.HOOD_CENTRE)[spec.COWL_X_CENTRE]
         z = zc + (zA - zc) * (y / yA) ** 2
         return y, z
 
@@ -242,7 +281,8 @@ class Body:
         dome = spec.HOOD_DOME
         t = np.clip((x - spec.COWL_X_CENTRE) / (self.x_nose_top - spec.COWL_X_CENTRE), 0, 1)
         y_ridge = dome['y_rear'] + (dome['y_front'] - dome['y_rear']) * t
-        z = z + dome['amp'] * (1 - smoothstep(y_ridge - dome['soft'], y_ridge + dome['soft'], y)) * (1 - smoothstep(0.85, 1.0, t))
+        # Raised centre section with soft flanks, fading out well before the nose.
+        z = z + dome['amp'] * (1 - smoothstep(y_ridge - dome['soft'], y_ridge + dome['soft'], y)) * (1 - smoothstep(0.45, 1.0, t))
         pos = np.stack([x, y, z], axis=1)
         if np.any(offset):
             pos = pos + self.normal(self.hood, x, w) * np.asarray(offset)[..., None]
@@ -301,10 +341,10 @@ class Body:
         ta = np.clip(t, 0, 1)
         band = R - B
         out[a, 1:] = (B + band * ta[:, None])[a, 1:]
-        out[a, 1] += spec.GLASS_BOW * np.sin(math.pi * ta[a]) * (band[a, 2] > 0.01)
+        out[a, 1] += spec.GLASS_BOW * np.sin(math.pi * ta[a]) * np.clip(band[a, 2] / 0.06, 0, 1)
         tb = np.clip(t - 1, 0, 1)
         frame = (R + (P - R) * tb[:, None])
-        bulge = 0.006 * np.sin(math.pi * tb)
+        bulge = 0.009 * np.sin(math.pi * tb)
         out[b, 1:] = frame[b, 1:]
         out[b, 1] += bulge[b]
         tc = np.clip(t - 2, 0, 1)

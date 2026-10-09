@@ -6,3 +6,4 @@ server/.env
 *.log
 .DS_Store
 test-results
+__pycache__/
