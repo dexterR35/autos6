@@ -10,23 +10,23 @@
   "foregroundPropsRelocated": 221,
   "car": {
     "file": "/models/s6-c5.glb",
-    "bytes": 6359520,
-    "meshes": 65,
-    "drawCalls": 65,
-    "triangles": 303116,
+    "bytes": 6641672,
+    "meshes": 67,
+    "drawCalls": 67,
+    "triangles": 314814,
     "bounds": {
       "min": [
         -2.371917486190796,
-        -0.0003131343109998852,
-        -1.0700000524520874
+        -4.376994547783397e-05,
+        -1.0499999523162842
       ],
       "max": [
         2.436429500579834,
         1.7771271467208862,
-        1.0700000524520874
+        1.0499999523162842
       ]
     },
-    "materials": 32,
+    "materials": 33,
     "parts": [
       "body",
       "brake-kit",

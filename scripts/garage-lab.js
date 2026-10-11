@@ -24,6 +24,11 @@ const shots = {
   rearq: { ...cameraPreset('rear-quarter-b'), fov: 36 },
   garage: { position: [6.5, 4.4, 8.1], target: GARAGE_TARGET, fov: 50 },
   top: { position: [0, 42, -0.5], target: [0, 0, -0.6], fov: 48, near: 35 },
+  // Car close-ups at roughly the reference photographs' camera heights.
+  carfront: { position: [6.4, 1.05, 0], target: [0, 0.68, 0], fov: 30 },
+  car34: { position: [5.3, 1.15, 5.9], target: [0.35, 0.62, 0], fov: 30 },
+  carside: { position: [0, 0.95, 10.5], target: [0, 0.72, 0], fov: 30 },
+  carwheel: { position: [2.7, 0.55, 2.9], target: [1.5, 0.36, 0.8], fov: 30 },
 };
 const shot = shots[params.get('shot')] ?? shots.reference;
 const referenceImage = { reference: '/ChatGPT Image Oct 4, 2026, 01_38_30 AM-1.png', s6: '/ChatGPT Image Oct 4, 2026, 01_38_30 AM-1.png' }[params.get('shot') ?? 'reference'];

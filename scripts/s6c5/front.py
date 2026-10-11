@@ -113,12 +113,15 @@ def audi_rings(B, name, centre, normal, radius, tube_r, material, up=(0, 0, 1)):
 
 def headlamps(B):
     b, lay, m = B.body, B.lay, B.m
-    lamp = B.inset('S6 | headlamp', lay.headlamp_lens, 0.12, m['reflector'], m['lamp_dark'], lens_mat=m['lens'],
+    lamp = B.inset('S6 | headlamp', lay.headlamp_lens, 0.12, m['lamp_silver'], m['lamp_dark'], lens_mat=m['lens'],
                    lens_inset=0.0012, step=0.008)
     sf = b.s_front
-    # Inner projector (low beam), outer reflector (high beam), indicator in the corner.
-    for label, y, z, bowl, lens_r, glow in [('inner projector', 0.540, 0.689, 0.062, 0.040, True),
-                                           ('outer reflector', 0.712, 0.693, 0.056, 0.020, True)]:
+    # Silver housing with three round units, as in the reference: a large
+    # high-beam dome by the grille, the bright low-beam projector in the middle
+    # and a small side light in the outer corner.
+    for label, y, z, bowl, lens_r, glow in [('inner high beam', 0.508, 0.690, 0.056, 0.050, True),
+                                           ('centre projector', 0.628, 0.688, 0.050, 0.036, True),
+                                           ('outer side light', 0.738, 0.686, 0.040, 0.024, False)]:
         s = float(sf(y))
         p, n = B.frame_at(s, z)
         f = horizontal(n)
@@ -129,7 +132,7 @@ def headlamps(B):
                          m['reflector'], 56), mirror=True)
         B.link(disc_ring('S6 | headlamp ' + label + ' bezel', c, rr, uu, nn,
                          [(lens_r + 0.002, -0.004), (lens_r + 0.007, 0.0), (lens_r + 0.007, 0.004), (lens_r + 0.001, 0.006)],
-                         m['lamp_dark'], 48), mirror=True)
+                         m['chrome'], 48), mirror=True)
         B.link(disc_ring('S6 | headlamp ' + label + ' lens', c, rr, uu, nn,
                          [(0.0005, 0.006 + lens_r * 0.45), (lens_r * 0.5, 0.006 + lens_r * 0.36), (lens_r * 0.85, 0.006 + lens_r * 0.16), (lens_r, 0.004)],
                          m['lens'], 48), mirror=True)
@@ -141,7 +144,7 @@ def headlamps(B):
     pos = b.on_wall(np.array(pts), -0.03)
     from .meshgen import tube
     B.link(tube('S6 | headlamp chrome divider', pos, 0.004, m['reflector'], sides=8), mirror=True)
-    p, n = B.frame_at(float(b.s_of_side_x(2.14)), 0.70)
+    p, n = B.frame_at(float(b.s_of_side_x(2.15)), 0.722)
     rr, uu, nn = frame_from_normal(horizontal(n))
     B.link(disc_ring('S6 | headlamp indicator bulb', p - n * 0.045, rr, uu, nn,
                      [(0.0005, 0.012), (0.012, 0.008), (0.014, -0.004), (0.004, -0.01)], m['lamp_amber'], 24), mirror=True)

@@ -76,13 +76,14 @@ class Layout:
         self.L = L
 
         # ---- front ---------------------------------------------------------
-        # Headlamp: hood line on top, straight lower edge, wrapping round the
-        # corner onto the wing where it tapers to a point.
+        # Headlamp: hood line on top, straight lower edge, a near-rectangular
+        # unit whose tall outer end turns round the corner onto the wing.
         s_in = float(sf(0.452))
-        lamp_bottom = [(s_in, 0.642), (float(sf(0.466)), 0.607), (float(sf(0.60)), 0.603),
-                       (float(sf(0.70)), 0.608), (float(sf(0.78)), 0.620), (float(sx(2.20)), 0.644),
-                       (float(sx(2.13)), 0.674), (float(sx(2.075)), 0.712), (float(sx(2.045)), 0.748)]
-        s_end = float(sx(2.035))
+        lamp_bottom = [(s_in, 0.642), (float(sf(0.466)), 0.605), (float(sf(0.60)), 0.602),
+                       (float(sf(0.70)), 0.604), (float(sf(0.78)), 0.609), (float(sx(2.24)), 0.616),
+                       (float(sx(2.19)), 0.630), (float(sx(2.155)), 0.660), (float(sx(2.135)), 0.705),
+                       (float(sx(2.125)), 0.742)]
+        s_end = float(sx(2.118))
         lamp_top = [(s, top(s, 0.03)) for s in np.linspace(s_end, s_in - 0.004, 24)]
         self.headlamp = np.array(lamp_bottom + [(s_end, top(s_end, 0.03))] + lamp_top)
         self.headlamp_lens = np.array(lamp_bottom + [(s_end, top(s_end, -0.0015))]
@@ -115,7 +116,7 @@ class Layout:
 
         # Front bumper / wing split: from the lamp's rear corner to the arch.
         x_seam = spec.X_AXLE_F + math.sqrt((spec.ARCH_R_F - 0.006) ** 2 - 0.20 ** 2)
-        self.front_seam = np.array([(float(sx(2.05)), 0.738), (float(sx(1.95)), 0.63), (float(sx(x_seam)), spec.WHEEL_Z + 0.20)])
+        self.front_seam = np.array([(float(sx(2.112)), 0.738), (float(sx(2.0)), 0.63), (float(sx(x_seam)), spec.WHEEL_Z + 0.20)])
         self.front_bumper = np.array([(-0.06, -0.3), (float(sx(spec.X_AXLE_F)), -0.3), (float(sx(spec.X_AXLE_F)), 0.40),
                                       *self.front_seam[::-1], (float(sf(0.75)), 0.66), (s_in + 0.02, 0.66),
                                       (s_in + 0.02, 1.4), (-0.06, 1.4)])

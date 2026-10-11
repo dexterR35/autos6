@@ -147,6 +147,13 @@ else:
         scene.eevee.use_raytracing = True
     except AttributeError:
         pass
+    # EEVEE renders transmissive glass and lenses opaque unless they refract.
+    for mat in bpy.data.materials:
+        bsdf = mat.node_tree.nodes.get('Principled BSDF') if mat.use_nodes else None
+        if bsdf and bsdf.inputs['Transmission Weight'].default_value > 0:
+            mat.surface_render_method = 'DITHERED'
+            mat.use_raytrace_refraction = True
+            mat.use_transparency_overlap = True
 scene.view_settings.view_transform = 'AgX'
 scene.view_settings.look = 'AgX - Medium High Contrast'
 scene.render.resolution_x, scene.render.resolution_y = 1672, 941
@@ -158,6 +165,7 @@ cams = {
     'ref9': ((5.0, -4.9, 1.25), (0.6, 0.0, 0.75), 38),
     'ref3': ((0.15, -10.5, 0.95), (0.15, 0.0, 0.80), 38),
     'ref7': ((8.6, 0.0, 1.45), (0.0, 0.0, 0.85), 45),
+    'reff': ((7.9, 0.0, 1.0), (0.0, 0.0, 0.62), 46),
     'ref2': ((-8.6, 0.0, 1.5), (0.0, 0.0, 0.85), 45),
     'ref6': ((-6.4, -6.0, 1.7), (-0.4, 0.0, 0.8), 40),
     'side': ((0.0, 10.5, 0.9), (0.0, 0.0, 0.75), 38),

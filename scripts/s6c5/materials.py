@@ -105,6 +105,9 @@ def make_materials():
         'chrome': principled('S6 | polished chrome', (0.86, 0.88, 0.9), 1.0, 0.06),
         'alloy': principled('S6 | satin aluminium trim', (0.6, 0.62, 0.65), 0.9, 0.25),
         'reflector': principled('S6 | lamp chrome reflector', (0.8, 0.82, 0.85), 1.0, 0.12),
+        # Brushed silver headlamp housing, faintly lit so the clear lamps read bright as in the references.
+        'lamp_silver': principled('S6 | headlamp silver housing', (0.62, 0.64, 0.67), 0.8, 0.24,
+                                  emission=(0.72, 0.78, 0.88), strength=0.35),
         'lamp_dark': principled('S6 | lamp housing dark grey', (0.035, 0.037, 0.042), 0.3, 0.4),
         'lamp_white': principled('S6 | headlamp phosphor white', (0.9, 0.95, 1.0), 0, 0.3, emission=(0.86, 0.93, 1.0), strength=6.0),
         'lamp_red': principled('S6 | tail lamp red glow', (0.6, 0.0, 0.01), 0, 0.4, emission=(1.0, 0.02, 0.03), strength=5.0),
@@ -112,8 +115,9 @@ def make_materials():
         'lamp_reverse': principled('S6 | reverse lamp white glow', (0.9, 0.9, 0.9), 0, 0.3, emission=(1.0, 0.92, 0.85), strength=3.0),
         'badge_red': principled('S6 | badge red enamel', (0.55, 0.006, 0.016), 0.1, 0.2, 0.6),
         'rubber': principled('S6 | satin tyre rubber', (0.016, 0.017, 0.019), 0, 0.62),
-        'wheel': principled('S6 | graphite satin wheel finish', (0.07, 0.075, 0.08), 0.85, 0.32, 0.5, 0.12),
-        'wheel_lip': principled('S6 | machined wheel lip', (0.36, 0.37, 0.39), 1.0, 0.18),
+        # Gunmetal satin metallic as on the reference wheels (mid grey under the neon).
+        'wheel': principled('S6 | gunmetal satin wheel finish', (0.16, 0.16, 0.17), 0.7, 0.3, 0.6, 0.1),
+        'wheel_lip': principled('S6 | polished wheel lip', (0.62, 0.63, 0.65), 1.0, 0.12),
         'disc': principled('S6 | machined brake steel', (0.40, 0.40, 0.41), 1.0, 0.26),
         'caliper': principled('S6 | red brake caliper', (0.56, 0.010, 0.014), 0.0, 0.32, 1.0, 0.06),
         'caliper_logo': principled('S6 | caliper lettering white', (0.85, 0.85, 0.84), 0.0, 0.35),

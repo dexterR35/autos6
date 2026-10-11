@@ -7,12 +7,13 @@ export const GARAGE_TARGET = [0, 1.25, -1.8];
 export const CAMERA_PRESETS = {
   'exterior-a': [6.4, 2.8, 8],
   'exterior-b': [4.8, 1.9, 5.2],
-  front: [8.7, 1.75, 0],
+  // Front and rear sit near headlamp height, like the reference photographs.
+  front: [8.4, 1.3, 0],
   'side-a': [0.1, 1.9, 9.2],
   'side-b': [0.1, 1.9, -9.2],
   'rear-quarter-a': [-6.3, 2.7, 7.5],
   'rear-quarter-b': [-6.3, 2.7, -7.5],
-  rear: [-8.7, 1.75, 0],
+  rear: [-8.4, 1.35, 0],
 };
 
 export function cameraPreset(viewId, compact = false) {
@@ -38,8 +39,8 @@ export function partAnchors3D() {
     ],
     hood: [{ position: [1.72, 0.89, 0], normal: [0, 1, 0] }],
     'front-bumper': sides.map((s) => ({ position: [2.427, 0.472, 0.431 * s], normal: [1, 0, 0] })),
-    wheels: side(1.5, 0.34, 0.935),
-    'brake-kit': side(-1.345, 0.35, 0.935),
+    wheels: side(1.5, 0.35, 0.935),
+    'brake-kit': side(-1.345, 0.36, 0.935),
     'side-skirts': side(-0.05, 0.29, 0.921),
     'rear-bumper': sides.map((s) => ({ position: [-2.378, 0.501, 0.391 * s], normal: [-1, 0, 0] })),
     exhaust: sides.map((s) => ({ position: [-2.35, 0.262, 0.523 * s], normal: [-1, 0, 0] })),

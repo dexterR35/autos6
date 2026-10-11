@@ -1,7 +1,9 @@
-"""Graphite five-spoke 20-inch wheels, 255/35 R20 tyres, drilled discs and red calipers.
+"""Gunmetal concave five-spoke 21-inch wheels, low-profile tyres, drilled discs and red calipers.
 
 Left wheels are built in vehicle coordinates and mirrored. Each wheel faces +Y
-(outboard) at y = TRACK / 2.
+(outboard) at y = TRACK / 2. The rim follows the reference photographs: five
+broad flat-faced spokes dished towards a solid hub, the lug bolts recessed in
+the hub between the spokes, and a thin polished outer lip.
 """
 import math
 
@@ -14,9 +16,14 @@ from .meshgen import grid_faces, mesh_from_arrays, tube
 from .util import box_bar, disc_ring, loft, merge, torus
 
 AX = np.array([0.0, 1.0, 0.0])          # outboard axis
-K = 0.254 / 0.2413                      # radial scale of the rim drawing (19 in -> 20 in)
+K = spec.RIM_R / 0.2413                 # radial scale of the rim drawing (19 in drawing -> 21 in)
 R_AX = np.array([1.0, 0.0, 0.0])
 U_AX = np.array([0.0, 0.0, 1.0])
+FACE = 0.124                            # axial position of the rim lip / spoke tips
+DISH = 0.042                            # spoke dish: hub face sits this far inboard of the lip
+HUB = FACE - DISH                       # hub face
+MOUNT = 0.050                           # hub mounting face (rotor hat face)
+BRAKE_SHIFT = 0.030                     # brakes sit inboard so the face can be dished
 
 
 def lathe(name, centre, profile, material, segments=96, smooth=True):
@@ -25,82 +32,97 @@ def lathe(name, centre, profile, material, segments=96, smooth=True):
 
 
 def tyre(B, tag, c):
-    R, W = spec.TYRE_R, 0.255
-    hw = W / 2
-    bead = 0.2465 * K
-    prof = [(bead, -hw + 0.012), (bead + 0.011, -hw + 0.004), (0.282, -hw - 0.002), (0.309, -hw + 0.001),
-            (0.328, -hw + 0.010), (R - 0.002, -hw + 0.026), (R, -hw + 0.045)]
+    R, hw = spec.TYRE_R, spec.TYRE_W / 2
+    bead = spec.RIM_R + 0.004
+    # Half profile from the bead to the tread edge: (radius, axial inset from the
+    # sidewall plane; negative bulges outwards). Rim protector rib, a slightly
+    # bulged low sidewall and a tight, squared shoulder.
+    half = [(bead, 0.013), (bead + 0.004, 0.004), (bead + 0.010, -0.004), (bead + 0.016, -0.004),
+            (bead + 0.022, -0.002), (0.305, -0.006), (0.322, -0.005), (0.334, -0.001), (0.342, 0.006),
+            (R - 0.002, 0.015), (R, 0.026)]
+    prof = [(r, -hw + a) for r, a in half]
     # Four circumferential grooves in the tread.
     for g in (-0.068, -0.024, 0.024, 0.068):
         prof += [(R, g - 0.007), (R - 0.008, g - 0.005), (R - 0.008, g + 0.005), (R, g + 0.007)]
-    prof += [(R, hw - 0.045), (R - 0.002, hw - 0.026), (0.328, hw - 0.010), (0.309, hw - 0.001),
-             (0.282, hw + 0.002), (bead + 0.011, hw - 0.004), (bead, hw - 0.012)]
-    B.link(lathe('S6 | %s wheel | tyre 255/35 R20' % tag, c, prof, B.m['rubber'], 72), mirror=True)
+    prof += [(r, hw - a) for r, a in half[::-1]]
+    B.link(lathe('S6 | %s wheel | tyre 255/30 R21' % tag, c, prof, B.m['rubber'], 96), mirror=True)
 
 
-def spoke_mesh(c, face_y, n_spokes=5, r0=0.062, r1=0.226 * K):
-    """Flat, slightly concave spokes that taper towards the rim."""
+def spoke_mesh(c, n_spokes=5, r0=0.070, r1=None):
+    """Broad flat spokes, dished towards the hub, with chamfered edges and a fillet into the rim."""
+    r1 = r1 or K * 0.234
     parts = []
     for k in range(n_spokes):
         a = math.tau * k / n_spokes + math.pi / 2
         radial = np.array([math.cos(a), 0, math.sin(a)])
         tang = np.array([-math.sin(a), 0, math.cos(a)])
         sections = []
-        rs = np.linspace(r0, r1, 12)
-        for r in rs:
+        for r in np.linspace(r0, r1, 28):
             t = (r - r0) / (r1 - r0)
-            half = 0.040 - 0.012 * t + 0.010 * max(0.0, (t - 0.86) / 0.14) ** 2
-            face = face_y - 0.028 * (1 - t) ** 1.4 + 0.002 * t
-            # Never inboard of the hub mounting face: clears the caliper.
-            back = max(face - 0.042, 0.081)
-            ch = 0.006
-            sec = [(-half - 0.006, back), (-half, face - ch), (-half + ch, face), (half - ch, face), (half, face - ch), (half + 0.006, back)]
+            # Nearly parallel sides, slightly wider at the rim, flaring into it.
+            half = 0.034 + 0.007 * t + 0.016 * max(0.0, (t - 0.84) / 0.16) ** 2
+            # Concave dish: steep near the rim, flat at the hub.
+            face = FACE - 0.003 - DISH * (1 - t * t)
+            back = max(face - 0.036, MOUNT if r < 0.1 else MOUNT - 0.004)
+            ch = 0.003
+            sec = [(-half - 0.004, back), (-half, face - ch), (-half + ch, face), (0.0, face + 0.0008),
+                   (half - ch, face), (half, face - ch), (half + 0.004, back)]
             sections.append([c + radial * r + tang * w + AX * yy for w, yy in sec])
         S = np.array(sections)
-        nsec, k_ = S.shape[0], S.shape[1]
-        verts = S.reshape(-1, 3)
-        faces = []
-        for i in range(nsec - 1):
-            for j in range(k_ - 1):
-                q = i * k_ + j
-                faces.append((q, q + 1, q + k_ + 1, q + k_))
-        parts.append((list(verts), faces))
+        nsec = S.shape[0]
+        # Separate strips (side, chamfer, flat face, chamfer, side) so the edges
+        # stay crisp under smooth shading, as on a machined casting.
+        for j0, j1 in [(0, 1), (1, 2), (2, 4), (4, 5), (5, 6)]:
+            strip = S[:, j0:j1 + 1].reshape(-1, 3)
+            w = j1 - j0 + 1
+            faces = [(i * w + j, i * w + j + 1, (i + 1) * w + j + 1, (i + 1) * w + j)
+                     for i in range(nsec - 1) for j in range(w - 1)]
+            parts.append((list(strip), faces))
+        tip = S[-1]
+        parts.append((list(tip), [tuple(range(len(tip)))[::-1]]))
     return merge(parts)
 
 
 def rim(B, tag, c):
     m = B.m
-    fy = 0.122                       # spoke face plane (axial, outboard of the wheel centre)
-    # Barrel and inner well.
+    fy = FACE
+    # Barrel and inner well, dark behind the spokes.
     B.link(lathe('S6 | %s wheel | rim barrel' % tag, c,
                  [(K * 0.238, -0.105), (K * 0.232, -0.09), (K * 0.226, -0.03), (K * 0.226, 0.06), (K * 0.233, 0.09), (K * 0.236, 0.10)],
-                 m['grille'], 48), mirror=True)
-    # Machined outer lip and the graphite face ring.
-    B.link(lathe('S6 | %s wheel | machined lip' % tag, c,
-                 [(K * 0.236, 0.100), (K * 0.2425, fy - 0.008), (K * 0.2455, fy - 0.002), (K * 0.2445, fy + 0.002), (K * 0.240, fy + 0.003)],
-                 m['wheel_lip'], 72), mirror=True)
+                 m['grille'], 64), mirror=True)
+    # Thin polished outer lip, then a short gunmetal step down to the spokes.
+    B.link(lathe('S6 | %s wheel | polished lip' % tag, c,
+                 [(K * 0.236, 0.100), (K * 0.2425, fy - 0.008), (K * 0.2458, fy - 0.003), (K * 0.2452, fy + 0.0015),
+                  (K * 0.2415, fy + 0.0025)],
+                 m['wheel_lip'], 96), mirror=True)
     B.link(lathe('S6 | %s wheel | rim face ring' % tag, c,
-                 [(K * 0.240, fy + 0.003), (K * 0.232, fy + 0.002), (K * 0.225, fy - 0.004), (K * 0.222, fy - 0.03)],
-                 m['wheel'], 72), mirror=True)
-    v, f = spoke_mesh(c, fy)
-    B.link(mesh_from_arrays('S6 | %s wheel | graphite five spokes' % tag, v, f, m['wheel']), mirror=True)
-    # Hub, lug bolts and the centre cap.
+                 [(K * 0.2415, fy + 0.0025), (K * 0.236, fy + 0.002), (K * 0.231, fy - 0.003), (K * 0.228, fy - 0.012),
+                  (K * 0.226, fy - 0.03)],
+                 m['wheel'], 96), mirror=True)
+    v, f = spoke_mesh(c)
+    B.link(mesh_from_arrays('S6 | %s wheel | gunmetal five spokes' % tag, v, f, m['wheel']), mirror=True)
+    # Solid hub the spokes grow out of, down to the mounting face.
     B.link(lathe('S6 | %s wheel | hub' % tag, c,
-                 [(0.07, fy - 0.045), (0.072, fy - 0.03), (0.068, fy - 0.026), (0.045, fy - 0.024), (0.032, fy - 0.022)],
-                 m['wheel'], 48), mirror=True)
-    bolts = []
+                 [(0.030, HUB + 0.006), (0.071, HUB + 0.006), (0.078, HUB + 0.0045), (0.083, HUB - 0.001),
+                  (0.086, HUB - 0.014), (0.088, MOUNT)],
+                 m['wheel'], 80), mirror=True)
+    # Lug bolts in dark pockets between the spokes (112 mm PCD).
     for k in range(5):
         a = math.tau * k / 5 + math.pi / 2 + math.pi / 5
-        bc = c + 0.0525 * (math.cos(a) * R_AX + math.sin(a) * U_AX)
-        prof = [(0.011, fy - 0.03), (0.011, fy - 0.022), (0.0095, fy - 0.014), (0.006, fy - 0.011), (0.0005, fy - 0.011)]
-        o = disc_ring('S6 | %s wheel | lug bolt' % tag, bc, R_AX, U_AX, AX, prof, m['hat'], 12)
-        bolts.append(o)
-    for o in bolts:
-        B.link(o, mirror=True)
+        bc = c + 0.056 * (math.cos(a) * R_AX + math.sin(a) * U_AX)
+        B.link(disc_ring('S6 | %s wheel | lug bolt pocket' % tag, bc, R_AX, U_AX, AX,
+                         [(0.0005, HUB + 0.0062), (0.0108, HUB + 0.0062), (0.0118, HUB + 0.0058)], m['grille'], 20), mirror=True)
+        B.link(disc_ring('S6 | %s wheel | lug bolt' % tag, bc, R_AX, U_AX, AX,
+                         [(0.0078, HUB + 0.0063), (0.0078, HUB + 0.0085), (0.0062, HUB + 0.0098), (0.0005, HUB + 0.0101)],
+                         m['alloy'], 6, smooth=False), mirror=True)
+    # Domed black centre cap with a polished ring and red emblem.
     B.link(lathe('S6 | %s wheel | centre cap' % tag, c,
-                 [(0.031, fy - 0.03), (0.031, fy - 0.019), (0.028, fy - 0.016), (0.0005, fy - 0.015)], m['grille'], 40), mirror=True)
-    B.link(lathe('S6 | %s wheel | centre cap badge' % tag, c + AX * 0.0005,
-                 [(0.017, fy - 0.0158), (0.0005, fy - 0.0152)], m['badge_red'], 32), mirror=True)
+                 [(0.031, HUB + 0.006), (0.031, HUB + 0.012), (0.028, HUB + 0.0155), (0.018, HUB + 0.017), (0.0005, HUB + 0.0175)],
+                 m['grille'], 48), mirror=True)
+    B.link(torus('S6 | %s wheel | centre cap ring' % tag, c + AX * (HUB + 0.0158), R_AX, U_AX, AX, 0.0215, 0.0016, m['chrome'], 48, 8),
+           mirror=True)
+    B.link(lathe('S6 | %s wheel | centre cap badge' % tag, c,
+                 [(0.0155, HUB + 0.0172), (0.0005, HUB + 0.0179)], m['badge_red'], 32), mirror=True)
 
 
 def arc_sections(c, th0, th1, n, section):
@@ -204,8 +226,8 @@ def brakes(B, tag, c, disc_r, front, side):
 
 def build(B):
     y = spec.TRACK / 2
-    for tag, x, disc_r, front in [('front', spec.X_AXLE_F, 0.172, True), ('rear', spec.X_AXLE_R, 0.160, False)]:
+    for tag, x, disc_r, front in [('front', spec.X_AXLE_F, 0.182, True), ('rear', spec.X_AXLE_R, 0.168, False)]:
         c = np.array([x, y, spec.WHEEL_Z])
         tyre(B, tag, c)
         rim(B, tag, c)
-        brakes(B, tag, c, disc_r, front, 1)
+        brakes(B, tag, c - AX * BRAKE_SHIFT, disc_r, front, 1)

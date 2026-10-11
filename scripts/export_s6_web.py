@@ -135,9 +135,10 @@ def web_material(original):
     # Alpha glazing avoids the expensive full-scene transmission pass while
     # retaining real seat/dashboard geometry and sharp environment reflections.
     if 'automotive glazing' in lower:
-        bs.inputs['Base Color'].default_value = (.055, .10, .14, .48)
-        bs.inputs['Alpha'].default_value = .48
-        bs.inputs['Metallic'].default_value = .3
+        # Darker tint, as in the references: the black cabin reads through it.
+        bs.inputs['Base Color'].default_value = (.018, .032, .046, .62)
+        bs.inputs['Alpha'].default_value = .62
+        bs.inputs['Metallic'].default_value = .15
         bs.inputs['Roughness'].default_value = .095
         bs.inputs['Coat Weight'].default_value = 1
         mat.surface_render_method = 'BLENDED'

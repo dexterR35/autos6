@@ -35,7 +35,7 @@ def gh_point(B, x, y, off=0.0):
 
 def mirrors(B):
     m = B.m
-    cx, cy, cz = 0.772, 0.958, 1.014
+    cx, cy, cz = 0.772, 0.938, 1.030
     ax, ay, az = 0.063, 0.112, 0.074
 
     def taper(x, y, z):
@@ -49,7 +49,7 @@ def mirrors(B):
     verts = [(cx - ax * 0.42 - 0.0015, cy + gy, cz + gz * (0.75 + 0.25 * (gy / ay + 1) / 2)) for gy, gz in glass]
     B.link(mesh_from_arrays('S6 | door mirror glass', verts + [(cx - ax * 0.42 - 0.0015, cy, cz)],
                             [(i, (i + 1) % 48, 48) for i in range(48)], m['chrome'], smooth=False), mirror=True)
-    B.link(rounded_box('S6 | door mirror arm', (0.80, 0.83, 0.955), (0.075, 0.12, 0.04), m['black'], 3.0, (20, 10)), mirror=True)
+    B.link(rounded_box('S6 | door mirror arm', (0.80, 0.815, 0.968), (0.075, 0.11, 0.04), m['black'], 3.0, (20, 10)), mirror=True)
     # Black sail at the front corner of the front door window.
     b = B.body
     poly = [(0.76, -0.01), (0.96, -0.01), (0.96, 1.01), (0.76, 0.40)]
