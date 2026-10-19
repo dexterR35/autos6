@@ -27,14 +27,10 @@ const PRACTICALS = [
   { kind: 'bulb', test: /tungsten worklamp/i, color: [1, 0.5, 0.2], strength: 5.2, budget: 2, power: 0.8, reach: 3.5 },
 ];
 
-// Ceiling work lights. Off is the dim neon mood of the references; on floods the
-// room and the car with cool white fluorescent light, row by row with a tube flicker.
+// Ceiling work lights stay lit. Brightness blends the room's fill and reflections.
 const CEILING = {
   off: { emissive: new THREE.Color(1, 0.84, 0.66), strength: 3, sky: new THREE.Color('#7b8fb8'), fill: 0.26, environment: 0.65, carEnvironment: 2.2 },
   on: { emissive: new THREE.Color(0.92, 0.96, 1), strength: 5.6, sky: new THREE.Color('#e4ebff'), fill: 0.85, environment: 0.5, carEnvironment: 1.35, light: 75 },
-  // Starter flicker of a fluorescent tube, one step per 55 ms.
-  flicker: [0.9, 0, 0, 0.7, 0.15, 0, 1, 0.45, 1],
-  step: 55,
   fade: 240,
 };
 
@@ -367,15 +363,13 @@ export function createGarageLook({ renderer, scene, camera, compact = false }) {
   const base = new THREE.Group();
   base.name = 'Garage look | base lights';
   // Cool blue-grey night fill: the masonry stays readable away from the neon.
-  const hemisphere = new THREE.HemisphereLight(CEILING.off.sky, '#0b0e18', CEILING.off.fill);
+  const hemisphere = new THREE.HemisphereLight(CEILING.on.sky, '#0b0e18', CEILING.on.fill);
   base.add(hemisphere);
-  // Ceiling work lights, at zero until switched on. A zero-intensity light costs
-  // almost nothing (its BRDF is skipped) and keeping the light count fixed avoids
-  // recompiling every shader when the switch is used.
+  // Keep the light count fixed while adjusting brightness to avoid shader recompiles.
   const ceilingLights = [];
   for (const x of [-7, 0, 7]) {
     for (const z of [-8.5, -1.5, 6.5]) {
-      const light = new THREE.PointLight('#f2f6ff', 0, 15, 2);
+      const light = new THREE.PointLight('#f2f6ff', CEILING.on.light, 15, 2);
       light.position.set(x, 5.1, z);
       light.name = 'Ceiling work light';
       ceilingLights.push(light);
@@ -438,7 +432,8 @@ export function createGarageLook({ renderer, scene, camera, compact = false }) {
   let shadow = null;
   let practicalLights = null;
   let carMaterials = [];
-  const ceiling = { on: false, instant: true, since: 0, rows: [], probes: { off: null, on: null }, probe: null };
+  const ceiling = { level: 1, instant: true, since: 0, rows: [], probe: null };
+  let roomProbe = null;
 
   /** Applies the ceiling state for per-row levels (0 off, 1 on); returns the mean level. */
   function applyCeiling(levels) {
@@ -450,12 +445,13 @@ export function createGarageLook({ renderer, scene, camera, compact = false }) {
       row.material.emissiveIntensity = THREE.MathUtils.lerp(CEILING.off.strength, CEILING.on.strength, level);
       total += level;
     });
-    const mean = ceiling.rows.length ? total / ceiling.rows.length : Number(ceiling.on);
+    const mean = ceiling.rows.length ? total / ceiling.rows.length : ceiling.level;
     ceilingLights.forEach((light) => { light.intensity = CEILING.on.light * mean; });
     hemisphere.color.lerpColors(CEILING.off.sky, CEILING.on.sky, mean);
     hemisphere.intensity = THREE.MathUtils.lerp(CEILING.off.fill, CEILING.on.fill, mean);
-    // Reflections switch to the lit-room probe halfway through the transition.
-    const probe = mean >= 0.5 && ceiling.probes.on ? ceiling.probes.on : ceiling.probes.off;
+    // Use one lit-room probe across the visible brightness range; switching probes
+    // halfway through a slider gesture produces a distracting reflection pop.
+    const probe = roomProbe;
     if (probe && probe !== ceiling.probe) {
       ceiling.probe = probe;
       scene.environment = probe.texture;
@@ -470,29 +466,18 @@ export function createGarageLook({ renderer, scene, camera, compact = false }) {
   /** Advances the switch transition; returns true while it still needs frames. */
   function advanceCeiling(now) {
     if (!ceiling.rows.length) return false;
-    const elapsed = now - ceiling.since;
-    let animating = false;
-    const levels = ceiling.rows.map((row) => {
-      if (ceiling.instant) return Number(ceiling.on);
-      if (!ceiling.on) {
-        const level = Math.max(0, row.from * (1 - elapsed / CEILING.fade));
-        if (level > 0) animating = true;
-        return level;
-      }
-      const step = Math.floor((elapsed - row.delay) / CEILING.step);
-      if (step >= CEILING.flicker.length) return 1;
-      animating = true;
-      return step < 0 ? row.from : CEILING.flicker[step];
-    });
+    const t = ceiling.instant ? 1 : Math.min(1, Math.max(0, (now - ceiling.since) / CEILING.fade));
+    const ease = t * t * (3 - 2 * t);
+    const levels = ceiling.rows.map((row) => THREE.MathUtils.lerp(row.from, ceiling.level, ease));
     applyCeiling(levels);
-    if (!animating) ceiling.instant = false;
-    return animating;
+    return t < 1;
   }
 
-  /** Ceiling work lights on or off; instant skips the flicker and fade. */
-  function setCeilingLights(on, instant = false) {
-    if (on === ceiling.on && !instant) return;
-    ceiling.on = on;
+  /** Never black out the workshop; reduced motion applies brightness immediately. */
+  function setLightLevel(value, instant = false) {
+    const level = THREE.MathUtils.clamp(value, 0.35, 1);
+    if (level === ceiling.level && !instant) return;
+    ceiling.level = level;
     ceiling.instant = instant;
     ceiling.since = performance.now();
     ceiling.rows.forEach((row) => { row.from = row.level; });
@@ -509,9 +494,7 @@ export function createGarageLook({ renderer, scene, camera, compact = false }) {
       object.receiveShadow = true;
       const material = object.material;
       if (object.userData.ceilingRow !== undefined) {
-        // Rows switch on one after another, with a little irregularity.
-        const row = object.userData.ceilingRow;
-        ceiling.rows.push({ material, delay: row * 150 + ((row * 37) % 5) * 22, level: 0, from: 0 });
+        ceiling.rows.push({ material, level: ceiling.level, from: ceiling.level });
         return;
       }
       if (object.userData.surface === 'floor' || /wet concrete/i.test(material.name)) {
@@ -553,23 +536,18 @@ export function createGarageLook({ renderer, scene, camera, compact = false }) {
     shadow = contactShadow();
     scene.add(shadow);
 
-    // Probes of the lit workshop: the garage gets soft bounce from them and the car's
-    // paint, glass and chrome reflect the neon and cabinets around it. With the
-    // ceiling lights off, the ceiling is left out (it would wash every wall); with
-    // them on, it is the main source, and the paint shows rows of tube reflections.
-    const capture = (lightsOn) => {
+    // The lit workshop probe gives paint, glass and chrome the tube reflections.
+    const capture = () => {
       const hidden = [car, shadow];
-      if (!lightsOn) scene.traverse((object) => { if (object.userData.excludeFromProbe) hidden.push(object); });
       hidden.forEach((object) => { object.visible = false; });
-      applyCeiling(ceiling.rows.map(() => Number(lightsOn)));
+      applyCeiling(ceiling.rows.map(() => 1));
       reflection.strength.value = 0;
       const probe = track(pmrem.fromScene(scene, 0.03, 0.1, 60, { position: new THREE.Vector3(0, 2.2, -2.5), size: 256 }));
       hidden.forEach((object) => { object.visible = true; });
       reflection.strength.value = 1;
       return probe;
     };
-    ceiling.probes.on = capture(true);
-    ceiling.probes.off = capture(false);
+    roomProbe = capture();
     car.traverse((object) => {
       if (!object.isMesh) return;
       for (const material of [object.material].flat().filter(Boolean)) {
@@ -590,7 +568,7 @@ export function createGarageLook({ renderer, scene, camera, compact = false }) {
       }
     });
     ceiling.probe = null;
-    applyCeiling(ceiling.rows.map(() => Number(ceiling.on)));
+    applyCeiling(ceiling.rows.map(() => ceiling.level));
     renderer.shadowMap.needsUpdate = true;
   }
 
@@ -616,5 +594,5 @@ export function createGarageLook({ renderer, scene, camera, compact = false }) {
     base.traverse((light) => light.dispose?.());
   }
 
-  return { attach, setSize, render, dispose, setCeilingLights, get practicalLights() { return practicalLights; } };
+  return { attach, setSize, render, dispose, setLightLevel, get practicalLights() { return practicalLights; } };
 }

@@ -60,7 +60,7 @@ if (params.get('extend') !== '0') extendGarage(garage);
 scene.add(car, garage);
 if (params.get('flat') === '1') scene.add(new THREE.AmbientLight('#ffffff', 6));
 look.attach({ car, garage });
-if (params.get('lights') === 'on') look.setCeilingLights(true, true);
+if (params.get('lights') === 'on') look.setLightLevel(1, true);
 car.visible = params.get('car') !== '0';
 renderer.shadowMap.needsUpdate = true;
 // Tuning overrides: lights=on (ceiling lights), exposure=0.85, tone=aces|agx|neutral,

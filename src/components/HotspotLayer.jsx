@@ -134,7 +134,7 @@ export default function HotspotLayer({
           onHover={onHover}
         />
       ))}
-      {anchors.map((a, i) => (
+      {anchors.filter((a) => !compact || a.partId === selectedPartId).map((a, i) => (
         <HotspotButton
           key={a.id}
           delay={delayFor(`d-${a.id}`, 240, i, 45)}
@@ -146,6 +146,7 @@ export default function HotspotLayer({
           onSelect={onSelect}
           onHover={onHover}
           currency={currency}
+          subtle={compact}
         />
       ))}
     </div>

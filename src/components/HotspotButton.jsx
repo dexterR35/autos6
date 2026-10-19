@@ -2,11 +2,11 @@ import { formatCents } from '../lib/money.js';
 import { STATUS_LABELS } from '../lib/parts.js';
 
 /** Semantic hotspot: 44px hit area, ~22px visible blue ring. Always blue regardless of status. */
-export default function HotspotButton({ part, point, selected, active, onSelect, onHover, currency, delay = '0ms', covered = false }) {
+export default function HotspotButton({ part, point, selected, active, onSelect, onHover, currency, delay = '0ms', covered = false, subtle = false }) {
   return (
     <button
       type="button"
-      className={`hotspot ${selected ? 'is-selected' : ''} ${active ? 'is-active' : ''} ${covered ? 'is-covered' : ''}`}
+      className={`hotspot ${subtle ? 'hotspot--subtle' : ''} ${selected ? 'is-selected' : ''} ${active ? 'is-active' : ''} ${covered ? 'is-covered' : ''}`}
       tabIndex={covered ? -1 : undefined}
       style={{ left: point.x, top: point.y, '--delay': delay }}
       aria-label={`${part.name}, ${STATUS_LABELS[part.status]}, estimated ${formatCents(part.estimateCents, currency)}. Show details.`}

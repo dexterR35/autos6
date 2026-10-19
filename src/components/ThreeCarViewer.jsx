@@ -77,6 +77,7 @@ export default function ThreeCarViewer({
   const mountRef = useRef(null);
   const toolbarRef = useRef(null);
   const hintRef = useRef(null);
+  const lightingRef = useRef(null);
   const markersRef = useRef(new Map());
   const runtimeRef = useRef(null);
   const propsRef = useRef(null);
@@ -84,7 +85,8 @@ export default function ThreeCarViewer({
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState({ state: 'loading', progress: 0 });
   const [garageView, setGarageView] = useState(false);
-  const [ceilingLights, setCeilingLights] = useState(false);
+  const [lightLevel, setLightLevel] = useState(100);
+  const [lightingOpen, setLightingOpen] = useState(false);
 
   useEffect(() => {
     const host = mountRef.current;
@@ -102,6 +104,8 @@ export default function ThreeCarViewer({
     let height = 1;
     let sceneReady = false;
     let pointerStart = null;
+    const activePointers = new Set();
+    let lastFrameTime = 0;
     const occluders = [];
     let rayIndex = null;
     const cleanups = [];
@@ -138,7 +142,7 @@ export default function ThreeCarViewer({
       if (!car || !sceneReady) return;
       const current = propsRef.current;
       const bounds = stage.getBoundingClientRect();
-      const covered = [...current.reservedRefs, ...current.overlayRefs, toolbarRef, hintRef]
+      const covered = [...current.reservedRefs, ...current.overlayRefs, toolbarRef, hintRef, lightingRef]
         .map((ref) => ref?.current?.getBoundingClientRect()).filter((rect) => rect?.width && rect?.height);
       const occupied = [];
       const entries = [...markersRef.current.entries()].sort(([a], [b]) => Number(b === current.selectedPartId) - Number(a === current.selectedPartId));
@@ -221,9 +225,12 @@ export default function ThreeCarViewer({
       frameId = 0;
       if (disposed || failed || document.hidden) return;
       trackMotion(time);
+      const delta = lastFrameTime ? Math.min((time - lastFrameTime) / 1000, 0.05) : 1 / 60;
+      lastFrameTime = time;
+      controls.dampingFactor = 1 - Math.pow(1 - 0.09, delta * 60);
       if (tween) {
         const t = Math.min(1, (time - tween.started) / tween.duration);
-        const ease = 1 - (1 - t) ** 3;
+        const ease = t * t * t * (t * (t * 6 - 15) + 10);
         controls.target.lerpVectors(tween.fromTarget, tween.toTarget, ease);
         const spherical = new THREE.Spherical(
           THREE.MathUtils.lerp(tween.fromOrbit.radius, tween.toOrbit.radius, ease),
@@ -263,11 +270,16 @@ export default function ThreeCarViewer({
       else settle();
     }
 
-    function flyTo(position, target, immediate = false, fov = 36) {
-      // Flush momentum before applying a saved camera, so drag inertia cannot alter it.
+    function flyTo(position, target, immediate = false, fov = 36, duration = 680) {
+      // Clear inertia, then restore the visible pose so interrupting a drag never
+      // jumps to the end of its remaining momentum before starting the transition.
+      const visiblePosition = camera.position.clone();
+      const visibleTarget = controls.target.clone();
       controls.enableDamping = false;
       controls.update();
       controls.enableDamping = !reducedMotion;
+      camera.position.copy(visiblePosition);
+      controls.target.copy(visibleTarget);
       tween = null;
       if (immediate || reducedMotion) {
         camera.position.fromArray(position);
@@ -283,7 +295,7 @@ export default function ThreeCarViewer({
         tween = {
           fromOrbit, toOrbit, fromTarget: controls.target.clone(), toTarget,
           fromFov: camera.fov, toFov: fov,
-          started: performance.now(), duration: 620,
+          started: performance.now(), duration,
         };
       }
       requestFrame();
@@ -293,6 +305,14 @@ export default function ThreeCarViewer({
       const preset = cameraPreset(propsRef.current.viewId, propsRef.current.compact);
       setGarageView(false);
       flyTo(preset.position, preset.target);
+    }
+
+    function zoom(direction) {
+      const target = tween?.toTarget.clone() ?? controls.target.clone();
+      const orbit = tween?.toOrbit.clone() ?? new THREE.Spherical().setFromVector3(camera.position.clone().sub(target));
+      orbit.radius = THREE.MathUtils.clamp(orbit.radius * (direction > 0 ? 1 / 1.2 : 1.2), controls.minDistance, controls.maxDistance);
+      const position = new THREE.Vector3().setFromSpherical(orbit).add(target);
+      flyTo(position.toArray(), target.toArray(), false, tween?.toFov ?? camera.fov, 280);
     }
 
     function pick(event) {
@@ -322,7 +342,7 @@ export default function ThreeCarViewer({
       canvas.className = 'three-canvas';
       canvas.tabIndex = 0;
       canvas.setAttribute('role', 'img');
-      canvas.setAttribute('aria-label', 'Interactive 3D Audi S6 and garage. Drag to orbit, scroll to zoom, right-drag to pan. Arrow keys orbit, plus and minus zoom, Home resets.');
+      canvas.setAttribute('aria-label', 'Interactive 3D Audi S6 and garage. Click or tap a car component to see details. Drag to orbit, scroll or pinch to zoom. Arrow keys orbit, plus and minus zoom, Home resets.');
       host.appendChild(canvas);
 
       controls = new OrbitControls(camera, canvas);
@@ -341,7 +361,8 @@ export default function ThreeCarViewer({
       controls.target.fromArray(initial.target);
       controls.update();
       controls.addEventListener('change', requestFrame);
-      controls.addEventListener('start', () => { tween = null; requestFrame(); });
+      controls.addEventListener('start', () => { tween = null; stage.dataset.interacting = 'true'; requestFrame(); });
+      controls.addEventListener('end', () => { stage.dataset.interacting = 'false'; requestFrame(); });
 
       // Neon practicals, wet reflective floor, workshop probe and bloom.
       look = createGarageLook({ renderer, scene, camera, compact: propsRef.current.compact });
@@ -362,7 +383,9 @@ export default function ThreeCarViewer({
 
       listen(canvas, 'webglcontextlost', (event) => { event.preventDefault(); fail(new Error('WebGL context lost. Retry to restore the garage.')); });
       listen(canvas, 'pointerdown', (event) => {
-        pointerStart = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false, primary: event.isPrimary, button: event.button };
+        activePointers.add(event.pointerId);
+        if (activePointers.size === 1) pointerStart = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false, primary: event.isPrimary, button: event.button };
+        else if (pointerStart) pointerStart.moved = true;
         propsRef.current.onPartHover?.(null);
       });
       listen(canvas, 'pointermove', (event) => {
@@ -376,26 +399,27 @@ export default function ThreeCarViewer({
         propsRef.current.onPartHover?.(partId);
       });
       listen(canvas, 'pointerup', (event) => {
+        activePointers.delete(event.pointerId);
         const start = pointerStart;
         pointerStart = null;
         if (!start || !start.primary || start.moved || start.button !== 0 || event.pointerId !== start.id) return;
         const partId = pick(event);
-        if (partId) propsRef.current.onPartSelect?.(partId, { source: 'hotspot' });
+        propsRef.current.onPartSelect?.(partId, { source: 'hotspot' });
       });
-      listen(canvas, 'pointercancel', () => { pointerStart = null; });
+      listen(canvas, 'pointercancel', (event) => { activePointers.delete(event.pointerId); pointerStart = null; stage.dataset.interacting = 'false'; });
       listen(canvas, 'pointerleave', () => { propsRef.current.onPartHover?.(null); });
       listen(canvas, 'keydown', (event) => {
         const step = Math.PI / 18;
         const actions = {
           ArrowLeft: () => controls.rotateLeft(step), ArrowRight: () => controls.rotateLeft(-step),
           ArrowUp: () => controls.rotateUp(step), ArrowDown: () => controls.rotateUp(-step),
-          '+': () => controls.dollyIn(1 / 1.16), '=': () => controls.dollyIn(1 / 1.16),
-          '-': () => controls.dollyOut(1 / 1.16), _: () => controls.dollyOut(1 / 1.16), Home: reset,
+          '+': () => zoom(1), '=': () => zoom(1),
+          '-': () => zoom(-1), _: () => zoom(-1), Home: reset,
         };
         if (!actions[event.key]) return;
         event.preventDefault();
         event.stopPropagation();
-        tween = null;
+        if (event.key.startsWith('Arrow')) tween = null;
         actions[event.key]();
         requestFrame();
       });
@@ -406,8 +430,8 @@ export default function ThreeCarViewer({
 
       runtimeRef.current = {
         reset, invalidate: requestFrame,
-        zoom: (direction) => { tween = null; direction > 0 ? controls.dollyIn(1 / 1.2) : controls.dollyOut(1 / 1.2); requestFrame(); },
-        setCeilingLights: (on) => { look.setCeilingLights(on, reducedMotion); requestFrame(); },
+        zoom,
+        setLightLevel: (level) => { look.setLightLevel(level / 100, reducedMotion); requestFrame(); },
         showGarage: (enabled) => {
           setGarageView(enabled);
           if (enabled) flyTo([6.5, 4.4, 8.1], GARAGE_TARGET, false, 50);
@@ -479,13 +503,26 @@ export default function ThreeCarViewer({
   }, [attempt]);
 
   useEffect(() => { runtimeRef.current?.reset(); }, [viewId, resetKey, compact]);
-  useEffect(() => { runtimeRef.current?.setCeilingLights(ceilingLights); }, [ceilingLights, attempt]);
-  useEffect(() => { runtimeRef.current?.invalidate(); }, [selectedPartId, visiblePartIds, hoveredPartId, status.state, reservedRefs, overlayRefs]);
+  useEffect(() => { runtimeRef.current?.setLightLevel(lightLevel); }, [lightLevel, attempt]);
+  useEffect(() => { runtimeRef.current?.invalidate(); }, [selectedPartId, visiblePartIds, hoveredPartId, status.state, reservedRefs, overlayRefs, lightingOpen]);
+
+  useEffect(() => {
+    if (!lightingOpen) return undefined;
+    const dismiss = (event) => {
+      if (event.type === 'keydown' && event.key !== 'Escape') return;
+      if (event.type === 'pointerdown' && (lightingRef.current?.contains(event.target) || event.target.closest('.three-toolbar__lights'))) return;
+      setLightingOpen(false);
+      if (event.type === 'keydown') toolbarRef.current?.querySelector('.three-toolbar__lights')?.focus();
+    };
+    document.addEventListener('pointerdown', dismiss);
+    document.addEventListener('keydown', dismiss);
+    return () => { document.removeEventListener('pointerdown', dismiss); document.removeEventListener('keydown', dismiss); };
+  }, [lightingOpen]);
 
   const ready = status.state === 'ready';
   const selectPart = (id) => onPartSelect?.(id, { source: 'hotspot' });
   return (
-    <div ref={stageRef} className="viewer viewer--three" data-testid="three-viewer" data-renderer="three" data-view-id={viewId} data-loaded={ready}>
+    <div ref={stageRef} className="viewer viewer--three" data-testid="three-viewer" data-renderer="three" data-view-id={viewId} data-loaded={ready} data-light-level={lightLevel}>
       <div ref={mountRef} className="three-canvas-mount" />
       {status.state === 'loading' && (
         <div className="three-loading" role="status" aria-live="polite">
@@ -507,20 +544,32 @@ export default function ThreeCarViewer({
       {ready && (
         <>
           <div className="three-hotspots">
-            {Object.keys(ANCHORS).filter((id) => partsById[id] && (!visiblePartIds || visiblePartIds.has(id))).map((id) => (
+            {Object.keys(ANCHORS).filter((id) => id === selectedPartId && partsById[id] && (!visiblePartIds || visiblePartIds.has(id))).map((id) => (
               <div className="three-hotspot-anchor" key={id} ref={(element) => { if (element) markersRef.current.set(id, element); else markersRef.current.delete(id); }}>
-                <HotspotButton part={partsById[id]} point={{ x: 0, y: 0 }} selected={id === selectedPartId} active={id === (hoveredPartId ?? selectedPartId)} onSelect={selectPart} onHover={(partId) => onPartHover?.(partId)} currency={currency} />
+                <HotspotButton part={partsById[id]} point={{ x: 0, y: 0 }} selected={id === selectedPartId} active={id === (hoveredPartId ?? selectedPartId)} onSelect={selectPart} onHover={(partId) => onPartHover?.(partId)} currency={currency} subtle />
               </div>
             ))}
           </div>
           <div ref={toolbarRef} className="three-toolbar" role="group" aria-label="3D camera controls">
-            <button type="button" onClick={() => runtimeRef.current?.reset()} title="Reset view"><RotateCcw aria-hidden="true" /><span>Reset view</span></button>
-            <button type="button" onClick={() => runtimeRef.current?.zoom(1)} aria-label="Zoom in" title="Zoom in"><Plus aria-hidden="true" /></button>
-            <button type="button" onClick={() => runtimeRef.current?.zoom(-1)} aria-label="Zoom out" title="Zoom out"><Minus aria-hidden="true" /></button>
-            <button type="button" className={garageView ? 'is-active' : ''} aria-pressed={garageView} onClick={() => runtimeRef.current?.showGarage(!garageView)} title="Garage view"><Warehouse aria-hidden="true" /><span>Garage view</span></button>
-            <button type="button" className="three-toolbar__lights" aria-pressed={ceilingLights} aria-label="Ceiling lights" onClick={() => setCeilingLights((on) => !on)} title={ceilingLights ? 'Turn the ceiling lights off' : 'Turn the ceiling lights on'}><Lightbulb aria-hidden="true" /><span>Lights</span></button>
+            <div className="three-toolbar__views">
+              <button type="button" onClick={() => runtimeRef.current?.reset()} aria-label="Reset view" title="Reset view"><RotateCcw aria-hidden="true" /><span>Reset</span></button>
+              <button type="button" className={garageView ? 'is-active' : ''} aria-label="Garage view" aria-pressed={garageView} onClick={() => runtimeRef.current?.showGarage(!garageView)} title="Garage view"><Warehouse aria-hidden="true" /><span>Garage</span></button>
+            </div>
+            <div className="three-toolbar__zoom" role="group" aria-label="Zoom">
+              <button type="button" onClick={() => runtimeRef.current?.zoom(-1)} aria-label="Zoom out" title="Zoom out"><Minus aria-hidden="true" /></button>
+              <span aria-hidden="true">Zoom</span>
+              <button type="button" onClick={() => runtimeRef.current?.zoom(1)} aria-label="Zoom in" title="Zoom in"><Plus aria-hidden="true" /></button>
+            </div>
+            <button type="button" className="three-toolbar__lights" aria-expanded={lightingOpen} aria-controls="garage-lighting" aria-label="Adjust garage lighting" onClick={() => setLightingOpen((open) => !open)} title="Adjust garage lighting"><Lightbulb aria-hidden="true" /><span>Lights <small>{lightLevel}%</small></span></button>
           </div>
-          <p ref={hintRef} className="three-hint">{compact ? 'Drag to orbit · Pinch to zoom · Two fingers to pan' : 'Drag to orbit · Scroll to zoom · Right-drag to pan'}</p>
+          {lightingOpen && (
+            <div ref={lightingRef} id="garage-lighting" className="three-lighting" role="group" aria-label="Garage lighting">
+              <label htmlFor="garage-brightness">Brightness <output htmlFor="garage-brightness">{lightLevel}%</output></label>
+              <input id="garage-brightness" type="range" min="35" max="100" step="5" value={lightLevel} onChange={(event) => setLightLevel(Number(event.target.value))} />
+              <div><span>Soft</span><span>Bright</span></div>
+            </div>
+          )}
+          <p ref={hintRef} className={`three-hint ${lightingOpen ? 'is-hidden' : ''}`}>{compact ? 'Drag to explore · Tap a car part for details' : 'Drag to orbit · Scroll to zoom · Click a car part for details'}</p>
         </>
       )}
     </div>

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import App from '../src/App.jsx';
 import { ProjectDataProvider } from '../src/hooks/useProjectData.jsx';
 import { GarageStateProvider } from '../src/hooks/useGarageState.jsx';
@@ -25,7 +25,7 @@ beforeAll(() => {
   window.scrollTo = () => {};
   Element.prototype.scrollIntoView = () => {};
 });
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
 // jsdom covers the explicit image fallback; the actual WebGL renderer is exercised
 // in scripts/verify-orbit.mjs with a browser and the exported Blender models.
@@ -56,6 +56,18 @@ async function switchView(label) {
 }
 
 describe('garage image fallback dashboard (demo mode)', () => {
+  it('keeps mobile clear until a part is selected and removes its marker when details close', () => {
+    vi.stubGlobal('matchMedia', (query) => ({ matches: query === '(max-width: 900px)', addEventListener() {}, removeEventListener() {} }));
+    renderApp();
+    expect(dotParts()).toEqual([]);
+    expect(document.querySelectorAll('.callout')).toHaveLength(0);
+    fireEvent.click(document.querySelector('[data-part-row="hood"]'));
+    expect(dotParts()).toEqual(['hood']);
+    expect(document.querySelector('.hotspot')).toHaveClass('hotspot--subtle');
+    fireEvent.click(screen.getByRole('button', { name: 'Close part details' }));
+    expect(dotParts()).toEqual([]);
+  });
+
   it('renders the reference content from data', () => {
     renderApp();
     expect(screen.getByRole('button', { name: 'All (10)' })).toBeInTheDocument();

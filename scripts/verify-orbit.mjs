@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium } from 'playwright';
+import * as THREE from 'three';
 
 const base = (process.argv[2] || 'http://127.0.0.1:5173').replace(/\/$/, '');
 const output = resolve(process.argv[3] || 'output/orbit-verification');
@@ -52,8 +53,11 @@ async function ready(page, path = '/') {
 }
 async function screenshot(page, name) {
   if (await page.locator(`${viewerSelector}[data-loaded="true"]`).count()) await settled(page);
+  await page.evaluate(() => scrollTo(0, 0));
   const path = resolve(output, `${name}.png`);
-  await page.screenshot({ path, fullPage: true });
+  // A full-page mobile capture resizes the visual viewport, which moves fixed
+  // sheets and sticky headers. Capture the actual phone viewport instead.
+  await page.screenshot({ path, fullPage: page.viewportSize().width > 900 });
   report.screenshots.push(path);
 }
 function monitor(page) {
@@ -76,10 +80,40 @@ async function drag(page, canvas, deltaX = 220, deltaY = 40) {
   await page.mouse.up();
 }
 
+async function carSurfacePoint(page, position) {
+  const pose = await camera(page);
+  const bounds = await page.locator('canvas.three-canvas').boundingBox();
+  const fov = Number(await page.locator(viewerSelector).getAttribute('data-camera-fov'));
+  const projection = new THREE.PerspectiveCamera(fov, bounds.width / bounds.height, 0.08, 90);
+  projection.position.fromArray(pose.position);
+  projection.lookAt(new THREE.Vector3(...pose.target));
+  projection.updateMatrixWorld();
+  const point = new THREE.Vector3(...position).project(projection);
+  return { x: bounds.x + (point.x + 1) * bounds.width / 2, y: bounds.y + (1 - point.y) * bounds.height / 2 };
+}
+
+async function checkLighting(page) {
+  assert.equal(await page.locator(viewerSelector).getAttribute('data-light-level'), '100', 'Lights start at full brightness');
+  const lighting = page.getByRole('button', { name: 'Adjust garage lighting' });
+  await lighting.click();
+  assert.equal(await lighting.getAttribute('aria-expanded'), 'true');
+  const slider = page.getByRole('slider', { name: 'Brightness' });
+  await slider.focus();
+  await page.keyboard.press('Home');
+  assert.equal(await slider.inputValue(), '35', 'Minimum brightness keeps lights on');
+  await page.keyboard.press('End');
+  assert.equal(await slider.inputValue(), '100');
+  await page.keyboard.press('Escape');
+  assert.equal(await lighting.getAttribute('aria-expanded'), 'false');
+  report.checks.push({ name: 'lights start on; accessible brightness control never switches them off' });
+}
+
 try {
   const desktop = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
   monitor(desktop);
   const canvas = await ready(desktop);
+  assert.equal(await desktop.locator(`${viewerSelector} .hotspot`).count(), 0, 'No idle part markers obscure the car');
+  await checkLighting(desktop);
   await screenshot(desktop, 'desktop-before-orbit');
   const initial = await camera(desktop);
   assert.ok(initial.position.every(Number.isFinite) && initial.target.every(Number.isFinite));
@@ -121,13 +155,15 @@ try {
   await desktop.locator('[data-angle="exterior-a"]').click();
   await settled(desktop);
   const hood = desktop.locator(`${viewerSelector} [data-part-id="hood"]`);
+  const hoodPoint = await carSurfacePoint(desktop, [1.72, 0.89, 0]);
+  await desktop.mouse.click(hoodPoint.x, hoodPoint.y);
   await hood.waitFor({ state: 'visible' });
-  await hood.click();
   await desktop.getByRole('complementary', { name: 'Hood', exact: true }).waitFor();
   assert.equal(await desktop.locator('[data-part-row="hood"]').getAttribute('aria-current'), 'true');
   await screenshot(desktop, 'desktop-selected-part');
   await desktop.getByRole('button', { name: 'Close part details' }).click();
-  report.checks.push({ name: '3D hotspot opens matching part details and selects catalogue row' });
+  assert.equal(await desktop.locator(`${viewerSelector} .hotspot`).count(), 0, 'Closing details removes the selected marker');
+  report.checks.push({ name: 'clicking actual car body selects component, shows one subtle marker, and opens matching details' });
 
   const search = desktop.getByPlaceholder('Search parts...').first();
   await search.fill('bumper');
@@ -196,6 +232,23 @@ try {
   const mobile = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
   monitor(mobile);
   const mobileCanvas = await ready(mobile);
+  assert.equal(await mobile.locator(`${viewerSelector} .hotspot`).count(), 0, 'Mobile starts without component dots');
+  await checkLighting(mobile);
+  const mobileInitial = await settled(mobile);
+  await mobile.getByRole('button', { name: 'Zoom in', exact: true }).tap();
+  const mobileZoomed = await settled(mobile);
+  assert.ok(distance(mobileZoomed) < distance(mobileInitial) - 0.1);
+  await mobile.getByRole('button', { name: 'Zoom out', exact: true }).tap();
+  assert.ok(distance(await settled(mobile)) > distance(mobileZoomed) + 0.1);
+  const mobileHoodPoint = await carSurfacePoint(mobile, [1.72, 0.89, 0]);
+  await mobile.touchscreen.tap(mobileHoodPoint.x, mobileHoodPoint.y);
+  await mobile.getByRole('complementary', { name: 'Hood', exact: true }).waitFor();
+  assert.equal(await mobile.evaluate(() => innerWidth), 390, 'Selecting a part does not widen the mobile viewport');
+  assert.equal(await mobile.locator(`${viewerSelector} .hotspot`).count(), 1, 'Tap reveals only the selected marker');
+  await screenshot(mobile, 'mobile-selected-component');
+  await mobile.getByRole('button', { name: 'Close part details' }).tap();
+  assert.equal(await mobile.locator(`${viewerSelector} .hotspot`).count(), 0);
+  report.checks.push({ name: 'mobile zoom buttons and direct component taps work without persistent dots' });
   await screenshot(mobile, 'mobile-before-orbit');
   const mobilePose = await camera(mobile);
   const mobileBounds = await mobileCanvas.boundingBox();
@@ -213,6 +266,26 @@ try {
   const afterTouch = await moved(mobile, mobilePose);
   await screenshot(mobile, 'mobile-after-orbit');
   report.checks.push({ name: 'mobile touch drag orbits the real camera', movement: separation(mobilePose.position, afterTouch.position) });
+  assert.equal(await mobile.locator('.part-drawer').count(), 0, 'Orbiting does not accidentally select a component');
+  const beforePinch = await settled(mobile);
+  const pinchY = mobileBounds.y + mobileBounds.height * 0.45;
+  const pinchX = mobileBounds.x + mobileBounds.width * 0.5;
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ id: 1, x: pinchX - 30, y: pinchY }, { id: 2, x: pinchX + 30, y: pinchY }] });
+  for (let step = 1; step <= 8; step++) {
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ id: 1, x: pinchX - 30 - step * 5, y: pinchY }, { id: 2, x: pinchX + 30 + step * 5, y: pinchY }] });
+  }
+  await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  const afterPinch = await settled(mobile);
+  assert.ok(distance(afterPinch) < distance(beforePinch) - 0.1, 'Spreading two fingers zooms in');
+  assert.equal(await mobile.locator('.part-drawer').count(), 0, 'Pinch does not accidentally select a component');
+  report.checks.push({ name: 'two-finger pinch zooms without selecting parts' });
+  await mobile.setViewportSize({ width: 320, height: 740 });
+  assert.equal(await mobile.evaluate(() => innerWidth), 320, 'Header and scene fit narrow phones without widening the viewport');
+  for (const control of await mobile.locator('.three-toolbar button').all()) {
+    const rect = await control.boundingBox();
+    assert.ok(rect.x >= 0 && rect.x + rect.width <= 320 && rect.width >= 44 && rect.height >= 44, 'Every control fits narrow phones and has a 44px touch target');
+  }
+  await screenshot(mobile, 'mobile-narrow-controls');
   await mobile.close();
 
   await desktop.goto(`${base}/?viewer=image`, { waitUntil: 'networkidle' });
