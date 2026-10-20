@@ -1,0 +1,53 @@
+{
+  "verifiedAt": "2026-10-20T22:34:13.624Z",
+  "project": {
+    "id": "006db33e-7594-4b89-b604-4c7c49f58a51",
+    "slug": "project-s6",
+    "goal_cents": 1000000,
+    "currency": "usd"
+  },
+  "partCount": 10,
+  "summary": [
+    {
+      "goal_cents": 1000000,
+      "raised_cents": 0,
+      "donation_count": 0,
+      "currency": "usd"
+    }
+  ],
+  "privateAccess": [
+    {
+      "table": "donations",
+      "denied": true
+    },
+    {
+      "table": "stripe_events",
+      "denied": true
+    },
+    {
+      "table": "subscribers",
+      "denied": true
+    },
+    {
+      "table": "email_jobs",
+      "denied": true
+    }
+  ],
+  "assets": [
+    {
+      "name": "s6-c5.glb",
+      "bytes": 1407932,
+      "sha256": "d50d307b167c81d8298686431f4e7e122fe6639c1291ff250fd4dd2531899393"
+    },
+    {
+      "name": "garage.glb",
+      "bytes": 1816740,
+      "sha256": "6b6dc1426438c1428d99ff4d8d6d93358ce1ce9a95a4c493211173cdff028766"
+    },
+    {
+      "name": "garage-lighting.hdr",
+      "bytes": 12853,
+      "sha256": "214de2f2374bafe5722a5e5f63b127d82f9221c65c5312d370df02daf2da1501"
+    }
+  ]
+}

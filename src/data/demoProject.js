@@ -8,13 +8,13 @@ export const demoProject = {
   vehicleDisplayName: 'AUDI S6 C5 AVANT 4.2 V8 (2003)',
   tagline: 'MAKE THIS CAR GREAT AGAIN',
   currency: 'usd',
-  goalCents: 800000,
+  goalCents: 1000000,
   description:
     'A long-term restoration of a C5-generation Audi S6 Avant. Contributions go toward parts, paint and labour, one job at a time.',
 };
 
 // Sample funding shown in demo mode only.
-export const demoSummary = { raisedCents: 265000, goalCents: 800000, donationCount: null };
+export const demoSummary = { raisedCents: 265000, goalCents: 1000000, donationCount: null };
 
 export const demoParts = [
   { id: 'front-bumper', name: 'Front Bumper', estimateCents: 80000, status: 'needed', condition: 'Scratched', description: 'Original bumper cover is scratched and scuffed. Plan: repair, prime and paint to match.' },
@@ -27,7 +27,7 @@ export const demoParts = [
   { id: 'brake-kit', name: 'Brake Kit', estimateCents: 140000, status: 'upgrade', condition: 'Optional upgrade', description: 'Optional brake upgrade for the front axle.' },
   { id: 'roof-box', name: 'Roof Box', estimateCents: 45000, status: 'bought', condition: 'Purchased', description: 'Roof box already purchased and fitted.' },
   { id: 'interior', name: 'Interior Refresh', estimateCents: 60000, status: 'needed', condition: 'Needs restoration', description: 'Seats, trim and carpets need cleaning and repair. No interior photos yet.' },
-].map((p, i) => ({ ...p, sortOrder: i, thumbnailUrl: null }));
+].map((p, i) => ({ ...p, priority: ['front-bumper', 'exhaust', 'coilovers'].includes(p.id) ? 'important' : 'standard', raisedCents: [32000, 21000, 12000, 15000, 18000, 42000, 48000, 7000, 0, 20000][i], sortOrder: i, thumbnailUrl: null }));
 
 // Labelled fixture updates for the Progress page in demo mode. Placeholder copy only —
 // these are NOT real restoration events.
@@ -53,5 +53,5 @@ export const demoUpdates = [
 export const demoMilestones = [
   { id: 'm1', label: 'Bodywork essentials', targetCents: 260000 },
   { id: 'm2', label: 'Running gear (exhaust, suspension)', targetCents: 520000 },
-  { id: 'm3', label: 'Interior and finishing', targetCents: 800000 },
+  { id: 'm3', label: 'Interior and finishing', targetCents: 1000000 },
 ];

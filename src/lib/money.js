@@ -1,6 +1,10 @@
 // Money helpers. All amounts are integer cents; floats never reach the payment API.
 
-export const DONATION_PRESETS_CENTS = [500, 1000, 2500, 5000, 10000];
+export const DONATION_PRESETS_CENTS = [500, 2500];
+export const CAMPAIGN_GOAL_CENTS = 1_000_000;
+
+// Presentation cap only. The ledger always retains the full payment amount.
+export const displayedRaised = (raised, goal = CAMPAIGN_GOAL_CENTS) => Number.isFinite(raised) ? Math.min(Math.max(0, raised), goal) : null;
 export const DEFAULT_MIN_CENTS = 100; // $1
 export const DEFAULT_MAX_CENTS = 1_000_000; // $10,000
 
@@ -34,5 +38,5 @@ export function validateAmountCents(cents, { min = DEFAULT_MIN_CENTS, max = DEFA
 
 export function percentOf(part, whole) {
   if (!whole || whole <= 0 || !Number.isFinite(part)) return 0;
-  return Math.max(0, Math.min(100, Math.round((part / whole) * 100)));
+  return Math.max(0, Math.min(part < whole ? 99 : 100, Math.round((part / whole) * 100)));
 }

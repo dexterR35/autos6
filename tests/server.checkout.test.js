@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { APP_ORIGIN, createTestServer } from './helpers/server.js';
 
 const attempt = () => crypto.randomUUID();
-const body = (over = {}) => ({ projectSlug: 'project-s6', partId: null, amountCents: 2500, displayName: 'Alex', isPublic: true, attemptId: attempt(), ...over });
+const body = (over = {}) => ({ projectSlug: 'project-s6', partId: null, amountCents: 2500, displayName: 'Alex', isPublic: true, attemptId: attempt(), termsAccepted: true, termsVersion: '2026-10-21', ...over });
 
 let t;
 beforeEach(async () => {
@@ -48,6 +48,8 @@ describe('POST /api/donations/checkout', () => {
     [{ partId: '../etc' }, /part/],
     [{ displayName: 'x'.repeat(41) }, /40 characters/],
     [{ isPublic: 'yes' }, /recognition/],
+    [{ termsAccepted: false }, /terms/],
+    [{ termsVersion: 'old' }, /terms/],
   ])('rejects invalid input %j', async (over, msg) => {
     const res = await post(body(over));
     expect(res.status).toBe(400);
@@ -102,6 +104,21 @@ describe('POST /api/donations/checkout', () => {
     await post(body());
     const [s] = (await t.pg.query(`select * from get_campaign_summary('project-s6')`)).rows;
     expect(Number(s.raised_cents)).toBe(0);
+  });
+  it('continues accepting support after the $10,000 campaign goal is reached', async () => {
+    await t.pg.query("insert into donations(project_id,attempt_id,amount_cents,currency,status) select id,gen_random_uuid(),1100000,'usd','paid' from projects");
+    expect((await post(body({ amountCents: 500 }))).status).toBe(200);
+  });
+  it('requires a webhook secret before opening checkout', async () => {
+    const unavailable = await createTestServer({ config: { stripeWebhookSecret: '' } });
+    expect((await request(unavailable.app).post('/api/donations/checkout').set('Origin', APP_ORIGIN).send(body())).status).toBe(503);
+  });
+  it('sends policy consent to Stripe and records it before redirecting', async () => {
+    await post(body());
+    const [params] = t.stripe.checkout.sessions.create.mock.calls[0];
+    expect(params.consent_collection).toEqual({ terms_of_service: 'required' });
+    expect(params.metadata.terms_version).toBe('2026-10-21');
+    expect((await t.pg.query('select terms_accepted_at from donations')).rows[0].terms_accepted_at).toBeTruthy();
   });
 });
 

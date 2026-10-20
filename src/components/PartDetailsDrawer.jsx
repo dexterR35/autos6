@@ -2,6 +2,9 @@ import { forwardRef, useEffect, useRef } from 'react';
 import { Camera, EyeOff, HandHeart, X } from 'lucide-react';
 import PartThumb from './PartThumb.jsx';
 import StatusChip from './StatusChip.jsx';
+import PartProgress from './PartProgress.jsx';
+import PriorityChip from './PriorityChip.jsx';
+import SubscribeButton from './SubscribeButton.jsx';
 import { formatCents } from '../lib/money.js';
 import { viewHasPart, viewsContainingPart } from '../data/views.js';
 
@@ -33,11 +36,13 @@ const PartDetailsDrawer = forwardRef(function PartDetailsDrawer({ part, viewId, 
           </p>
           <div className="part-drawer__chips">
             <StatusChip status={part.status} />
+            <PriorityChip priority={part.priority} />
             {part.condition && <span className="condition">{part.condition}</span>}
           </div>
         </div>
       </div>
       {part.description && <p className="part-drawer__desc">{part.description}</p>}
+      <PartProgress part={part} currency={currency} />
 
       {showVisibility && (
         <div className="part-drawer__views">
@@ -66,6 +71,7 @@ const PartDetailsDrawer = forwardRef(function PartDetailsDrawer({ part, viewId, 
         <HandHeart aria-hidden="true" /> Fund this part
       </button>
       <p className="fine">Supports the restoration of this part — it isn’t a purchase of the part.</p>
+      <SubscribeButton partId={part.id} />
     </aside>
   );
 });

@@ -8,6 +8,7 @@ import './styles/tokens.css';
 import './styles/global.css';
 import './styles/garage.css';
 import './styles/pages.css';
+import './styles/refinements.css';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

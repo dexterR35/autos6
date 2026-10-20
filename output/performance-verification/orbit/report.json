@@ -1,0 +1,118 @@
+{
+  "base": "http://localhost:5173",
+  "checks": [
+    {
+      "name": "lights start on; accessible brightness control never switches them off"
+    },
+    {
+      "name": "mouse drag orbits the real camera",
+      "movement": 6.919704979260316
+    },
+    {
+      "name": "wheel zoom",
+      "before": 10.4341359488939,
+      "after": 8.390964724035014
+    },
+    {
+      "name": "zoom button direction is correct"
+    },
+    {
+      "name": "Front preset moves the camera",
+      "position": [
+        -1.648,
+        3.572,
+        7.257
+      ]
+    },
+    {
+      "name": "Garage view expands the orbit"
+    },
+    {
+      "name": "clicking actual car body selects component, shows one subtle marker, and opens matching details"
+    },
+    {
+      "name": "search and status filters apply to catalogue and 3D hotspots"
+    },
+    {
+      "name": "real car and garage GLBs loaded and rendered"
+    },
+    {
+      "name": "full horizontal orbit using keyboard",
+      "degrees": 479.9417185115969
+    },
+    {
+      "name": "right-drag pans camera and target",
+      "targetMovement": 0.5935056865776436
+    },
+    {
+      "name": "extreme zoom out and upward orbit stay inside workshop",
+      "position": [
+        4.595,
+        6.4,
+        -10.301
+      ],
+      "distance": 12.500456991646345
+    },
+    {
+      "name": "lights start on; accessible brightness control never switches them off"
+    },
+    {
+      "name": "mobile zoom buttons and direct component taps work without persistent dots"
+    },
+    {
+      "name": "mobile touch drag orbits the real camera",
+      "movement": 6.69406610364732
+    },
+    {
+      "name": "two-finger pinch zooms without selecting parts"
+    },
+    {
+      "name": "explicit image fallback still supports angle changes"
+    },
+    {
+      "name": "failed GLB exposes error; Retry 3D reloads successfully"
+    },
+    {
+      "name": "unavailable WebGL offers explicit, accurately labeled image fallback"
+    }
+  ],
+  "assets": [
+    {
+      "url": "http://localhost:5173/models/s6-c5.glb",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5173/models/garage.glb",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5173/models/s6-c5.glb",
+      "status": 200
+    },
+    {
+      "url": "http://localhost:5173/models/garage.glb",
+      "status": 200
+    }
+  ],
+  "screenshots": [
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\performance-verification\\orbit\\desktop-before-orbit.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\performance-verification\\orbit\\desktop-after-orbit.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\performance-verification\\orbit\\desktop-front-preset.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\performance-verification\\orbit\\desktop-garage-orbit.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\performance-verification\\orbit\\desktop-selected-part.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\performance-verification\\orbit\\desktop-extreme-orbit-bounds.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\performance-verification\\orbit\\mobile-selected-component.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\performance-verification\\orbit\\mobile-before-orbit.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\performance-verification\\orbit\\mobile-after-orbit.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\performance-verification\\orbit\\mobile-narrow-controls.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\performance-verification\\orbit\\asset-failure-recovery.png"
+  ],
+  "runtimeErrors": [],
+  "consoleErrors": [],
+  "renderer": {
+    "renderer": "three",
+    "drawCalls": 133,
+    "triangles": 463195
+  },
+  "passed": true
+}

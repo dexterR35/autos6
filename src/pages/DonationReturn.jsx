@@ -20,11 +20,17 @@ export function DonationSuccess() {
   const { refreshSummary, isDemo } = useProjectData();
   const [state, setState] = useState({ phase: sessionId ? 'pending' : 'missing', data: null });
   const started = useRef(Date.now());
+  const [retryCount, setRetryCount] = useState(0);
 
   const poll = useCallback(async () => {
     try {
       const data = await fetchDonationStatus(sessionId);
-      if (data.status === 'paid' || data.status === 'refunded' || data.status === 'partially_refunded') {
+      if (data.status === 'refunded' || data.status === 'partially_refunded') {
+        setState({ phase: 'refunded', data });
+        refreshSummary();
+        return true;
+      }
+      if (data.status === 'paid') {
         setState({ phase: 'paid', data });
         refreshSummary();
         // Only after server-confirmed payment; deduplicated across reloads.
@@ -63,16 +69,12 @@ export function DonationSuccess() {
       stopped = true;
       clearTimeout(timer);
     };
-  }, [sessionId, poll, isDemo]);
+  }, [sessionId, poll, isDemo, retryCount]);
 
   const retry = () => {
     started.current = Date.now();
     setState((s) => ({ ...s, phase: 'pending' }));
-    const tick = async () => {
-      const done = await poll();
-      if (!done) setTimeout(tick, POLL_MS);
-    };
-    tick();
+    setRetryCount((n) => n + 1);
   };
 
   const d = state.data;
@@ -91,6 +93,12 @@ export function DonationSuccess() {
             <CircleX className="return-card__icon is-bad" aria-hidden="true" />
             <h1>We couldn’t find that checkout</h1>
             <p>If you completed a payment, Stripe has emailed you a receipt. Your contribution will appear once it’s confirmed.</p>
+          </>
+        ) : state.phase === 'refunded' ? (
+          <>
+            <Clock className="return-card__icon" aria-hidden="true" />
+            <h1>{d.status === 'refunded' ? 'Contribution refunded' : 'Contribution partly refunded'}</h1>
+            <p>{formatCents(d.refundedCents, d.currency)} has been refunded from your {amount} contribution. Funding totals reflect the refund. Your bank may take a few days to display it.</p>
           </>
         ) : state.phase === 'paid' ? (
           <>

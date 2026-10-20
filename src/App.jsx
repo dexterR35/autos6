@@ -11,10 +11,14 @@ import Progress from './pages/Progress.jsx';
 import About from './pages/About.jsx';
 import { DonationCancel, DonationSuccess } from './pages/DonationReturn.jsx';
 import NotFound from './pages/NotFound.jsx';
+import Legal from './pages/Legal.jsx';
+import SubscriptionReturn from './pages/SubscriptionReturn.jsx';
+import AppFooter from './components/AppFooter.jsx';
 import { ShellContext } from './hooks/useShell.js';
 import { useProjectData } from './hooks/useProjectData.jsx';
 
 const Admin = lazy(() => import('./pages/Admin.jsx'));
+const Community = lazy(() => import('./pages/Community.jsx'));
 
 function ModeBanner() {
   const { mode, status, error } = useProjectData();
@@ -46,12 +50,18 @@ export default function App() {
             <Route path="/donations" element={<Donations />} />
             <Route path="/progress" element={<Progress />} />
             <Route path="/about" element={<About />} />
+            <Route path="/community" element={<Suspense fallback={<p className="page muted">Loading community…</p>}><Community /></Suspense>} />
+            <Route path="/terms" element={<Legal />} />
+            <Route path="/privacy" element={<Legal />} />
+            <Route path="/subscription/confirm" element={<SubscriptionReturn />} />
+            <Route path="/subscription/unsubscribe" element={<SubscriptionReturn />} />
             <Route path="/admin" element={<Suspense fallback={<p className="page muted">Loading…</p>}><Admin /></Suspense>} />
             <Route path="/donation/success" element={<DonationSuccess />} />
             <Route path="/donation/cancel" element={<DonationCancel />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
+        {route !== 'garage' && <AppFooter />}
         <DonationDialog />
         <ConsentBanner />
       </div>

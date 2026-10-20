@@ -28,6 +28,8 @@ export const mapPart = (r) => ({
   description: r.description,
   thumbnailUrl: r.thumbnail_url,
   sortOrder: r.sort_order,
+  priority: r.priority ?? 'standard',
+  raisedCents: null,
 });
 
 const mapUpdate = (r) => ({
@@ -47,12 +49,19 @@ function check({ data, error }) {
 export async function fetchLiveProject(slug) {
   const supabase = await client();
   const project = mapProject(check(await supabase.from('projects').select('*').eq('slug', slug).single()));
-  const [parts, updates, summary] = await Promise.all([
+  const [parts, updates, summary, funding] = await Promise.all([
     supabase.from('parts').select('*').eq('project_id', project.id).order('sort_order').then(check),
     supabase.from('restoration_updates').select('*').eq('project_id', project.id).not('published_at', 'is', null).order('published_at', { ascending: false }).then(check),
     fetchLiveSummary(slug),
+    fetchPartFunding(slug),
   ]);
-  return { project, parts: parts.map(mapPart), updates: updates.map(mapUpdate), summary };
+  return { project, parts: parts.map((p) => ({ ...mapPart(p), raisedCents: funding[p.slug] ?? 0 })), updates: updates.map(mapUpdate), summary };
+}
+
+export async function fetchPartFunding(slug) {
+  const supabase = await client();
+  const rows = check(await supabase.rpc('get_part_funding', { p_slug: slug }));
+  return Object.fromEntries(rows.map((r) => [r.part_slug, Number(r.raised_cents)]));
 }
 
 export async function fetchLiveSummary(slug) {

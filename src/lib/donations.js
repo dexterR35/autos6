@@ -28,19 +28,21 @@ export function newAttemptId() {
 }
 
 /** @returns {Promise<{url: string}>} */
-export async function createCheckout({ projectSlug, partId, amountCents, displayName, isPublic, attemptId }) {
+export async function createCheckout({ projectSlug, partId, amountCents, displayName, isPublic, attemptId, termsAccepted, termsVersion }) {
   let res;
   try {
     res = await fetch('/api/donations/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectSlug, partId: partId || null, amountCents, displayName: displayName || null, isPublic: Boolean(isPublic), attemptId }),
+      body: JSON.stringify({ projectSlug, partId: partId || null, amountCents, displayName: displayName || null, isPublic: Boolean(isPublic), attemptId, termsAccepted, termsVersion }),
     });
   } catch {
     throw new ApiError('Could not reach the payment server. Check your connection and try again.', 0);
   }
   const body = await readJson(res);
   if (!res.ok || !body.url) throw new ApiError(body.error || 'Checkout could not be started.', res.status);
+  const checkoutUrl = new URL(body.url);
+  if (checkoutUrl.protocol !== 'https:' || checkoutUrl.hostname !== 'checkout.stripe.com') throw new ApiError('Unexpected checkout address. Please try again.', 502);
   return body;
 }
 
@@ -54,7 +56,7 @@ export async function fetchDonationStatus(sessionId) {
 
 export function saveDraft(draft) {
   try {
-    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ amountCents: draft.amountCents, partId: draft.partId, customAmount: draft.customAmount }));
   } catch {
     /* storage unavailable — draft simply isn't restored */
   }
@@ -63,7 +65,9 @@ export function saveDraft(draft) {
 export function loadDraft() {
   try {
     const raw = sessionStorage.getItem(DRAFT_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const draft = JSON.parse(raw);
+    return { amountCents: Number.isSafeInteger(draft.amountCents) ? draft.amountCents : 2500, partId: typeof draft.partId === 'string' && /^[a-z0-9-]{1,60}$/.test(draft.partId) ? draft.partId : null, customAmount: draft.customAmount === true };
   } catch {
     return null;
   }

@@ -1,11 +1,13 @@
 import { forwardRef } from 'react';
 import { Heart } from 'lucide-react';
 import DemoBadge from './DemoBadge.jsx';
-import { DONATION_PRESETS_CENTS, formatCents, percentOf } from '../lib/money.js';
+import { CAMPAIGN_GOAL_CENTS, displayedRaised, formatCents, percentOf } from '../lib/money.js';
+import AmountPicker from './AmountPicker.jsx';
 import { useProjectData } from '../hooks/useProjectData.jsx';
 import { useGarageState } from '../hooks/useGarageState.jsx';
 
 export function FundingProgress({ raisedCents, goalCents, currency, compact = false }) {
+  raisedCents = displayedRaised(raisedCents, goalCents);
   const pct = percentOf(raisedCents, goalCents);
   return (
     <div className={`funding-progress ${compact ? 'is-compact' : ''}`}>
@@ -43,26 +45,15 @@ const FundingPanel = forwardRef(function FundingPanel(_props, ref) {
             <span className="muted">{status === 'loading' ? 'Loading…' : 'Totals unavailable'}</span>
           ) : (
             <>
-              <strong>{formatCents(summary.raisedCents, currency)}</strong> / {formatCents(summary.goalCents, currency)}
+              <strong>{formatCents(displayedRaised(summary.raisedCents), currency)}</strong> / {formatCents(CAMPAIGN_GOAL_CENTS, currency)}
             </>
           )}
         </p>
       </div>
-      {!unavailable && <FundingProgress raisedCents={summary.raisedCents} goalCents={summary.goalCents} currency={currency} />}
+      {!unavailable && <FundingProgress raisedCents={summary.raisedCents} goalCents={CAMPAIGN_GOAL_CENTS} currency={currency} />}
+      {!unavailable && summary.raisedCents >= CAMPAIGN_GOAL_CENTS && <p className="fine goal-reached">Goal reached. Contributions still support future work.</p>}
       <div className="funding-panel__actions">
-        <div className="presets" role="group" aria-label="Contribution amount">
-          {DONATION_PRESETS_CENTS.map((c) => (
-            <button
-              key={c}
-              type="button"
-              className={`preset ${draft.amountCents === c ? 'is-active' : ''}`}
-              aria-pressed={draft.amountCents === c}
-              onClick={() => setDraft({ amountCents: c })}
-            >
-              {formatCents(c, currency)}
-            </button>
-          ))}
-        </div>
+        <AmountPicker inline amountCents={draft.amountCents} custom={draft.customAmount ? '' : null} currency={currency} onChange={(amountCents) => setDraft({ amountCents, customAmount: false })} onCustom={() => openDonation({ customAmount: true })} />
         <button type="button" className="btn btn--donate btn--lg" onClick={() => openDonation()}>
           <Heart aria-hidden="true" fill="currentColor" />
           Donate now

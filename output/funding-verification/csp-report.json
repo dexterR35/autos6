@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "checks": [
+    "Built app loads under real CSP",
+    "No analytics request before consent",
+    "Hashed inline loader executes after opt-in",
+    "Revocation stops loading",
+    "Live build excludes local model and lighting files",
+    "Configured Supabase model URLs work (intercepted local fixtures)",
+    "Worker and Meshopt WASM comply with CSP",
+    "No CSP violations or runtime errors"
+  ]
+}

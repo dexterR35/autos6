@@ -21,6 +21,17 @@ function scene() {
 }
 
 describe('RayIndex', () => {
+  it('restores a worker-built index without losing mesh ownership or query results', () => {
+    const root = scene();
+    const index = new RayIndex([root]);
+    const transferred = structuredClone(index.toTransfer());
+    const restored = RayIndex.fromTransfer(transferred, index.meshes);
+    for(let i=0;i<50;i++) {
+      const origin=new THREE.Vector3(Math.sin(i)*12,1,Math.cos(i)*12);
+      const ray=new THREE.Ray(origin,origin.clone().negate().normalize());
+      expect(restored.intersect(ray)).toEqual(index.intersect(ray));
+    }
+  });
   it('matches three.js raycasting for the nearest hit and its object', () => {
     const root = scene();
     const index = new RayIndex([root]);

@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Car, SearchX } from 'lucide-react';
 import PartThumb from '../components/PartThumb.jsx';
 import StatusChip from '../components/StatusChip.jsx';
+import PartProgress from '../components/PartProgress.jsx';
+import PriorityChip from '../components/PriorityChip.jsx';
 import PartDetailsDrawer from '../components/PartDetailsDrawer.jsx';
 import Modal from '../components/Modal.jsx';
 import { formatCents } from '../lib/money.js';
-import { countByStatus, filterParts, matchesSearch } from '../lib/parts.js';
+import { countByStatus, filterParts } from '../lib/parts.js';
 import { useGarageState } from '../hooks/useGarageState.jsx';
 import { useProjectData } from '../hooks/useProjectData.jsx';
 import { viewsContainingPart } from '../data/views.js';
@@ -23,9 +25,10 @@ export default function Parts() {
   const g = useGarageState();
   const navigate = useNavigate();
   const [openId, setOpenId] = useState(null);
+  const { priorityFilter: priority, setPriorityFilter: setPriority } = g;
   const currency = project.currency ?? 'usd';
-  const counts = countByStatus(parts.filter((p) => matchesSearch(p, g.search)));
-  const rows = filterParts(parts, { query: g.search, status: g.statusFilter });
+  const counts = countByStatus(filterParts(parts, { query: g.search, priority }));
+  const rows = filterParts(parts, { query: g.search, status: g.statusFilter, priority });
   const open = parts.find((p) => p.id === openId);
   const totalEstimate = parts.reduce((s, p) => s + p.estimateCents, 0);
 
@@ -54,6 +57,8 @@ export default function Parts() {
         ))}
       </div>
 
+      <div className="priority-filters" role="group" aria-label="Part priority">{['all', 'important', 'standard'].map((p) => <button key={p} type="button" aria-pressed={priority === p} onClick={() => setPriority(p)}>{p === 'all' ? 'All priorities' : p === 'important' ? 'Important' : 'Standard'}</button>)}</div>
+
       {status === 'loading' && <p className="muted">Loading parts…</p>}
       {status === 'unconfigured' && <p className="muted">Live parts list unavailable — Supabase is not configured.</p>}
 
@@ -63,11 +68,13 @@ export default function Parts() {
             <button type="button" className="part-card panel" onClick={() => setOpenId(p.id)}>
               <PartThumb part={p} size="xl" />
               <span className="part-card__name">{p.name}</span>
+              <PriorityChip priority={p.priority} />
               <span className="part-card__meta">
                 <span className="part-card__price">{formatCents(p.estimateCents, currency)}</span>
                 <StatusChip status={p.status} />
               </span>
               <span className="muted part-card__cond">{p.condition}</span>
+              <PartProgress part={p} currency={currency} />
             </button>
           </li>
         ))}
@@ -76,7 +83,7 @@ export default function Parts() {
         <div className="empty">
           <SearchX aria-hidden="true" />
           <p>No parts match{g.search ? ` “${g.search}”` : ' this filter'}.</p>
-          <button type="button" className="btn btn--ghost btn--sm" onClick={() => { g.setSearch(''); g.setStatusFilter('all'); }}>Clear filters</button>
+          <button type="button" className="btn btn--ghost btn--sm" onClick={() => { g.setSearch(''); g.setStatusFilter('all'); setPriority('all'); }}>Clear filters</button>
         </div>
       )}
 
@@ -116,3 +123,4 @@ export default function Parts() {
     </div>
   );
 }
+

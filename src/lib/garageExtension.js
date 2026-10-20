@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { meshComponents } from './meshComponents.js';
+import { NEON_BLUE } from './neonLighting.js';
 
 const SIDE_X = 13.82; // inner face of both side walls
 const FRONT_Z = 13.92; // inner face of the new front wall
@@ -110,6 +111,10 @@ function audiEmblem(root, blueMesh) {
   // Its own material: a little less intense than the tubes, so the rings stay blue
   // through tone mapping instead of clipping to white.
   const sign = blueMesh.material.clone();
+  sign.color.setRGB(0,0,0);
+  sign.emissive.setRGB(...NEON_BLUE);
+  sign.emissiveIntensity=1.5;
+  sign.toneMapped=false;
   const tubes = new Builder();
   const emblem = new THREE.Box3();
   for (const box of rings) {
@@ -125,7 +130,7 @@ function audiEmblem(root, blueMesh) {
   const halo = new THREE.Mesh(
     new THREE.PlaneGeometry(size.x * 2.1, size.y * 3.4),
     new THREE.MeshBasicMaterial({
-      name: 'Audi sign | blue halo', map: glowTexture(), color: new THREE.Color(0.003, 0.03, 0.17),
+      name: 'Audi sign | blue halo', map: glowTexture(), color: new THREE.Color(...NEON_BLUE).multiplyScalar(.32),
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
     }),
   );
@@ -273,7 +278,7 @@ export function extendGarage(garage) {
   });
   // Blue LED strips under two truss chords, as in the reference ceiling.
   const trussBlue = new THREE.MeshStandardMaterial({
-    name: 'Truss LED strip | blue', color: 0x000000, emissive: new THREE.Color(0.01, 0.12, 1), emissiveIntensity: 2.4,
+    name: 'Truss LED strip | blue', color: 0x000000, emissive: new THREE.Color(...NEON_BLUE), emissiveIntensity: 7,
   });
   for (const z of [-6.7, -1.5]) for (const x of [-9, -3, 3, 9]) battens.box(trussBlue, [4.2, 0.028, 0.05], [x, 5.615, z]);
   // The ceiling reaches the room through bloom and the floor mirror, not through the

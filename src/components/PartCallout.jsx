@@ -1,6 +1,7 @@
 import { ChevronRight } from 'lucide-react';
 import PartThumb from './PartThumb.jsx';
 import StatusChip from './StatusChip.jsx';
+import PartProgress from './PartProgress.jsx';
 import { formatCents } from '../lib/money.js';
 
 // Short conditions ("Scratched", "Needs paint") read better on the card; long ones fall
@@ -29,6 +30,7 @@ export default function PartCallout({ part, rect, active, currency, onSelect, on
         <StatusChip status={part.status} label={calloutLabel(part)} size="sm" />
       </span>
       <ChevronRight className="callout__chevron" aria-hidden="true" />
+      <PartProgress part={part} currency={currency} compact />
     </div>
   );
 }

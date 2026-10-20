@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useProjectData } from '../hooks/useProjectData.jsx';
 import { formatCents } from '../lib/money.js';
 import { ANALYTICS_ENABLED, openConsentSettings } from '../lib/analytics.js';
+import SubscribeButton from '../components/SubscribeButton.jsx';
 
 // Placeholder copy where facts are unknown — edit freely (or move to Supabase `projects.description`).
 export default function About() {
@@ -36,6 +37,8 @@ export default function About() {
         Payments run through Stripe Checkout, and totals count only confirmed payments, minus refunds.
         {isDemo && ' Figures currently shown on the site are demo samples.'}
       </p>
+      <p>Part contributions advance that part and count once toward the shared $10,000 campaign. The display stops at the target; additional contributions still support the build. Read the <Link to="/terms">donation terms</Link> and <Link to="/privacy">privacy notice</Link>.</p>
+      <SubscribeButton />
       <p>
         See the <Link to="/progress">progress log</Link> for updates, or the <Link to="/donations">donations page</Link> for the campaign summary.
       </p>

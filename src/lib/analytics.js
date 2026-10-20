@@ -62,6 +62,8 @@ export function setConsent(choice) {
     ad_personalization: 'denied',
   });
   track('consent_update', { analytics_consent: granted ? 'granted' : 'denied' });
+  if (granted) window.__s6StartAnalytics?.();
+  else if (window.__s6GtmStarted) window.location.reload();
 }
 
 export const OPEN_CONSENT_EVENT = 'project-s6:open-consent';

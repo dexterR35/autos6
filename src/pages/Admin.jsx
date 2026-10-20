@@ -3,31 +3,57 @@ import { LogOut, Plus, Save, Trash2, Upload } from 'lucide-react';
 import { supabase } from '../lib/supabase.js';
 import { useProjectData } from '../hooks/useProjectData.jsx';
 import { formatCents, parseDollarsToCents } from '../lib/money.js';
+import { authCallbackError } from '../lib/authErrors.js';
 
 // Owner controls. The UI hides itself for non-owners, but the real enforcement is
 // Postgres RLS (project_admins membership) — see supabase/migrations.
 
 function SignIn() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [msg, setMsg] = useState(null);
+  const [msg, setMsg] = useState(() => authCallbackError(window.location.hash));
+  const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  useEffect(() => {
+    if (authCallbackError(window.location.hash)) {
+      window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
+    }
+  }, []);
+  useEffect(() => {
+    if (!cooldown) return;
+    const timer = window.setTimeout(() => setCooldown((remaining) => Math.max(0, remaining - 1)), 1000);
+    return () => window.clearTimeout(timer);
+  }, [cooldown]);
   const submit = async (e) => {
     e.preventDefault();
+    if (busy || cooldown) return;
     setBusy(true);
     setMsg(null);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setBusy(false);
-    if (error) setMsg(error.message);
+    setSent(false);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: { emailRedirectTo: `${window.location.origin}/admin`, shouldCreateUser: false },
+      });
+      if (error) throw error;
+      setSent(true);
+      setCooldown(60);
+    } catch (error) {
+      if (error?.status === 429 || error?.code === 'over_email_send_rate_limit') {
+        setCooldown(60);
+        setMsg('Please wait a minute before requesting another sign-in link.');
+      } else setMsg('Could not send a sign-in link. Please try again later.');
+    }
+    finally { setBusy(false); }
   };
   return (
     <form className="panel admin-signin" onSubmit={submit}>
       <h2>Owner sign in</h2>
-      <p className="fine">Supporters don’t need an account. This area is for the project owner only.</p>
+      <p className="fine">Sign in with an email link. A verified project-owner membership is required. Donations don’t require an account.</p>
       <label className="field"><span>Email</span><input type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>
-      <label className="field"><span>Password</span><input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></label>
       {msg && <p className="form-error" role="alert">{msg}</p>}
-      <button className="btn btn--primary" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
+      {sent && <p className="fine" role="status">Check your email for a sign-in link. Open the newest message once; requesting another link can replace the previous one.</p>}
+      <button className="btn btn--primary" disabled={busy || cooldown > 0}>{busy ? 'Sending…' : cooldown ? `Send again in ${cooldown}s` : 'Email sign-in link'}</button>
     </form>
   );
 }
@@ -48,7 +74,7 @@ function CampaignEditor({ project, onSaved }) {
     title: project.title ?? '',
     tagline: project.tagline ?? '',
     vehicle_display_name: project.vehicleDisplayName ?? '',
-    goal: project.goalCents != null ? (project.goalCents / 100).toFixed(2) : '',
+    goal: '10000.00',
     description: project.description ?? '',
   });
   const [msg, setMsg] = useState(null);
@@ -71,7 +97,7 @@ function CampaignEditor({ project, onSaved }) {
         <label className="field"><span>Title</span><input value={form.title} onChange={set('title')} required /></label>
         <label className="field"><span>Tagline</span><input value={form.tagline} onChange={set('tagline')} /></label>
         <label className="field"><span>Vehicle display name</span><input value={form.vehicle_display_name} onChange={set('vehicle_display_name')} /></label>
-        <label className="field"><span>Goal (USD)</span><input inputMode="decimal" value={form.goal} onChange={set('goal')} required /></label>
+        <label className="field"><span>Campaign goal (USD)</span><input value="10,000.00" readOnly /><small>Fixed campaign goal. Part targets are independent.</small></label>
       </div>
       <label className="field"><span>Description</span><textarea rows={3} value={form.description} onChange={set('description')} /></label>
       <div className="dialog-actions"><span className="fine" role="status">{msg}</span><button className="btn btn--primary"><Save aria-hidden="true" /> Save</button></div>
@@ -84,10 +110,10 @@ function PartRow({ part, onSaved }) {
   const [msg, setMsg] = useState(null);
   const save = async () => {
     const estimate_cents = parseDollarsToCents(p.estimate);
-    if (estimate_cents == null) return setMsg('Bad amount');
+    if (estimate_cents == null || estimate_cents <= 0) return setMsg('Enter a positive target.');
     const { error } = await supabase
       .from('parts')
-      .update({ name: p.name, estimate_cents, status: p.status, condition: p.condition, description: p.description, sort_order: Number(p.sortOrder) || 0 })
+      .update({ name: p.name, estimate_cents, status: p.status, priority: p.priority ?? 'standard', condition: p.condition, description: p.description, sort_order: Number(p.sortOrder) || 0 })
       .eq('id', part.dbId);
     setMsg(error ? error.message : 'Saved');
     if (!error) onSaved();
@@ -105,6 +131,8 @@ function PartRow({ part, onSaved }) {
         </select>
       </td>
       <td><input aria-label="Condition" value={p.condition ?? ''} onChange={set('condition')} /></td>
+      <td><select aria-label="Priority" value={p.priority ?? 'standard'} onChange={set('priority')}><option value="standard">Standard</option><option value="important">Important</option></select></td>
+      <td><textarea aria-label="Part description" rows={2} maxLength={2000} value={p.description ?? ''} onChange={set('description')} /></td>
       <td><input aria-label="Sort order" value={p.sortOrder} onChange={set('sortOrder')} size={3} /></td>
       <td><button type="button" className="btn btn--ghost btn--sm" onClick={save}><Save aria-hidden="true" /> Save</button> <span className="fine" role="status">{msg}</span></td>
     </tr>
@@ -112,16 +140,17 @@ function PartRow({ part, onSaved }) {
 }
 
 function NewPart({ projectId, onSaved }) {
-  const [p, setP] = useState({ slug: '', name: '', estimate: '', status: 'needed', condition: '' });
+  const blank = { slug: '', name: '', estimate: '', status: 'needed', condition: '', priority: 'standard', description: '' };
+  const [p, setP] = useState(blank);
   const [msg, setMsg] = useState(null);
   const add = async (e) => {
     e.preventDefault();
     const estimate_cents = parseDollarsToCents(p.estimate);
-    if (estimate_cents == null) return setMsg('Enter a valid estimate.');
-    const { error } = await supabase.from('parts').insert({ project_id: projectId, slug: p.slug, name: p.name, estimate_cents, status: p.status, condition: p.condition, sort_order: 100 });
+    if (estimate_cents == null || estimate_cents <= 0) return setMsg('Enter a positive funding target.');
+    const { error } = await supabase.from('parts').insert({ project_id: projectId, slug: p.slug, name: p.name, estimate_cents, status: p.status, condition: p.condition, priority: p.priority, description: p.description, sort_order: 100 });
     setMsg(error ? error.message : 'Added.');
     if (!error) {
-      setP({ slug: '', name: '', estimate: '', status: 'needed', condition: '' });
+      setP(blank);
       onSaved();
     }
   };
@@ -133,6 +162,8 @@ function NewPart({ projectId, onSaved }) {
       <label className="field"><span>Estimate (USD)</span><input inputMode="decimal" value={p.estimate} onChange={set('estimate')} required /></label>
       <label className="field"><span>Status</span><select value={p.status} onChange={set('status')}><option value="needed">Needed</option><option value="upgrade">Upgrade</option><option value="bought">Bought</option></select></label>
       <label className="field"><span>Condition</span><input value={p.condition} onChange={set('condition')} /></label>
+      <label className="field"><span>Priority</span><select value={p.priority} onChange={set('priority')}><option value="standard">Standard</option><option value="important">Important</option></select></label>
+      <label className="field"><span>Description</span><textarea rows={2} maxLength={2000} value={p.description} onChange={set('description')} /></label>
       <button className="btn btn--ghost"><Plus aria-hidden="true" /> Add part</button>
       <span className="fine" role="status">{msg}</span>
     </form>
@@ -157,6 +188,7 @@ function UpdatesEditor({ projectId, userId }) {
     e.preventDefault();
     setMsg('Saving…');
     const image_urls = [];
+    if (files.length > 10 || files.some((f) => !['image/jpeg','image/png','image/webp'].includes(f.type) || f.size > 5 * 1024 * 1024)) return setMsg('Choose up to 10 JPG, PNG or WebP photos, each under 5 MB.');
     for (const f of files) {
       const path = `${projectId}/updates/${crypto.randomUUID()}-${f.name.replace(/[^\w.-]/g, '_')}`;
       const { error } = await supabase.storage.from('project-media').upload(path, f, { contentType: f.type });
@@ -194,7 +226,7 @@ function UpdatesEditor({ projectId, userId }) {
         <label className="field"><span>Body</span><textarea rows={3} value={form.body} onChange={set('body')} required /></label>
         <div className="form-grid">
           <label className="field"><span>Cost (USD, optional)</span><input inputMode="decimal" value={form.cost} onChange={set('cost')} /></label>
-          <label className="field"><span><Upload aria-hidden="true" /> Photos</span><input type="file" accept="image/*" multiple onChange={(e) => setFiles([...e.target.files])} /></label>
+          <label className="field"><span><Upload aria-hidden="true" /> Photos (JPG, PNG, WebP · max 5 MB)</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => setFiles([...e.target.files])} /></label>
         </div>
         <label className="check"><input type="checkbox" checked={form.publish} onChange={set('publish')} /> <span>Publish now</span></label>
         <div className="dialog-actions"><span className="fine" role="status">{msg}</span><button className="btn btn--primary"><Plus aria-hidden="true" /> Add update</button></div>
@@ -220,8 +252,11 @@ export default function Admin() {
   const [isOwner, setIsOwner] = useState(null);
 
   useEffect(() => {
+    setIsOwner(null);
     if (!supabase || !session || !project.id) return;
-    supabase.rpc('is_project_admin', { p_project_id: project.id }).then(({ data, error }) => setIsOwner(!error && data === true));
+    let stale = false;
+    supabase.rpc('is_project_admin', { p_project_id: project.id }).then(({ data, error }) => { if (!stale) setIsOwner(!error && data === true); });
+    return () => { stale = true; };
   }, [session, project.id]);
 
   if (!supabase) {
@@ -266,7 +301,7 @@ export default function Admin() {
             <p className="fine">Mark a part “Bought” only after you’ve actually bought it. Donations never change status automatically.</p>
             <div className="table-wrap">
               <table className="admin-table">
-                <thead><tr><th>Name</th><th>Estimate</th><th>Status</th><th>Condition</th><th>Order</th><th /></tr></thead>
+                <thead><tr><th>Name</th><th>Target</th><th>Status</th><th>Condition</th><th>Priority</th><th>Description</th><th>Order</th><th /></tr></thead>
                 <tbody>{parts.map((p) => <PartRow key={p.dbId} part={p} onSaved={reload} />)}</tbody>
               </table>
             </div>
@@ -275,8 +310,30 @@ export default function Admin() {
             <p className="fine">Totals: {formatCents(parts.reduce((s, p) => s + p.estimateCents, 0))} estimated across {parts.length} parts.</p>
           </section>
           <UpdatesEditor projectId={project.id} userId={session.user.id} />
+          <CommunityModeration projectId={project.id} />
         </>
       )}
     </div>
   );
+}
+
+function CommunityModeration({ projectId }) {
+  const [rows, setRows] = useState([]);
+  const [filter, setFilter] = useState('pending');
+  const [message, setMessage] = useState('');
+  const [busy, setBusy] = useState(false);
+  const load = async () => {
+    const { data, error } = await supabase.from('community_posts').select('id,title,body,display_name,status,parent_id,created_at').eq('project_id', projectId).eq('status', filter).order('created_at', { ascending: false }).limit(50);
+    setRows(data ?? []);
+    if (error) setMessage('Could not load moderation queue.');
+  };
+  useEffect(() => { load(); }, [projectId, filter]);
+  const moderate = async (id, status) => {
+    setBusy(true);
+    const { error } = await supabase.from('community_posts').update({ status }).eq('id', id).eq('project_id', projectId);
+    setMessage(error ? 'Could not update this post.' : `Post ${status}.`);
+    setBusy(false);
+    if (!error) load();
+  };
+  return <section className="panel admin-section"><h2>Community moderation</h2><p className="fine">Review posts and replies before publication. The most recent 50 entries are shown for each status.</p><div className="priority-filters" role="group" aria-label="Moderation status">{['pending','approved','hidden'].map((s) => <button key={s} onClick={() => setFilter(s)} aria-pressed={filter === s}>{s}</button>)}</div><p role="status" className="fine">{message}</p><ul className="moderation-list">{rows.map((post) => <li key={post.id}><strong>{post.title}</strong><span className="fine"> · {post.display_name}{post.parent_id && ' · Reply'}</span><p>{post.body}</p><div className="dialog-actions">{post.status !== 'approved' && <button disabled={busy} className="btn btn--primary btn--sm" onClick={() => moderate(post.id, 'approved')}>Approve</button>}{post.status !== 'hidden' && <button disabled={busy} className="btn btn--ghost btn--sm" onClick={() => moderate(post.id, 'hidden')}>Hide</button>}</div></li>)}</ul>{rows.length === 0 && <p className="muted">No {filter} posts.</p>}</section>;
 }

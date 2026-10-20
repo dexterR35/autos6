@@ -4,6 +4,7 @@
 // Keys: C car, O orbit, R reference overlay (cycles opacity).
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createGarageLook } from '../src/lib/garageLook.js';
 import { extendGarage } from '../src/lib/garageExtension.js';
@@ -52,7 +53,7 @@ const hud = document.getElementById('hud');
 const overlay = document.getElementById('reference');
 if (referenceImage) { overlay.src = referenceImage; overlay.style.width = `${width}px`; overlay.style.height = `${height}px`; }
 
-const loader = new GLTFLoader();
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 const [car, garage] = await Promise.all(['/models/s6-c5.glb', '/models/garage.glb'].map(async (url) => (await loader.loadAsync(url)).scene));
 car.traverse((object) => { if (object.isMesh) { object.castShadow = true; object.receiveShadow = true; } });
 if (shot.carYaw && params.get('yaw') !== '0') car.rotation.y = THREE.MathUtils.degToRad(shot.carYaw);

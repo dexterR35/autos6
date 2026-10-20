@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronRight, Funnel, SearchX } from 'lucide-react';
+import { ChevronRight, Funnel, Search, SearchX } from 'lucide-react';
 import PartThumb from './PartThumb.jsx';
 import StatusChip from './StatusChip.jsx';
+import PartProgress from './PartProgress.jsx';
+import PriorityChip from './PriorityChip.jsx';
 import { formatCents } from '../lib/money.js';
-import { countByStatus, filterParts, matchesSearch } from '../lib/parts.js';
+import { countByStatus, filterParts } from '../lib/parts.js';
 import { useGarageState } from '../hooks/useGarageState.jsx';
 import { useProjectData } from '../hooks/useProjectData.jsx';
 
@@ -15,12 +17,12 @@ const TABS = [
 
 export default function PartsSidebar({ id = 'parts-rail' }) {
   const { parts, project, status } = useProjectData();
-  const { search, setSearch, statusFilter, setStatusFilter, selectedPartId, selectPart, hoveredPartId, setHoveredPartId } = useGarageState();
+  const { search, setSearch, statusFilter, setStatusFilter, selectedPartId, selectPart, hoveredPartId, setHoveredPartId, priorityFilter: priority, setPriorityFilter: setPriority } = useGarageState();
   const [filterOpen, setFilterOpen] = useState(false);
   const listRef = useRef(null);
-  const searched = parts.filter((p) => matchesSearch(p, search));
+  const searched = filterParts(parts, { query: search, priority });
   const counts = countByStatus(searched);
-  const rows = filterParts(parts, { query: search, status: statusFilter });
+  const rows = filterParts(parts, { query: search, status: statusFilter, priority });
   const currency = project.currency ?? 'usd';
 
   // Keep the selected row in view when selection comes from the stage.
@@ -67,6 +69,7 @@ export default function PartsSidebar({ id = 'parts-rail' }) {
         </div>
       </div>
 
+      <label className="search rail-search"><Search aria-hidden="true" /><span className="visually-hidden">Search the parts list</span><input type="search" placeholder="Search parts..." value={search} onChange={(e) => setSearch(e.target.value)} /></label>
       <div className="tabs" role="group" aria-label="Filter by status">
         {TABS.map((t) => (
           <button
@@ -91,7 +94,10 @@ export default function PartsSidebar({ id = 'parts-rail' }) {
       {status === 'unconfigured' && <p className="rail-msg">Live parts list unavailable — Supabase is not configured.</p>}
       {status === 'error' && <p className="rail-msg">Could not load parts. Try again later.</p>}
 
-      <ul ref={listRef} className="part-rows">
+      <div className="priority-filters" role="group" aria-label="Part priority">
+        {['all', 'important', 'standard'].map((p) => <button key={p} type="button" aria-pressed={priority === p} onClick={() => setPriority(p)}>{p === 'all' ? 'All priorities' : p === 'important' ? 'Important' : 'Standard'}</button>)}
+      </div>
+      <ul ref={listRef} className="part-rows" tabIndex={0} aria-label="Scrollable parts list">
         {rows.map((p) => (
           <li key={p.id}>
             <button
@@ -107,9 +113,11 @@ export default function PartsSidebar({ id = 'parts-rail' }) {
               <span className="part-row__text">
                 <span className="part-row__name">{p.name}</span>
                 <span className="part-row__price">{formatCents(p.estimateCents, currency)}</span>
+                <PriorityChip priority={p.priority} />
               </span>
               <StatusChip status={p.status} />
               <ChevronRight className="part-row__chevron" aria-hidden="true" />
+              <PartProgress part={p} currency={currency} compact />
             </button>
           </li>
         ))}
@@ -118,7 +126,7 @@ export default function PartsSidebar({ id = 'parts-rail' }) {
         <div className="empty">
           <SearchX aria-hidden="true" />
           <p>No parts match{search ? ` “${search}”` : ' this filter'}.</p>
-          <button type="button" className="btn btn--ghost btn--sm" onClick={() => { setSearch(''); setStatusFilter('all'); }}>
+          <button type="button" className="btn btn--ghost btn--sm" onClick={() => { setSearch(''); setStatusFilter('all'); setPriority('all'); }}>
             Clear filters
           </button>
         </div>

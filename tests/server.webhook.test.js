@@ -9,7 +9,7 @@ async function startCheckout(amountCents = 5000, partId = 'hood') {
   const res = await request(t.app)
     .post('/api/donations/checkout')
     .set('Origin', APP_ORIGIN)
-    .send({ projectSlug: 'project-s6', partId, amountCents, displayName: 'Robin', isPublic: true, attemptId: crypto.randomUUID() });
+    .send({ projectSlug: 'project-s6', partId, amountCents, displayName: 'Robin', isPublic: true, attemptId: crypto.randomUUID(), termsAccepted: true, termsVersion: '2026-10-21' });
   expect(res.status).toBe(200);
   const call = t.stripe.checkout.sessions.create.mock.calls.at(-1);
   return { id: call[0].metadata.donation_id, sessionId: (await t.pg.query('select stripe_checkout_session_id as s from donations where id = $1', [call[0].metadata.donation_id])).rows[0].s };
@@ -44,6 +44,16 @@ beforeEach(async () => {
 });
 
 describe('POST /api/stripe/webhook', () => {
+  it.each([{ amount_total: null }, { currency: null }])('quarantines missing payment verification fields %j', async (missing) => {
+    const res = await deliver(sessionEvent('checkout.session.completed', session(missing)));
+    expect(res.body.result).toBe('mismatch');
+    expect(await raised()).toBe(0);
+    expect((await statusOf()).status).toBe('processing');
+  });
+  it('rejects signed events from the wrong Stripe mode', async () => {
+    expect((await deliver(sessionEvent('checkout.session.completed', session(), { livemode: true }))).status).toBe(400);
+    expect(await raised()).toBe(0);
+  });
   it('rejects an invalid signature without touching the database', async () => {
     const res = await deliver(sessionEvent('checkout.session.completed', session()), { header: 't=1,v1=deadbeef' });
     expect(res.status).toBe(400);

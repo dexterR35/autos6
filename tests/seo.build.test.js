@@ -43,14 +43,15 @@ describe('production build', () => {
     expect(html).toContain(`href="${SITE}/progress"`);
   });
 
-  it('installs Consent Mode defaults before the GTM container, and the noscript iframe after <body>', () => {
+  it('installs Consent Mode defaults before an opt-in-only GTM loader and omits noscript tracking', () => {
     const html = read('index.html');
     const consent = html.indexOf("gtag('consent', 'default'");
     const gtm = html.indexOf('googletagmanager.com/gtm.js');
     expect(consent).toBeGreaterThan(-1);
     expect(gtm).toBeGreaterThan(consent);
     expect(html).toContain("'GTM-TEST123'");
-    expect(html.indexOf('ns.html?id=GTM-TEST123')).toBeGreaterThan(html.indexOf('<body>'));
+    expect(html).not.toContain('ns.html?id=GTM-TEST123');
+    expect(html).toContain("if(localStorage.getItem('project-s6:analytics-consent')==='granted')window.__s6StartAnalytics()");
   });
 
   it('does not compete with 3D loading by preloading an unused hero photo', () => {

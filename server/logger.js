@@ -4,12 +4,14 @@ const PATTERNS = [
   [/\b(sk|rk)_(test|live)_[A-Za-z0-9]+/g, '[stripe-key]'],
   [/\bwhsec_[A-Za-z0-9]+/g, '[webhook-secret]'],
   [/\bsb_secret_[A-Za-z0-9_-]+/g, '[supabase-secret]'],
+  [/\bre_[A-Za-z0-9_-]{8,}/g, '[email-provider-key]'],
+  [/(token[=:])[A-Za-z0-9._%-]+/gi, '$1[redacted]'],
   [/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g, '[jwt]'],
   [/\b(cs|pi|ch)_(test|live)_[A-Za-z0-9]*([A-Za-z0-9]{4})\b/g, '$1_$2_…$3'],
 ];
 
 export function redact(value) {
-  let s = typeof value === 'string' ? value : JSON.stringify(value);
+  let s = typeof value === 'string' ? value : JSON.stringify(value) ?? String(value);
   for (const [re, rep] of PATTERNS) s = s.replace(re, rep);
   return s;
 }

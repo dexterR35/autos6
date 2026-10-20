@@ -14,7 +14,7 @@ const instance = new THREE.Matrix4();
 const vertex = new THREE.Vector3();
 
 /** Triangles of every mesh (instances expanded) in world space, plus their owner. */
-function collect(roots) {
+function* collect(roots) {
   const meshes = [];
   for (const root of roots) {
     root.updateMatrixWorld(true);
@@ -28,7 +28,8 @@ function collect(roots) {
   const positions = new Float32Array(count * 9);
   const owners = new Uint32Array(count);
   let triangle = 0;
-  meshes.forEach((mesh, owner) => {
+  for (let owner = 0; owner < meshes.length; owner++) {
+    const mesh = meshes[owner];
     const { index, attributes } = mesh.geometry;
     const position = attributes.position;
     const corners = index ? index.count : position.count;
@@ -44,15 +45,23 @@ function collect(roots) {
           positions[offset + 2] = vertex.z;
         }
         owners[triangle++] = owner;
+        if (triangle % 3000 === 0) yield;
       }
     }
-  });
+  }
   return { meshes, positions, owners, count };
 }
 
 export class RayIndex {
   constructor(roots) {
-    const { meshes, positions, owners, count } = collect(roots);
+    let data = roots;
+    if (Array.isArray(roots)) {
+      const work = collect(roots);
+      let next;
+      do { next = work.next(); } while (!next.done);
+      data = next.value;
+    }
+    const { meshes = [], positions, owners, count } = data;
     this.meshes = meshes;
     this.positions = positions;
     this.owners = owners;
@@ -79,6 +88,37 @@ export class RayIndex {
     this.used = 0;
     if (count) this.build(0, count, bounds, centres, 0);
     this.stack = new Int32Array(128);
+  }
+
+  static async create(roots, { signal } = {}) {
+    const work = collect(roots);
+    let next;
+    do {
+      if (signal?.aborted) throw new DOMException('Cancelled', 'AbortError');
+      const started = performance.now();
+      do { next = work.next(); } while (!next.done && performance.now() - started < 6);
+      if (!next.done) await new Promise((resolve) => setTimeout(resolve, 0));
+    } while (!next.done);
+    const { meshes, ...data } = next.value;
+    return new Promise((resolve, reject) => {
+      const worker = new Worker(new URL('./rayIndex.worker.js', import.meta.url), { type: 'module' });
+      const finish = () => { signal?.removeEventListener('abort', cancel); worker.terminate(); };
+      const cancel = () => { finish(); reject(new DOMException('Cancelled', 'AbortError')); };
+      signal?.addEventListener('abort', cancel, { once: true });
+      if (signal?.aborted) { cancel(); return; }
+      worker.onmessage = ({ data: result }) => { finish(); resolve(RayIndex.fromTransfer(result, meshes)); };
+      worker.onerror = () => { finish(); reject(new Error('Background model preparation failed.')); };
+      worker.postMessage(data, [data.positions.buffer, data.owners.buffer]);
+    });
+  }
+
+  toTransfer() {
+    const { positions, owners, order, boxes, nodes, used } = this;
+    return { positions, owners, order, boxes, nodes, used };
+  }
+
+  static fromTransfer(data, meshes) {
+    return Object.assign(Object.create(RayIndex.prototype), data, { meshes, stack: new Int32Array(128) });
   }
 
   build(start, end, bounds, centres, depth) {

@@ -2,9 +2,12 @@
 
 A neon-garage dashboard for crowdfunding an Audi S6 C5 Avant restoration. Visitors orbit the car and garage in real 3D, zoom and pan, select parts, and contribute through Stripe Checkout. Campaign content and payment records live in Supabase.
 
+**October 2026 update:** per-part funding with important/standard priorities, a capped $10,000 campaign display, $5/$25/custom donations, independent parts scrolling, shared UI components, a moderated community, confirmed email subscriptions and security hardening. See [the launch guide](docs/LAUNCH.md), [security review](docs/SECURITY-AUDIT.md) and [ten growth ideas](docs/GROWTH-IDEAS.md). Hosted credentials and operator/legal setup are still required before accepting real payments.
+
 - **Frontend:** React 19 + Vite 8 (JavaScript/JSX), React Router, plain CSS with design tokens, Lucide icons
 - **Payments API:** Node.js + Express 5 (`server/`): Stripe Checkout sessions, signed webhooks, scoped status lookup
 - **Data:** Supabase Postgres with RLS, Auth for the owner, Storage for update photos (`supabase/migrations/`)
+- **3D delivery:** compressed GLBs and fixture lighting from Supabase Storage in live mode; local assets only for demo/development. See [model hosting and performance](docs/MODEL-HOSTING.md).
 
 ![Garage at 1983×793](docs/screenshots/garage-1983x793.png)
 
@@ -21,7 +24,7 @@ npm run dev:web
 
 Open http://localhost:5173. With no `.env`, the site runs in **demo mode**:
 
-- Parts, the $2,650 / $8,000 funding sample and the progress entries come from `src/data/demoProject.js`. Each one carries a **Demo data** label.
+- Parts, the $2,650 / $10,000 funding sample and the progress entries come from `src/data/demoProject.js`. Each one carries a **Demo data** label.
 - The donation dialog works, but submitting only explains that **no payment was taken**. Totals never change.
 - No supporters are invented. The donations page shows an empty state.
 
@@ -176,10 +179,10 @@ Regenerate the images with `node scripts/make-brand-assets.js`.
 Set `VITE_GTM_ID=GTM-XXXXXXX` and rebuild. The plugin injects the following, in the order Google requires:
 
 1. **Consent Mode v2 defaults**, before GTM loads: `analytics_storage`, `ad_storage`, `ad_user_data` and `ad_personalization` all `denied`. A visitor's earlier choice is restored from `localStorage`.
-2. The **GTM container** in `<head>`.
-3. The **`<noscript>` iframe** right after `<body>`. Turn it off with `VITE_GTM_NOSCRIPT=false`.
+2. An **opt-in GTM loader** in `<head>`. The container starts only after analytics consent.
+3. No noscript tracking iframe is injected, because it cannot request consent. The legacy `VITE_GTM_NOSCRIPT` setting is ignored.
 
-With GTM set, a small banner asks visitors to allow analytics. "Allow" grants only `analytics_storage`; ad signals stay denied. Visitors can reopen the choice from About → Cookie settings. Without an ID, no GTM loads and no banner shows. GTM loads in production builds only, unless `VITE_GTM_IN_DEV=true`.
+With GTM set, a small banner asks visitors to allow analytics. "Allow" grants only `analytics_storage`; ad signals stay denied. Visitors can reopen the choice from About or Privacy → Cookie settings. Revocation reloads the page to stop the container. Without an ID, no GTM loads and no banner shows. GTM is eligible in production builds only, unless `VITE_GTM_IN_DEV=true`, and still requires consent.
 
 **dataLayer events** (no names, emails or Stripe ids are ever pushed):
 
@@ -188,7 +191,7 @@ With GTM set, a small banner asks visitors to allow analytics. "Allow" grants on
 | `virtual_page_view` | Every route change (SPA) | `page_path`, `page_title`, `page_location` (query strings removed) |
 | `select_item` | Part chosen from a dot, card or list | `selection_source`, `ecommerce.items[]` |
 | `select_angle` | Camera view changed | `angle_id` |
-| `search` | Search settles (1.2 s debounce) | `search_term` |
+| `search` | Search settles (1.2 s debounce) | Catalogue names matching the query; raw search text is not sent |
 | `donate_dialog_open` | Donation dialog opened | `part_id` |
 | `begin_checkout` | Live checkout started | `ecommerce` (currency, value, items) |
 | `purchase` | **Only after the server confirms payment**; once per donation | `ecommerce.transaction_id` (SHA-256 of the session id), value, items |
@@ -250,7 +253,7 @@ tests/         see "Tests"
 
 ## Tests
 
-`npm test` runs 131 tests:
+`npm test` covers unit, UI, real SQL/RLS, consent, community and payment regressions. See `output/test-results.txt` for the latest run:
 
 | File | Covers |
 | --- | --- |

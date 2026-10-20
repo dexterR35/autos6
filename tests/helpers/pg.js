@@ -21,7 +21,7 @@ alter default privileges in schema public grant all on sequences to anon, authen
 
 create schema auth;
 grant usage on schema auth to anon, authenticated, service_role;
-create table auth.users (id uuid primary key, email text);
+create table auth.users (id uuid primary key, email text, email_confirmed_at timestamptz default now());
 create function auth.uid() returns uuid language sql stable as $$
   select nullif(coalesce(current_setting('request.jwt.claim.sub', true), current_setting('request.jwt.claims', true)::jsonb ->> 'sub'), '')::uuid
 $$;
@@ -29,7 +29,7 @@ grant execute on function auth.uid() to anon, authenticated, service_role;
 
 create schema storage;
 grant usage on schema storage to anon, authenticated, service_role;
-create table storage.buckets (id text primary key, name text not null, public boolean default false);
+create table storage.buckets (id text primary key, name text not null, public boolean default false, file_size_limit bigint, allowed_mime_types text[]);
 create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets(id), name text not null, owner uuid);
 alter table storage.objects enable row level security;
 grant select, insert, update, delete on storage.objects to anon, authenticated, service_role;
@@ -82,8 +82,8 @@ export function createPgliteServerDb(db) {
   return {
     async createPendingDonation(v) {
       const { mapPending } = await import('../../server/db.js');
-      const rows = await call('select * from public.create_pending_donation($1, $2, $3, $4, $5, $6)', [
-        v.attemptId, v.projectSlug, v.partSlug, v.amountCents, v.displayName, v.isPublic,
+      const rows = await call('select * from public.create_consented_donation($1, $2, $3, $4, $5, $6, $7)', [
+        v.attemptId, v.projectSlug, v.partSlug, v.amountCents, v.displayName, v.isPublic, v.termsVersion,
       ]);
       return mapPending(rows[0]);
     },
@@ -105,5 +105,16 @@ export function createPgliteServerDb(db) {
       const rows = await call('select * from public.get_donation_status($1)', [sessionId]);
       return mapStatus(rows[0]) ?? null;
     },
+    requestSubscription: (v) => call('select public.request_subscription($1,$2,$3,$4,$5,$6)', [v.slug,v.email,v.partSlug,v.hash,v.url,v.consent]),
+    async confirmSubscription(hash) { return (await call('select public.confirm_subscription($1) as ok', [hash]))[0].ok; },
+    unsubscribe: (id) => call('select public.unsubscribe_member($1)', [id]),
+    claimEmailJobs: () => call('select * from public.claim_email_jobs(20)', []),
+    finishEmailJob: (id, lease, provider) => call('select public.finish_email_job($1,$2,$3)', [id,lease,provider]),
+    async isEmailEligible(job) {
+      const [s] = await call('select * from subscribers where id=$1', [job.subscriber_id]);
+      const { hashToken } = await import('../../server/subscriptions.js');
+      return job.kind === 'update' ? s.status === 'active' : s.status === 'pending' && s.token_hash === hashToken(new URL(job.payload.url).hash.slice(7)) && Date.parse(s.token_expires_at) > Date.now();
+    },
+    cancelEmailJob: (id) => call("update email_jobs set state='cancelled' where id=$1", [id]),
   };
 }

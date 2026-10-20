@@ -1,0 +1,21 @@
+{
+  "checks": [
+    "1440px: 3D icons, part progress and scroll, custom donation and consent, subscription preview, community/legal routes, no horizontal overflow",
+    "390px: 3D icons, part progress and scroll, custom donation and consent, subscription preview, community/legal routes, no horizontal overflow"
+  ],
+  "errors": [],
+  "screenshots": [
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\funding-verification/garage-1440.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\funding-verification/donation-1440.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\funding-verification/parts-1440.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\funding-verification/community-1440.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\funding-verification/terms-1440.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\funding-verification/privacy-1440.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\funding-verification/garage-390.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\funding-verification/donation-390.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\funding-verification/parts-390.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\funding-verification/community-390.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\funding-verification/terms-390.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\funding-verification/privacy-390.png"
+  ]
+}

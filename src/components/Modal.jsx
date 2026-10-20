@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 
 const FOCUSABLE = 'a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])';
+let openDialogs = 0;
+let previousOverflow = '';
 
 /**
  * Accessible modal built on <dialog>.showModal(): background is inert (focus stays
@@ -10,6 +12,12 @@ const FOCUSABLE = 'a[href], button, input, select, textarea, [tabindex]:not([tab
 export default function Modal({ open, onClose, title, labelledBy = 'modal-title', children, className = '' }) {
   const ref = useRef(null);
   const returnFocus = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    if (openDialogs++ === 0) { previousOverflow = document.body.style.overflow; document.body.style.overflow = 'hidden'; }
+    return () => { if (--openDialogs === 0) document.body.style.overflow = previousOverflow; };
+  }, [open]);
 
   useEffect(() => {
     const dlg = ref.current;

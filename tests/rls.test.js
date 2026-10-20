@@ -58,7 +58,7 @@ describe('anonymous visitors', () => {
   it('gets campaign totals from confirmed donations only', async () => {
     const [s] = await asRole(db, 'anon', `select * from get_campaign_summary('project-s6')`);
     expect(Number(s.raised_cents)).toBe(7500); // 2500 + 5000 paid, pending excluded
-    expect(Number(s.goal_cents)).toBe(800000);
+    expect(Number(s.goal_cents)).toBe(1000000);
   });
 
   it('sees only consented supporters, with no emails or Stripe ids', async () => {

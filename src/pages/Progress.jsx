@@ -3,6 +3,8 @@ import DemoBadge from '../components/DemoBadge.jsx';
 import { formatCents } from '../lib/money.js';
 import { demoMilestones } from '../data/demoProject.js';
 import { useProjectData } from '../hooks/useProjectData.jsx';
+import SubscribeButton from '../components/SubscribeButton.jsx';
+import { safeMediaUrl } from '../lib/safeMedia.js';
 
 export default function Progress() {
   const { parts, updates, project, summary, isDemo, status } = useProjectData();
@@ -19,6 +21,7 @@ export default function Progress() {
           <h1>Progress {isDemo && <DemoBadge>Demo fixtures</DemoBadge>}</h1>
         </div>
       </header>
+      <SubscribeButton className="btn btn--ghost subscribe-inline" />
 
       <div className="stat-row">
         <div className="panel stat"><span className="stat__label">Parts bought</span><span className="stat__value">{bought.length} / {parts.length}</span></div>
@@ -60,7 +63,7 @@ export default function Progress() {
               {u.costCents != null && <p className="muted">Cost: {formatCents(u.costCents, currency)}</p>}
               {u.imageUrls?.length > 0 && (
                 <div className="timeline__photos">
-                  {u.imageUrls.map((src) => (
+                  {u.imageUrls.filter(safeMediaUrl).map((src) => (
                     <img key={src} src={src} alt={`Photo for update: ${u.title}`} loading="lazy" />
                   ))}
                 </div>

@@ -22,8 +22,10 @@ export function extractEvent(event) {
       sessionId: obj.id,
       paymentIntentId: idOf(obj.payment_intent),
       paymentStatus: obj.payment_status,
-      amountTotal: obj.amount_total,
-      currency: obj.currency,
+      // Missing/null fields must quarantine a success event rather than bypass SQL's
+      // mismatch check (NULL comparisons are not true in PostgreSQL).
+      amountTotal: Number.isSafeInteger(obj.amount_total) && obj.amount_total > 0 ? obj.amount_total : -1,
+      currency: typeof obj.currency === 'string' && /^[a-z]{3}$/.test(obj.currency) ? obj.currency : 'invalid',
       donorEmail: obj.customer_details?.email ?? null,
       donationId,
     };

@@ -4,7 +4,7 @@ import {
 } from '../src/seo/config.js';
 
 const SITE = 'https://projects6.example';
-const nav = ['/', '/parts', '/donations', '/progress', '/about'];
+const nav = ['/', '/parts', '/donations', '/progress', '/about', '/community', '/terms', '/privacy'];
 
 describe('route metadata', () => {
   it('every public page has a unique title (≤ 60 chars) and description (70–160 chars)', () => {
@@ -70,7 +70,7 @@ describe('rendering', () => {
 
   it('sitemap lists only indexable pages with absolute URLs; robots points at it', () => {
     const xml = renderSitemap(SITE, '2026-10-04');
-    expect(xml.match(/<loc>/g)).toHaveLength(5);
+    expect(xml.match(/<loc>/g)).toHaveLength(8);
     expect(xml).not.toMatch(/admin|donation\//);
     expect(xml).toContain(`<loc>${SITE}/parts</loc>`);
     const robots = renderRobots(SITE);

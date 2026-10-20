@@ -41,8 +41,8 @@ export default function GarageStage() {
 
   // Search and status filter hide the same parts on the car as in the list.
   const visiblePartIds = useMemo(
-    () => new Set(filterParts(parts, { query: g.search, status: g.statusFilter }).map((p) => p.id)),
-    [parts, g.search, g.statusFilter],
+    () => new Set(filterParts(parts, { query: g.search, status: g.statusFilter, priority: g.priorityFilter }).map((p) => p.id)),
+    [parts, g.search, g.statusFilter, g.priorityFilter],
   );
   const selected = g.selectedPartId ? partsById[g.selectedPartId] : null;
   const currency = project.currency ?? 'usd';

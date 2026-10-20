@@ -157,15 +157,19 @@ try {
   const hood = desktop.locator(`${viewerSelector} [data-part-id="hood"]`);
   const hoodPoint = await carSurfacePoint(desktop, [1.72, 0.89, 0]);
   await desktop.mouse.click(hoodPoint.x, hoodPoint.y);
-  await hood.waitFor({ state: 'visible' });
+  assert.equal(await hood.count(), 1, 'The selected component has one marker');
   await desktop.getByRole('complementary', { name: 'Hood', exact: true }).waitFor();
+  if (!await hood.isVisible()) {
+    const drawer = await desktop.getByRole('complementary', { name: 'Hood', exact: true }).boundingBox();
+    assert.ok(hoodPoint.x >= drawer.x - 24 && hoodPoint.x <= drawer.x + drawer.width + 24 && hoodPoint.y >= drawer.y - 24 && hoodPoint.y <= drawer.y + drawer.height + 24, 'A covered marker stays hidden under its details panel');
+  }
   assert.equal(await desktop.locator('[data-part-row="hood"]').getAttribute('aria-current'), 'true');
   await screenshot(desktop, 'desktop-selected-part');
   await desktop.getByRole('button', { name: 'Close part details' }).click();
   assert.equal(await desktop.locator(`${viewerSelector} .hotspot`).count(), 0, 'Closing details removes the selected marker');
   report.checks.push({ name: 'clicking actual car body selects component, shows one subtle marker, and opens matching details' });
 
-  const search = desktop.getByPlaceholder('Search parts...').first();
+  const search = desktop.getByLabel('Search the parts list');
   await search.fill('bumper');
   assert.equal(await desktop.locator('.part-row').count(), 2);
   const filteredAnchors = await desktop.locator(`${viewerSelector} [data-part-id]`).evaluateAll((elements) => elements.map((element) => element.dataset.partId));

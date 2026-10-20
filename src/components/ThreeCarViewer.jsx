@@ -1,16 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RotateCcw, Plus, Minus, Warehouse, Lightbulb } from 'lucide-react';
 import HotspotButton from './HotspotButton.jsx';
 import { cameraPreset, GARAGE_TARGET, findMeshPart, partAnchors3D } from '../lib/garage3d.js';
-import { createGarageLook } from '../lib/garageLook.js';
+import { createGarageLook } from '../lib/garageLighting.js';
+import { modelUrl } from '../lib/modelAssets.js';
 import { extendGarage } from '../lib/garageExtension.js';
 import { RayIndex } from '../lib/rayIndex.js';
 
 const ANCHORS = partAnchors3D();
-const MODEL_URLS = ['/models/s6-c5.glb', '/models/garage.glb'];
+const MODEL_URLS = [modelUrl('s6-c5.glb'), modelUrl('garage.glb')];
 
 function disposeObject(root) {
   const geometries = new Set();
@@ -62,7 +64,7 @@ async function loadGlb(url, loader, signal, onProgress) {
     onProgress(0.9);
   }
   if (signal.aborted) throw new DOMException('Loading cancelled', 'AbortError');
-  const gltf = await loader.parseAsync(buffer, '/models/');
+  const gltf = await loader.parseAsync(buffer, new URL('.', new URL(url, window.location.href)).href);
   onProgress(1);
   return gltf.scene;
 }
@@ -110,6 +112,7 @@ export default function ThreeCarViewer({
     let rayIndex = null;
     const cleanups = [];
     const abortController = new AbortController();
+    const bootStarted = performance.now();
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(36, 1, 0.08, 90);
     const pointer = new THREE.Vector2();
@@ -183,7 +186,7 @@ export default function ThreeCarViewer({
     // budget (large or high-DPI screens, weak GPUs), moving frames use a lower pixel
     // ratio; once the camera settles, the still image is drawn at full resolution.
     const motion = { scale: 1, applied: 1, last: 0, intervals: [], skip: 0, cooldownUntil: 0, settleTimer: 0 };
-    const basePixelRatio = () => Math.min(window.devicePixelRatio || 1, window.matchMedia?.('(max-width: 900px)').matches ? 1.25 : 1.5);
+    const basePixelRatio = () => Math.min(window.devicePixelRatio || 1, 2);
     function applyScale(scale) {
       if (scale === motion.applied || !look) return;
       motion.applied = scale;
@@ -205,8 +208,8 @@ export default function ThreeCarViewer({
         // Median, so one hitch (a first drag frame, a GC pause) cannot trigger a step.
         // Typically below ~48 fps: step down. Every frame on time: try a step up.
         const sorted = [...motion.intervals].sort((a, b) => a - b);
-        if (sorted[4] > 21 && motion.scale > 0.55) {
-          motion.scale = Math.max(0.55, motion.scale * 0.8);
+        if (sorted[4] > 21 && motion.scale > 0.85) {
+          motion.scale = Math.max(0.85, motion.scale * 0.9);
           motion.cooldownUntil = time + 2000;
         } else if (sorted[7] < 19 && motion.scale < 1 && time > motion.cooldownUntil) {
           motion.scale = Math.min(1, motion.scale * 1.25);
@@ -218,12 +221,13 @@ export default function ThreeCarViewer({
     function settle() {
       if (motion.applied === 1) return;
       clearTimeout(motion.settleTimer);
-      motion.settleTimer = setTimeout(() => { applyScale(1); requestFrame(); }, 140);
+      motion.settleTimer = setTimeout(() => { motion.scale = 1; applyScale(1); requestFrame(); }, 140);
     }
 
     function renderFrame(time) {
       frameId = 0;
-      if (disposed || failed || document.hidden) return;
+      if (disposed || failed || document.hidden || !sceneReady) return;
+      if (!tween && stage.dataset.interacting !== 'true' && time - motion.last > 100) motion.scale = 1;
       trackMotion(time);
       const delta = lastFrameTime ? Math.min((time - lastFrameTime) / 1000, 0.05) : 1 / 60;
       lastFrameTime = time;
@@ -265,6 +269,7 @@ export default function ThreeCarViewer({
       stage.dataset.renderScale = motion.applied.toFixed(2);
       stage.dataset.renderCalls = String(renderer.info.render.calls);
       stage.dataset.triangles = String(renderer.info.render.triangles);
+      stage.dataset.pixelRatio = renderer.getPixelRatio().toFixed(2);
       projectMarkers();
       if (tween || changed || lightsChanging) requestFrame();
       else settle();
@@ -332,11 +337,10 @@ export default function ThreeCarViewer({
       cleanups.push(() => target.removeEventListener(type, handler, options));
     }
 
-    try {
-      // The scene is antialiased in the composer's multisampled target; the canvas only
-      // receives the finished image, so its own MSAA buffer would be wasted.
-      renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, powerPreference: 'high-performance' });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, propsRef.current.compact ? 1.25 : 1.5));
+    async function initialize() {
+      if (disposed) return;
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'default' });
+      renderer.setPixelRatio(basePixelRatio());
       renderer.outputColorSpace = THREE.SRGBColorSpace;
       const canvas = renderer.domElement;
       canvas.className = 'three-canvas';
@@ -364,8 +368,9 @@ export default function ThreeCarViewer({
       controls.addEventListener('start', () => { tween = null; stage.dataset.interacting = 'true'; requestFrame(); });
       controls.addEventListener('end', () => { stage.dataset.interacting = 'false'; requestFrame(); });
 
-      // Neon practicals, wet reflective floor, workshop probe and bloom.
+      // Bounded direct lighting, precomputed reflections, one sharp scene pass.
       look = createGarageLook({ renderer, scene, camera, compact: propsRef.current.compact });
+      const environment = look.loadEnvironment(abortController.signal);
 
       function resize() {
         width = Math.max(1, host.clientWidth);
@@ -440,8 +445,8 @@ export default function ThreeCarViewer({
       };
 
       const progress = [0, 0];
-      const loader = new GLTFLoader();
-      Promise.all(MODEL_URLS.map(async (url, index) => {
+      const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+      await Promise.all([environment, ...MODEL_URLS.map(async (url, index) => {
         const model = await loadGlb(url, loader, abortController.signal, (fraction) => {
           progress[index] = fraction;
           if (!disposed && !failed) setStatus({ state: 'loading', progress: Math.floor((progress[0] + progress[1]) / 2 * 95) });
@@ -466,29 +471,36 @@ export default function ThreeCarViewer({
         occluders.push(model);
         if (index === 0) car = model;
         requestFrame();
-      })).then(async () => {
-        if (disposed || failed) return;
-        look.attach({ car, garage: occluders.find((model) => model !== car) });
-        // Indexed rays for hotspot occlusion and picking (brute force cost ~50 ms a frame).
-        rayIndex = new RayIndex(occluders);
-        // Compile every material now, so first views of the room never hitch.
-        await renderer.compileAsync(scene, camera);
-        if (disposed || failed) return;
-        sceneReady = true;
-        setStatus({ state: 'ready', progress: 100 });
-        propsRef.current.onViewError?.(null);
-        scene.updateMatrixWorld(true);
-        requestFrame();
-      }).catch(fail);
+      })]);
+      if (disposed || failed) return;
+      const yieldToPage = () => new Promise((resolve) => setTimeout(resolve, 0));
+      await yieldToPage();
+      if (disposed || failed) return;
+      look.attach({ car, garage: occluders.find((model) => model !== car) });
+      await yieldToPage();
+      if (disposed || failed) return;
+      // Expensive BVH partitioning runs in a worker, leaving page input responsive.
+      const [preparedIndex] = await Promise.all([
+        RayIndex.create(occluders, { signal: abortController.signal }),
+        renderer.compileAsync(scene, camera),
+      ]);
+      rayIndex = preparedIndex;
+      if (disposed || failed) return;
+      sceneReady = true;
+      stage.dataset.readyMs = String(Math.round(performance.now() - bootStarted));
+      setStatus({ state: 'ready', progress: 100 });
+      propsRef.current.onViewError?.(null);
+      scene.updateMatrixWorld(true);
       requestFrame();
-    } catch (error) {
-      fail(error);
     }
+    // React StrictMode can cancel its throwaway effect before allocating a GPU context.
+    const startupTimer = setTimeout(() => { initialize().catch(fail); }, 0);
 
     return () => {
       disposed = true;
       runtimeRef.current = null;
       abortController.abort();
+      clearTimeout(startupTimer);
       cancelAnimationFrame(frameId);
       resizeObserver?.disconnect();
       clearTimeout(motion.settleTimer);
@@ -552,15 +564,14 @@ export default function ThreeCarViewer({
           </div>
           <div ref={toolbarRef} className="three-toolbar" role="group" aria-label="3D camera controls">
             <div className="three-toolbar__views">
-              <button type="button" onClick={() => runtimeRef.current?.reset()} aria-label="Reset view" title="Reset view"><RotateCcw aria-hidden="true" /><span>Reset</span></button>
-              <button type="button" className={garageView ? 'is-active' : ''} aria-label="Garage view" aria-pressed={garageView} onClick={() => runtimeRef.current?.showGarage(!garageView)} title="Garage view"><Warehouse aria-hidden="true" /><span>Garage</span></button>
+              <button type="button" onClick={() => runtimeRef.current?.reset()} aria-label="Reset view" title="Reset view"><RotateCcw aria-hidden="true" /></button>
+              <button type="button" className={garageView ? 'is-active' : ''} aria-label="Garage view" aria-pressed={garageView} onClick={() => runtimeRef.current?.showGarage(!garageView)} title="Garage view"><Warehouse aria-hidden="true" /></button>
             </div>
             <div className="three-toolbar__zoom" role="group" aria-label="Zoom">
               <button type="button" onClick={() => runtimeRef.current?.zoom(-1)} aria-label="Zoom out" title="Zoom out"><Minus aria-hidden="true" /></button>
-              <span aria-hidden="true">Zoom</span>
               <button type="button" onClick={() => runtimeRef.current?.zoom(1)} aria-label="Zoom in" title="Zoom in"><Plus aria-hidden="true" /></button>
             </div>
-            <button type="button" className="three-toolbar__lights" aria-expanded={lightingOpen} aria-controls="garage-lighting" aria-label="Adjust garage lighting" onClick={() => setLightingOpen((open) => !open)} title="Adjust garage lighting"><Lightbulb aria-hidden="true" /><span>Lights <small>{lightLevel}%</small></span></button>
+            <button type="button" className="three-toolbar__lights" aria-expanded={lightingOpen} aria-controls="garage-lighting" aria-label="Adjust garage lighting" onClick={() => setLightingOpen((open) => !open)} title="Adjust garage lighting"><Lightbulb aria-hidden="true" /></button>
           </div>
           {lightingOpen && (
             <div ref={lightingRef} id="garage-lighting" className="three-lighting" role="group" aria-label="Garage lighting">

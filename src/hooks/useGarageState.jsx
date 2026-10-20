@@ -6,7 +6,7 @@ import { useProjectData } from './useProjectData.jsx';
 
 const GarageContext = createContext(null);
 
-const emptyDraft = { amountCents: 2500, partId: null, displayName: '', isPublic: false };
+const emptyDraft = { amountCents: 2500, partId: null, displayName: '', isPublic: false, customAmount: false };
 
 /**
  * Shell-level UI state shared by the header, garage stage, parts rail and dialogs:
@@ -19,6 +19,7 @@ export function GarageStateProvider({ children, initialViewId = DEFAULT_VIEW_ID 
   const [hoveredPartId, setHoveredPartId] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [priorityFilter, setPriorityFilter] = useState('all');
   const [draft, setDraftRaw] = useState(() => ({ ...emptyDraft, ...(loadDraft() ?? {}) }));
   const [donationOpen, setDonationOpen] = useState(false);
   const { partsById } = useProjectData();
@@ -29,7 +30,10 @@ export function GarageStateProvider({ children, initialViewId = DEFAULT_VIEW_ID 
   useEffect(() => {
     const term = search.trim();
     if (term.length < 2) return undefined;
-    const t = setTimeout(() => track('search', { search_term: term.slice(0, 60).toLowerCase() }), 1200);
+    const t = setTimeout(() => {
+      const matches = Object.values(partsRef.current).filter((p) => p.name.toLowerCase().includes(term.toLowerCase()));
+      track('search', { search_term: matches.length ? matches.map((p) => p.name).join(', ').slice(0, 160) : 'no matching parts' });
+    }, 1200);
     return () => clearTimeout(t);
   }, [search]);
 
@@ -78,7 +82,7 @@ export function GarageStateProvider({ children, initialViewId = DEFAULT_VIEW_ID 
 
   const openDonation = useCallback(
     (patch = {}) => {
-      setDraft(patch);
+      setDraft({ partId: null, ...patch });
       setDonationOpen(true);
       track('donate_dialog_open', { part_id: patch.partId ?? null });
     },
@@ -92,10 +96,11 @@ export function GarageStateProvider({ children, initialViewId = DEFAULT_VIEW_ID 
       hoveredPartId, setHoveredPartId,
       search, setSearch,
       statusFilter, setStatusFilter,
+      priorityFilter, setPriorityFilter,
       draft, setDraft,
       donationOpen, openDonation, closeDonation: () => setDonationOpen(false),
     }),
-    [viewId, setViewId, selectedPartId, selectPart, hoveredPartId, search, statusFilter, draft, setDraft, donationOpen, openDonation],
+    [viewId, setViewId, selectedPartId, selectPart, hoveredPartId, search, statusFilter, priorityFilter, draft, setDraft, donationOpen, openDonation],
   );
   return <GarageContext.Provider value={value}>{children}</GarageContext.Provider>;
 }

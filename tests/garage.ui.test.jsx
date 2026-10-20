@@ -73,7 +73,7 @@ describe('garage image fallback dashboard (demo mode)', () => {
     expect(screen.getByRole('button', { name: 'All (10)' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Needed (7)' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Bought (1)' })).toBeInTheDocument();
-    expect(screen.getByRole('progressbar', { name: 'Campaign funding' })).toHaveAttribute('aria-valuenow', '33');
+    expect(screen.getByRole('progressbar', { name: 'Campaign funding' })).toHaveAttribute('aria-valuenow', '27');
     expect(screen.getAllByText(/Demo data/i).length).toBeGreaterThan(0);
     expect(layer().dataset.view).toBe('exterior-a');
     expect(dotParts()).toEqual(['brake-kit', 'front-bumper', 'hood', 'roof-box', 'side-skirts', 'wheels']);
@@ -156,13 +156,15 @@ describe('garage image fallback dashboard (demo mode)', () => {
 describe('donation dialog (demo mode)', () => {
   it('validates custom amounts and never pretends to charge in demo mode', async () => {
     renderApp();
-    fireEvent.click(screen.getByRole('button', { name: '$50' }));
+    fireEvent.click(screen.getByRole('button', { name: '$25' }));
     fireEvent.click(screen.getByRole('button', { name: /Donate now/i }));
-    const dialog = await screen.findByRole('dialog', { hidden: true });
-    const custom = within(dialog).getByPlaceholderText('Other');
+    const dialog = await screen.findByRole('dialog', { hidden: true, name: 'Support the restoration' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Custom', hidden: true }));
+    const custom = within(dialog).getByPlaceholderText('e.g. 15.50');
     fireEvent.change(custom, { target: { value: '0.5' } });
     expect(within(dialog).getByText(/minimum contribution is \$1/i)).toBeInTheDocument();
     fireEvent.change(custom, { target: { value: '12.34' } });
+    fireEvent.click(within(dialog).getByLabelText(/I agree to the/));
     fireEvent.submit(dialog.querySelector('form'));
     expect(await within(dialog).findByText('No payment was taken')).toBeInTheDocument();
     expect(within(dialog).getByText('$12.34')).toBeInTheDocument();
@@ -172,7 +174,7 @@ describe('donation dialog (demo mode)', () => {
     renderApp();
     fireEvent.click(document.querySelector('.hotspot[data-part-id="hood"]'));
     fireEvent.click(screen.getByRole('button', { name: /Fund this part/i }));
-    const dialog = await screen.findByRole('dialog', { hidden: true });
+    const dialog = await screen.findByRole('dialog', { hidden: true, name: 'Support the restoration' });
     expect(within(dialog).getByRole('combobox', { hidden: true })).toHaveValue('hood');
     expect(within(dialog).getByText(/isn’t a parts purchase/)).toBeInTheDocument();
   });
@@ -184,12 +186,15 @@ describe('routes', () => {
     ['/donations', /Donations/],
     ['/progress', /Progress/],
     ['/about', /PROJECT S6/],
+    ['/community', /A garage for/],
+    ['/terms', /Donation terms/],
+    ['/privacy', /Privacy notice/],
     ['/admin', /Owner admin/],
     ['/donation/cancel?part=hood&amount=25.00', /Checkout cancelled/],
     ['/nope', /Page not found/],
   ])('%s renders', async (path, heading) => {
     renderApp(path);
-    expect(await screen.findByRole('heading', { level: 1, name: heading })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: heading }, { timeout: 5000 })).toBeInTheDocument();
   });
 
   it('demo donations page shows no invented supporters', () => {

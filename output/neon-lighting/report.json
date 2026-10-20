@@ -1,0 +1,15 @@
+{
+  "errors": [],
+  "profiles": [
+    {
+      "width": 1440,
+      "drawCalls": "133",
+      "readyMs": "1582"
+    },
+    {
+      "width": 390,
+      "drawCalls": "132",
+      "readyMs": "1017"
+    }
+  ]
+}

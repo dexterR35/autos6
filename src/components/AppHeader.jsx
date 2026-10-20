@@ -9,6 +9,7 @@ const NAV = [
   { to: '/parts', label: 'Parts' },
   { to: '/donations', label: 'Donations' },
   { to: '/progress', label: 'Progress' },
+  { to: '/community', label: 'Community' },
   { to: '/about', label: 'About' },
 ];
 
@@ -79,7 +80,7 @@ const AppHeader = forwardRef(function AppHeader(_props, ref) {
           <span className="visually-hidden">Search parts</span>
           <input type="search" placeholder="Search parts..." value={search} onChange={onSearch} autoComplete="off" />
         </label>
-        <button type="button" className="btn btn--donate" onClick={() => openDonation()}>
+        <button type="button" className="btn btn--donate" aria-label="Donate" onClick={() => openDonation()}>
           <Heart aria-hidden="true" fill="currentColor" />
           <span>Donate</span>
         </button>

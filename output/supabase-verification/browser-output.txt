@@ -1,0 +1,82 @@
+{
+  "profiles": [
+    {
+      "name": "desktop",
+      "readyMs": 1572,
+      "drawCalls": 131,
+      "triangles": 463167,
+      "pixelRatio": 1,
+      "scale": 1,
+      "cssWidth": 1038,
+      "bufferWidth": 1038,
+      "longTasks": [
+        55,
+        469,
+        76
+      ],
+      "models": [
+        {
+          "name": "https://hbjtppfmqyunzeddfjzt.supabase.co/storage/v1/object/public/project-models/006db33e-7594-4b89-b604-4c7c49f58a51/v1/s6-c5.glb",
+          "bytes": 0,
+          "downloadMs": 222
+        },
+        {
+          "name": "https://hbjtppfmqyunzeddfjzt.supabase.co/storage/v1/object/public/project-models/006db33e-7594-4b89-b604-4c7c49f58a51/v1/garage.glb",
+          "bytes": 0,
+          "downloadMs": 232
+        }
+      ]
+    },
+    {
+      "name": "mobile",
+      "readyMs": 1022,
+      "drawCalls": 130,
+      "triangles": 463165,
+      "pixelRatio": 2,
+      "scale": 1,
+      "cssWidth": 364,
+      "bufferWidth": 728,
+      "longTasks": [
+        55
+      ],
+      "models": [
+        {
+          "name": "https://hbjtppfmqyunzeddfjzt.supabase.co/storage/v1/object/public/project-models/006db33e-7594-4b89-b604-4c7c49f58a51/v1/s6-c5.glb",
+          "bytes": 0,
+          "downloadMs": 279
+        },
+        {
+          "name": "https://hbjtppfmqyunzeddfjzt.supabase.co/storage/v1/object/public/project-models/006db33e-7594-4b89-b604-4c7c49f58a51/v1/garage.glb",
+          "bytes": 0,
+          "downloadMs": 289
+        }
+      ]
+    },
+    {
+      "name": "narrow",
+      "readyMs": 847,
+      "drawCalls": 128,
+      "triangles": 463161,
+      "pixelRatio": 2,
+      "scale": 1,
+      "cssWidth": 294,
+      "bufferWidth": 588,
+      "longTasks": [
+        54
+      ],
+      "models": [
+        {
+          "name": "https://hbjtppfmqyunzeddfjzt.supabase.co/storage/v1/object/public/project-models/006db33e-7594-4b89-b604-4c7c49f58a51/v1/s6-c5.glb",
+          "bytes": 0,
+          "downloadMs": 311
+        },
+        {
+          "name": "https://hbjtppfmqyunzeddfjzt.supabase.co/storage/v1/object/public/project-models/006db33e-7594-4b89-b604-4c7c49f58a51/v1/garage.glb",
+          "bytes": 0,
+          "downloadMs": 321
+        }
+      ]
+    }
+  ],
+  "errors": []
+}

@@ -1,4 +1,5 @@
 import { validateAmountCents } from '../src/lib/money.js';
+import { POLICY_VERSION } from '../src/lib/policies.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SLUG_RE = /^[a-z0-9-]{1,60}$/;
@@ -16,6 +17,7 @@ export function validateCheckoutBody(body, { minCents, maxCents }) {
   if (amountError) return { error: amountError };
   if (typeof attemptId !== 'string' || !UUID_RE.test(attemptId)) return { error: 'Invalid checkout attempt.' };
   if (typeof isPublic !== 'boolean') return { error: 'Invalid recognition preference.' };
+  if (body.termsAccepted !== true || body.termsVersion !== POLICY_VERSION) return { error: 'Please accept the current donation terms and privacy notice.' };
 
   let name = null;
   if (displayName !== null) {
@@ -27,6 +29,6 @@ export function validateCheckoutBody(body, { minCents, maxCents }) {
   }
 
   return {
-    value: { projectSlug, partSlug: partId, amountCents, displayName: name, isPublic, attemptId: attemptId.toLowerCase() },
+    value: { projectSlug, partSlug: partId, amountCents, displayName: name, isPublic, attemptId: attemptId.toLowerCase(), termsVersion: POLICY_VERSION },
   };
 }

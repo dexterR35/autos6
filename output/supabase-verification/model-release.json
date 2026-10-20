@@ -1,0 +1,30 @@
+{
+  "projectRef": "hbjtppfmqyunzeddfjzt",
+  "files": [
+    {
+      "name": "s6-c5.glb",
+      "url": "https://hbjtppfmqyunzeddfjzt.supabase.co/storage/v1/object/public/project-models/006db33e-7594-4b89-b604-4c7c49f58a51/v1/s6-c5.glb",
+      "bytes": 1407932,
+      "sha256": "d50d307b167c81d8298686431f4e7e122fe6639c1291ff250fd4dd2531899393",
+      "cacheControl": "public, max-age=31536000",
+      "contentType": "model/gltf-binary"
+    },
+    {
+      "name": "garage.glb",
+      "url": "https://hbjtppfmqyunzeddfjzt.supabase.co/storage/v1/object/public/project-models/006db33e-7594-4b89-b604-4c7c49f58a51/v1/garage.glb",
+      "bytes": 1816740,
+      "sha256": "6b6dc1426438c1428d99ff4d8d6d93358ce1ce9a95a4c493211173cdff028766",
+      "cacheControl": "public, max-age=31536000",
+      "contentType": "model/gltf-binary"
+    },
+    {
+      "name": "garage-lighting.hdr",
+      "url": "https://hbjtppfmqyunzeddfjzt.supabase.co/storage/v1/object/public/project-models/006db33e-7594-4b89-b604-4c7c49f58a51/v1/garage-lighting.hdr",
+      "bytes": 12853,
+      "sha256": "214de2f2374bafe5722a5e5f63b127d82f9221c65c5312d370df02daf2da1501",
+      "cacheControl": "public, max-age=31536000",
+      "contentType": "image/vnd.radiance"
+    }
+  ],
+  "unauthorizedHelperStatus": 404
+}

@@ -2,7 +2,7 @@
 -- Run after the migrations: supabase db reset (local) or paste into the SQL editor.
 insert into public.projects (slug, title, tagline, vehicle_display_name, currency, goal_cents, description)
 values (
-  'project-s6', 'PROJECT S6', 'MAKE THIS CAR GREAT AGAIN', 'AUDI S6 C5 AVANT 2.7 BiTurbo (2003)', 'usd', 800000,
+  'project-s6', 'PROJECT S6', 'MAKE THIS CAR GREAT AGAIN', 'AUDI S6 C5 AVANT 2.7 BiTurbo (2003)', 'usd', 1000000,
   'A long-term restoration of a C5-generation Audi S6 Avant. Contributions go toward parts, paint and labour, one job at a time.'
 )
 on conflict (slug) do nothing;
@@ -24,6 +24,9 @@ cross join (values
 ) as v(slug, name, estimate_cents, status, condition, description, sort_order)
 where p.slug = 'project-s6'
 on conflict (project_id, slug) do nothing;
+
+update public.parts set priority='important' where slug in ('front-bumper','exhaust','coilovers')
+  and project_id=(select id from public.projects where slug='project-s6');
 
 -- Owner provisioning (trusted step — run in the SQL editor after the owner signs up):
 -- insert into public.project_admins (project_id, user_id)

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Heart, Users } from 'lucide-react';
 import DemoBadge from '../components/DemoBadge.jsx';
 import { FundingProgress } from '../components/FundingPanel.jsx';
-import { formatCents } from '../lib/money.js';
+import { CAMPAIGN_GOAL_CENTS, displayedRaised, formatCents } from '../lib/money.js';
 import { fetchPublicContributions } from '../lib/liveData.js';
 import { useGarageState } from '../hooks/useGarageState.jsx';
 import { useProjectData } from '../hooks/useProjectData.jsx';
@@ -43,9 +43,10 @@ export default function Donations() {
         {summary ? (
           <>
             <p className="summary-card__totals">
-              <strong>{formatCents(summary.raisedCents, currency)}</strong> raised of {formatCents(summary.goalCents, currency)} goal
+              <strong>{formatCents(displayedRaised(summary.raisedCents), currency)}</strong> raised of {formatCents(CAMPAIGN_GOAL_CENTS, currency)} goal
             </p>
-            <FundingProgress raisedCents={summary.raisedCents} goalCents={summary.goalCents} currency={currency} />
+            <FundingProgress raisedCents={summary.raisedCents} goalCents={CAMPAIGN_GOAL_CENTS} currency={currency} />
+            {summary.raisedCents >= CAMPAIGN_GOAL_CENTS && <p className="note note--ok">The goal is funded. You can still contribute toward ongoing restoration and future upgrades.</p>}
             <p className="fine">
               {isDemo
                 ? 'Sample figures for design review. Live totals count only Stripe-confirmed payments, minus refunds.'
@@ -95,3 +96,4 @@ export default function Donations() {
     </div>
   );
 }
+

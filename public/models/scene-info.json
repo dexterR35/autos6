@@ -10,14 +10,14 @@
   "foregroundPropsRelocated": 221,
   "car": {
     "file": "/models/s6-c5.glb",
-    "bytes": 6641672,
+    "bytes": 1407932,
     "meshes": 67,
     "drawCalls": 67,
     "triangles": 314814,
     "bounds": {
       "min": [
         -2.371917486190796,
-        -4.376994547783397e-05,
+        -0.00004376994547783397,
         -1.0499999523162842
       ],
       "max": [
@@ -39,13 +39,17 @@
       "wheels"
     ],
     "extensions": [
+      "EXT_meshopt_compression",
       "KHR_materials_clearcoat",
-      "KHR_materials_emissive_strength"
-    ]
+      "KHR_materials_emissive_strength",
+      "KHR_mesh_quantization"
+    ],
+    "uncompressedBytes": 6641672,
+    "compression": "Meshopt; 16-bit positions, 14-bit normals, topology unchanged"
   },
   "garage": {
     "file": "/models/garage.glb",
-    "bytes": 5033708,
+    "bytes": 1816740,
     "meshes": 31,
     "drawCalls": 31,
     "triangles": 100876,
@@ -64,9 +68,13 @@
     "materials": 31,
     "parts": [],
     "extensions": [
+      "EXT_meshopt_compression",
       "KHR_materials_clearcoat",
-      "KHR_materials_emissive_strength"
-    ]
+      "KHR_materials_emissive_strength",
+      "KHR_mesh_quantization"
+    ],
+    "uncompressedBytes": 5033708,
+    "compression": "Meshopt; 16-bit positions, 14-bit normals, topology unchanged"
   },
   "notes": [
     "Procedural visual reconstruction, not OEM CAD.",

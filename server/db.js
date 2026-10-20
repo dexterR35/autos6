@@ -51,13 +51,14 @@ export function createSupabaseDb(client) {
   };
   return {
     async createPendingDonation(v) {
-      const rows = await rpc('create_pending_donation', {
+      const rows = await rpc('create_consented_donation', {
         p_attempt_id: v.attemptId,
         p_project_slug: v.projectSlug,
         p_part_slug: v.partSlug,
         p_amount_cents: v.amountCents,
         p_display_name: v.displayName,
         p_is_public: v.isPublic,
+        p_terms_version: v.termsVersion,
       });
       return mapPending(rows[0]);
     },
@@ -66,6 +67,23 @@ export function createSupabaseDb(client) {
     async getDonationStatus(sessionId) {
       const rows = await rpc('get_donation_status', { p_session_id: sessionId });
       return mapStatus(rows?.[0]) ?? null;
+    },
+    requestSubscription: (v) => rpc('request_subscription', { p_slug: v.slug, p_email: v.email, p_part_slug: v.partSlug, p_hash: v.hash, p_url: v.url, p_consent: v.consent }),
+    confirmSubscription: (hash) => rpc('confirm_subscription', { p_hash: hash }),
+    unsubscribe: (id) => rpc('unsubscribe_member', { p_id: id }),
+    claimEmailJobs: () => rpc('claim_email_jobs', { p_limit: 20 }),
+    finishEmailJob: (id, lease, provider) => rpc('finish_email_job', { p_id: id, p_lease: lease, p_provider: provider }),
+    async isEmailEligible(job) {
+      const { data, error } = await client.from('subscribers').select('status,token_hash,token_expires_at').eq('id', job.subscriber_id).single();
+      if (error) throw toDbError(error);
+      if (job.kind === 'update') return data.status === 'active';
+      const token = new URL(job.payload.url).hash.slice(7);
+      const { hashToken } = await import('./subscriptions.js');
+      return data.status === 'pending' && data.token_hash === hashToken(token) && Date.parse(data.token_expires_at) > Date.now();
+    },
+    async cancelEmailJob(id) {
+      const { error } = await client.from('email_jobs').update({ state: 'cancelled' }).eq('id', id);
+      if (error) throw toDbError(error);
     },
   };
 }

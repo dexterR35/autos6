@@ -7,6 +7,10 @@ import { createCheckout, newAttemptId } from '../lib/donations.js';
 import { track, trackBeginCheckout } from '../lib/analytics.js';
 import { useGarageState } from '../hooks/useGarageState.jsx';
 import { useProjectData } from '../hooks/useProjectData.jsx';
+import { Link } from 'react-router-dom';
+import AmountPicker from './AmountPicker.jsx';
+import PartProgress from './PartProgress.jsx';
+import { POLICY_VERSION } from '../lib/policies.js';
 
 const NAME_MAX = 40;
 
@@ -14,16 +18,18 @@ export default function DonationDialog() {
   const { donationOpen, closeDonation, draft, setDraft } = useGarageState();
   const { project, parts, isDemo, status } = useProjectData();
   const currency = project.currency ?? 'usd';
-  const [custom, setCustom] = useState('');
+  const [custom, setCustom] = useState(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [demoDone, setDemoDone] = useState(false);
   const attemptId = useRef(null);
+  const submittedPayload = useRef(null);
 
   const isPreset = DONATION_PRESETS_CENTS.includes(draft.amountCents);
-  const customCents = custom ? parseDollarsToCents(custom) : null;
-  const amountCents = custom ? customCents : draft.amountCents;
-  const amountError = custom && customCents === null ? 'Enter an amount like 15 or 15.50.' : validateAmountCents(amountCents);
+  const customCents = custom !== null ? parseDollarsToCents(custom) : null;
+  const amountCents = custom !== null ? customCents : draft.amountCents;
+  const amountError = custom !== null && customCents === null ? 'Enter an amount like 15 or 15.50.' : validateAmountCents(amountCents);
   const part = parts.find((p) => p.id === draft.partId) ?? null;
   const fundable = useMemo(() => parts.filter((p) => p.status !== 'bought' || p.id === draft.partId), [parts, draft.partId]);
 
@@ -31,10 +37,12 @@ export default function DonationDialog() {
     if (!donationOpen) return;
     // New attempt each time the dialog opens; reused for retries so the server never creates two sessions.
     attemptId.current = newAttemptId();
+    submittedPayload.current = null;
+    setTermsAccepted(false);
     setError(null);
     setSubmitting(false);
     setDemoDone(false);
-    setCustom(isPreset || !draft.amountCents ? '' : (draft.amountCents / 100).toString());
+    setCustom(draft.customAmount ? '' : isPreset || !draft.amountCents ? null : (draft.amountCents / 100).toString());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [donationOpen]);
 
@@ -45,7 +53,8 @@ export default function DonationDialog() {
       setError(amountError);
       return;
     }
-    setDraft({ amountCents });
+    if (!termsAccepted) { setError('Please accept the donation terms and privacy notice.'); return; }
+    setDraft({ amountCents, customAmount: custom !== null });
     if (isDemo) {
       // Not a real checkout: keep it out of GA4 ecommerce reports.
       track('donation_demo_preview', { value: amountCents / 100, currency: currency.toUpperCase(), part_id: part?.id ?? null });
@@ -56,6 +65,9 @@ export default function DonationDialog() {
     setSubmitting(true);
     setError(null);
     try {
+      const fingerprint = JSON.stringify([draft.partId, amountCents, draft.displayName.trim(), draft.isPublic]);
+      if (submittedPayload.current && submittedPayload.current !== fingerprint) attemptId.current = newAttemptId();
+      submittedPayload.current = fingerprint;
       const { url } = await createCheckout({
         projectSlug: project.slug,
         partId: draft.partId,
@@ -63,6 +75,8 @@ export default function DonationDialog() {
         displayName: draft.displayName.trim(),
         isPublic: draft.isPublic,
         attemptId: attemptId.current,
+        termsAccepted,
+        termsVersion: POLICY_VERSION,
       });
       window.location.assign(url);
     } catch (err) {
@@ -71,7 +85,8 @@ export default function DonationDialog() {
     }
   };
 
-  const liveUnavailable = !isDemo && status !== 'ready';
+  const legalReady = Boolean(import.meta.env.VITE_OPERATOR_NAME && import.meta.env.VITE_CONTACT_EMAIL);
+  const liveUnavailable = !isDemo && (status !== 'ready' || !legalReady);
 
   return (
     <Modal open={donationOpen} onClose={closeDonation} title="Support the restoration" labelledBy="donate-title" className="donate-modal">
@@ -96,47 +111,14 @@ export default function DonationDialog() {
             <p className="note"><Info aria-hidden="true" /> Demo mode: you can try the form, but no payment will be taken.</p>
           )}
           {liveUnavailable && (
-            <p className="note note--warn" role="alert">Donations are unavailable right now: live campaign data could not be loaded.</p>
+            <p className="note note--warn" role="alert">{!legalReady ? 'Donations are not open yet. The project owner is completing the public terms and contact details.' : 'Donations are unavailable right now: live campaign data could not be loaded.'}</p>
           )}
 
           <fieldset>
             <legend>Amount ({currency.toUpperCase()})</legend>
-            <div className="presets presets--dialog">
-              {DONATION_PRESETS_CENTS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  className={`preset ${!custom && draft.amountCents === c ? 'is-active' : ''}`}
-                  aria-pressed={!custom && draft.amountCents === c}
-                  onClick={() => {
-                    setCustom('');
-                    setDraft({ amountCents: c });
-                    setError(null);
-                  }}
-                >
-                  {formatCents(c, currency)}
-                </button>
-              ))}
-            </div>
-            <label className="field field--inline">
-              <span>Custom amount</span>
-              <span className="money-input">
-                <span aria-hidden="true">$</span>
-                <input
-                  inputMode="decimal"
-                  placeholder="Other"
-                  value={custom}
-                  aria-invalid={Boolean(custom && amountError)}
-                  aria-describedby="amount-help"
-                  onChange={(e) => {
-                    setCustom(e.target.value);
-                    setError(null);
-                  }}
-                />
-              </span>
-            </label>
-            <p id="amount-help" className={`fine ${custom && amountError ? 'is-error' : ''}`}>
-              {custom && amountError ? amountError : 'Minimum $1, maximum $10,000.'}
+            <AmountPicker amountCents={draft.amountCents} currency={currency} custom={custom} onCustom={(value) => { setCustom(value); setError(null); }} onChange={(value) => { setCustom(null); setDraft({ amountCents: value, customAmount: false }); setError(null); }} />
+            <p id="amount-help" className={`fine ${custom !== null && amountError ? 'is-error' : ''}`}>
+              {custom !== null && amountError ? amountError : 'Minimum $1, maximum $10,000 per donation.'}
             </p>
           </fieldset>
 
@@ -157,6 +139,8 @@ export default function DonationDialog() {
               parts as bought only after buying them.
             </p>
           )}
+          {part && <PartProgress part={part} currency={currency} />}
+          <p className="fine">Every contribution also moves the $10,000 campaign forward. After a part or the campaign is funded, additional support helps with fitting, running costs and future work.</p>
 
           <label className="field">
             <span>Display name <span className="muted">(optional)</span></span>
@@ -170,6 +154,10 @@ export default function DonationDialog() {
           <label className="check">
             <input type="checkbox" checked={draft.isPublic} onChange={(e) => setDraft({ isPublic: e.target.checked })} />
             <span>Show my display name and amount on the public supporters list</span>
+          </label>
+          <label className="check consent-check">
+            <input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} />
+            <span>I agree to the <Link to="/terms" target="_blank" rel="noopener noreferrer">donation terms</Link> and have read the <Link to="/privacy" target="_blank" rel="noopener noreferrer">privacy notice</Link>. This is a voluntary contribution to a personal restoration.</span>
           </label>
 
           {error && <p className="form-error" role="alert">{error}</p>}

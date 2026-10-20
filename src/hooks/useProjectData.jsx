@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { DEMO_MODE, HAS_SUPABASE, PROJECT_SLUG } from '../lib/config.js';
 import { demoParts, demoProject, demoSummary, demoUpdates } from '../data/demoProject.js';
-import { fetchLiveProject, fetchLiveSummary } from '../lib/liveData.js';
+import { fetchLiveProject } from '../lib/liveData.js';
 
 const ProjectDataContext = createContext(null);
 const SUMMARY_REFRESH_MS = 60_000;
@@ -36,8 +36,8 @@ export function ProjectDataProvider({ children, mode = DEMO_MODE ? 'demo' : 'liv
   const refreshSummary = useCallback(async () => {
     if (mode === 'demo' || !HAS_SUPABASE) return;
     try {
-      const summary = await fetchLiveSummary(slug);
-      setState((s) => ({ ...s, summary }));
+      const data = await fetchLiveProject(slug);
+      setState((s) => ({ ...s, ...data }));
     } catch {
       /* keep the last good summary */
     }

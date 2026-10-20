@@ -1,5 +1,6 @@
 import { Armchair, Wrench } from 'lucide-react';
 import { getPartThumbnail } from '../data/assetManifest.js';
+import { safeMediaUrl } from '../lib/safeMedia.js';
 
 function CoiloverIcon(props) {
   return (
@@ -17,13 +18,13 @@ export default function PartThumb({ part, size = 'md' }) {
   const thumb = getPartThumbnail(part);
   return (
     <span className={`part-thumb part-thumb--${size}`}>
-      {thumb.type === 'icon' ? (
+      {thumb.type === 'icon' || !safeMediaUrl(thumb.src) ? (
         (() => {
           const Icon = ICONS[thumb.icon] ?? Wrench;
           return <Icon className="part-thumb__icon" aria-hidden="true" />;
         })()
       ) : (
-        <img src={thumb.src} alt="" loading="lazy" decoding="async" draggable="false" />
+        <img src={safeMediaUrl(thumb.src)} alt="" loading="lazy" decoding="async" draggable="false" />
       )}
     </span>
   );

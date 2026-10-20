@@ -13,7 +13,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "screenshots": "node scripts/screenshots.js",
-    "verify:orbit": "node scripts/verify-orbit.mjs"
+    "verify:orbit": "node scripts/verify-orbit.mjs",
+    "upload:models": "node scripts/upload-models.mjs",
+    "generate:lighting": "node scripts/make-garage-environment.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2",
@@ -33,11 +35,11 @@
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",
     "@vitejs/plugin-react": "6.1.1",
-    "concurrently": "10.0.5",
+    "concurrently": "10.0.6",
     "jsdom": "30.1.1",
     "playwright": "1.63.0",
     "supertest": "7.3.1",
-    "vite": "8.3.2",
+    "vite": "8.3.4",
     "vitest": "5.0.3"
   }
 }

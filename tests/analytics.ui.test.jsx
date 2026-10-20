@@ -76,8 +76,9 @@ describe('funnel events', () => {
   it('demo donations are not reported as checkouts and never include the donor’s name', async () => {
     renderApp('/');
     fireEvent.click(screen.getByRole('button', { name: /Donate now/i }));
-    const dialog = await screen.findByRole('dialog', { hidden: true });
+    const dialog = await screen.findByRole('dialog', { hidden: true, name: 'Support the restoration' });
     fireEvent.change(within(dialog).getByLabelText(/Display name/), { target: { value: 'Secret Supporter' } });
+    fireEvent.click(within(dialog).getByLabelText(/I agree to the/));
     fireEvent.submit(dialog.querySelector('form'));
     expect(events('donate_dialog_open')).toHaveLength(1);
     expect(events('donation_demo_preview')).toHaveLength(1);
@@ -92,7 +93,7 @@ describe('funnel events', () => {
       const input = screen.getAllByPlaceholderText('Search parts...')[0];
       for (const v of ['b', 'bu', 'bum', 'bumper']) fireEvent.change(input, { target: { value: v } });
       act(() => vi.advanceTimersByTime(1500));
-      expect(events('search').map((e) => e.search_term)).toEqual(['bumper']);
+      expect(events('search').map((e) => e.search_term)).toEqual(['Front Bumper, Rear Bumper']);
     } finally {
       vi.useRealTimers();
     }

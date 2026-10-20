@@ -7,13 +7,15 @@ import { SESSION_ID_RE, validateCheckoutBody } from './validation.js';
 import { extractEvent } from './stripeEvents.js';
 import { createLogger } from './logger.js';
 import { ROUTES, normalizePath } from '../src/seo/config.js';
+import { registerSubscriptions } from './subscriptions.js';
+import { contentSecurityPolicy } from './security.js';
 
 const DEFAULT_DIST = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../dist');
 
 function publicStatus(row) {
   let status = row.status;
   if (status === 'paid' && row.refundedCents > 0) status = row.refundedCents >= row.amountCents ? 'refunded' : 'partially_refunded';
-  return { status, amountCents: row.amountCents, currency: row.currency, partName: row.partName ?? null };
+  return { status, amountCents: row.amountCents, currency: row.currency, partName: row.partName ?? null, ...(row.refundedCents > 0 ? { refundedCents: row.refundedCents } : {}) };
 }
 
 /**
@@ -23,7 +25,12 @@ export function createApp({ stripe = null, db = null, config, logger = createLog
   const app = express();
   app.disable('x-powered-by');
   if (config.trustProxy) app.set('trust proxy', config.trustProxy);
-  app.use(helmet({ contentSecurityPolicy: false }));
+  app.use(helmet({ contentSecurityPolicy: contentSecurityPolicy(config, config.distDir || DEFAULT_DIST), referrerPolicy: { policy: 'no-referrer' } }));
+  app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
+  const originGuard = (req, res, next) => {
+    if (req.get('origin') && req.get('origin') !== config.appOrigin || req.get('sec-fetch-site') === 'cross-site') return res.status(403).json({ error: 'Origin not allowed.' });
+    next();
+  };
 
   const limiter = (limit) => rateLimit({ windowMs: 60_000, limit, standardHeaders: 'draft-8', legacyHeaders: false, message: { error: 'Too many requests. Please wait a moment.' } });
 
@@ -41,6 +48,7 @@ export function createApp({ stripe = null, db = null, config, logger = createLog
       logger.warn('webhook signature verification failed');
       return res.status(400).json({ error: 'Invalid signature.' });
     }
+    if (Boolean(event.livemode) !== config.stripeLive) return res.status(400).json({ error: 'Payment mode mismatch.' });
 
     const args = extractEvent(event);
     if (!args) return res.json({ received: true, ignored: true });
@@ -57,16 +65,17 @@ export function createApp({ stripe = null, db = null, config, logger = createLog
   });
 
   const json = express.json({ limit: '10kb' });
+  registerSubscriptions(app, { db, config, json, limiter, originGuard, logger });
 
   app.get('/api/health', (_req, res) => {
     res.json({ ok: true, payments: Boolean(stripe && db), webhooks: Boolean(stripe && db && config.stripeWebhookSecret) });
   });
 
   // ---- Create a Checkout Session for a donation attempt.
-  app.post('/api/donations/checkout', limiter(config.rateLimit.checkoutPerMinute), json, async (req, res) => {
+  app.post('/api/donations/checkout', limiter(config.rateLimit.checkoutPerMinute), originGuard, json, async (req, res) => {
     const origin = req.get('origin');
     if (origin && origin !== config.appOrigin) return res.status(403).json({ error: 'Origin not allowed.' });
-    if (!stripe || !db) return res.status(503).json({ error: 'Donations are not available right now (payments are not configured).' });
+    if (!stripe || !db || !config.stripeWebhookSecret) return res.status(503).json({ error: 'Donations are not available right now (payments are not configured).' });
 
     const { value, error } = validateCheckoutBody(req.body, config);
     if (error) return res.status(400).json({ error });
@@ -96,6 +105,8 @@ export function createApp({ stripe = null, db = null, config, logger = createLog
         {
           mode: 'payment',
           submit_type: 'donate',
+          consent_collection: { terms_of_service: 'required' },
+          custom_text: { terms_of_service_acceptance: { message: `I agree to the [donation terms](${config.appOrigin}/terms) and have read the [privacy notice](${config.appOrigin}/privacy).` } },
           line_items: [
             {
               quantity: 1,
@@ -112,7 +123,7 @@ export function createApp({ stripe = null, db = null, config, logger = createLog
           success_url: `${config.appOrigin}/donation/success?session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${config.appOrigin}/donation/cancel?${cancelParams}`,
           client_reference_id: donation.donationId,
-          metadata: { donation_id: donation.donationId, project_slug: value.projectSlug, part_slug: donation.partSlug ?? '' },
+          metadata: { donation_id: donation.donationId, project_slug: value.projectSlug, part_slug: donation.partSlug ?? '', terms_version: value.termsVersion },
           payment_intent_data: { metadata: { donation_id: donation.donationId }, description: productName },
         },
         { idempotencyKey: `donation-checkout-${value.attemptId}` },

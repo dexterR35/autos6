@@ -116,3 +116,13 @@ create table public.stripe_events (
   result text,
   received_at timestamptz not null default now()
 );
+
+-- Private from creation, before the policy migration runs.
+alter table public.projects enable row level security;
+alter table public.parts enable row level security;
+alter table public.project_admins enable row level security;
+alter table public.restoration_updates enable row level security;
+alter table public.donations enable row level security;
+alter table public.stripe_events enable row level security;
+revoke all on public.projects,public.parts,public.project_admins,public.restoration_updates,public.donations,public.stripe_events from anon,authenticated;
+

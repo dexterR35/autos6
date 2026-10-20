@@ -17,6 +17,6 @@ export function countByStatus(parts) {
   return counts;
 }
 
-export function filterParts(parts, { query = '', status = 'all' } = {}) {
-  return parts.filter((p) => matchesSearch(p, query) && matchesStatus(p, status));
+export function filterParts(parts, { query = '', status = 'all', priority = 'all' } = {}) {
+  return parts.filter((p) => matchesSearch(p, query) && matchesStatus(p, status) && (priority === 'all' || (p.priority ?? 'standard') === priority));
 }
