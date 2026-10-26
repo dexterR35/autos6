@@ -30,5 +30,12 @@ export function readConfig(env = process.env) {
     serveStatic: env.SERVE_STATIC === 'true',
     distDir: env.DIST_DIR || '',
     rateLimit: { checkoutPerMinute: int(env.RATE_CHECKOUT_PER_MIN, 10), statusPerMinute: int(env.RATE_STATUS_PER_MIN, 60) },
+    // Which ad pixels the served site may load (same public variables as the frontend build).
+    pixels: {
+      meta: Boolean(env.VITE_META_PIXEL_ID),
+      tiktok: Boolean(env.VITE_TIKTOK_PIXEL_ID),
+      googleAds: Boolean(env.VITE_GOOGLE_ADS_ID),
+      gtmMarketing: Boolean(env.VITE_GTM_ID) && env.VITE_GTM_MARKETING === 'true',
+    },
   };
 }

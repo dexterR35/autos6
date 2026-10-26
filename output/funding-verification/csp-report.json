@@ -2,9 +2,10 @@
   "passed": true,
   "checks": [
     "Built app loads under real CSP",
-    "No analytics request before consent",
-    "Hashed inline loader executes after opt-in",
-    "Revocation stops loading",
+    "No third-party request before consent",
+    "GTM, Meta, TikTok and Google Ads load once after opt-in, without CSP violations",
+    "Stripe session id removed from the address before trackers start, and never sent to them",
+    "Withdrawal stops every tracker",
     "Live build excludes local model and lighting files",
     "Configured Supabase model URLs work (intercepted local fixtures)",
     "Worker and Meshopt WASM comply with CSP",

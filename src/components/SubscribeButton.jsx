@@ -31,16 +31,16 @@ export default function SubscribeButton({ partId = null, className = 'btn btn--g
     } catch (err) { setError(err.message || 'Please try again.'); setState('idle'); }
   };
   return <>
-    <button type="button" className={className} onClick={() => { setOpen(true); setState('idle'); setError(''); setConsent(false); }}><Bell aria-hidden="true" />{part ? 'Follow this part' : 'Subscribe to build updates'}</button>
-    <Modal open={open} onClose={() => setOpen(false)} title="Stay in the build" labelledBy={titleId} className="subscribe-modal">
-      {state === 'sent' || state === 'demo' ? <div className="subscription-result" role="status"><CheckCircle2 aria-hidden="true" /><h3>{state === 'demo' ? 'Demo preview · no email sent' : 'Check your inbox'}</h3><p>{state === 'demo' ? 'Live subscriptions send a confirmation link before activating updates.' : 'If this address needs confirmation, an email is on its way. Open it within 24 hours. Existing subscriptions stay active.'}</p><button className="btn btn--primary" onClick={() => setOpen(false)}>Done</button></div> : <form onSubmit={submit}>
-        <p className="muted">{part ? `Get an email when ${part.name} changes, plus published restoration updates.` : 'Part upgrades, new additions and restoration updates. Follow the journey, one part at a time.'}</p>
-        <label className="field"><span><Mail aria-hidden="true" /> Email address</span><input type="email" autoComplete="email" required maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} /></label>
+    <button type="button" className={className} onClick={() => { setOpen(true); setState('idle'); setError(''); setConsent(false); }}><Bell aria-hidden="true" />{part ? 'Follow this part' : 'Get updates'}</button>
+    <Modal open={open} onClose={() => setOpen(false)} title={part ? `Follow ${part.name}` : 'Build updates'} labelledBy={titleId} className="subscribe-modal">
+      {state === 'sent' || state === 'demo' ? <div className="subscription-result" role="status"><CheckCircle2 aria-hidden="true" /><h3>{state === 'demo' ? 'Demo · no email sent' : 'Check your inbox'}</h3><p>{state === 'demo' ? 'Live mode sends a confirmation link.' : 'Confirm within 24 hours.'}</p><button className="btn btn--primary" onClick={() => setOpen(false)}>Done</button></div> : <form onSubmit={submit}>
+        {isDemo && <p className="form-note">Demo mode: nothing is stored or sent.</p>}
+        <label className="field"><span><Mail aria-hidden="true" /> Email</span><input type="email" autoComplete="email" required maxLength={254} value={email} onChange={(e) => setEmail(e.target.value)} /></label>
         <label className="honeypot" aria-hidden="true">Website<input tabIndex={-1} autoComplete="off" value={website} onChange={(e) => setWebsite(e.target.value)} /></label>
-        <label className="check"><input type="checkbox" required checked={consent} onChange={(e) => setConsent(e.target.checked)} /><span>I want email updates about this build. I have read the <Link target="_blank" rel="noopener noreferrer" to="/privacy">privacy notice</Link>. I can unsubscribe at any time.</span></label>
+        <label className="check"><input type="checkbox" required checked={consent} onChange={(e) => setConsent(e.target.checked)} /><span>Email me build updates (<Link target="_blank" rel="noopener noreferrer" to="/privacy">privacy</Link>)</span></label>
         {error && <p role="alert" className="form-error">{error}</p>}
-        <button className="btn btn--primary btn--block" disabled={state === 'sending'}>{state === 'sending' ? 'Saving…' : 'Send confirmation email'}</button>
-        <p className="fine">Free email subscription. No recurring payments. {isDemo && 'Demo mode: your email will not be stored or sent.'}</p>
+        <button className="btn btn--primary btn--block" disabled={state === 'sending'}>{state === 'sending' ? 'Saving…' : 'Subscribe'}</button>
+        <p className="form-footnote">Free. Unsubscribe anytime.</p>
       </form>}
     </Modal>
   </>;

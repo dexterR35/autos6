@@ -1,0 +1,17 @@
+{
+  "profiles": [
+    {
+      "name": "desktop",
+      "drawCalls": 107,
+      "wallCamera": true,
+      "dialog": true
+    },
+    {
+      "name": "mobile",
+      "drawCalls": 99,
+      "wallCamera": true,
+      "dialog": true
+    }
+  ],
+  "errors": []
+}

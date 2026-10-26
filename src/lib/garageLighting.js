@@ -3,8 +3,8 @@
 import * as THREE from 'three';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { meshComponents } from './meshComponents.js';
-import { lightingUrl } from './modelAssets.js';
-import { NEON_BLUE, NEON_RED, selectNeonSources, addNeonSurfaceResponse } from './neonLighting.js';
+import { lightingUrl, carLightingUrl } from './modelAssets.js';
+import { NEON_BLUE, NEON_RED, selectNeonSources, addNeonSurfaceResponse, addNeonTubeProfile } from './neonLighting.js';
 
 function contactShadow() {
   const canvas=document.createElement('canvas');canvas.width=128;canvas.height=64;
@@ -79,26 +79,56 @@ export function createGarageLook({renderer,scene,camera,compact=false}) {
   const practicalLights=new THREE.Group();practicalLights.name='Garage look | practical lights';scene.add(practicalLights);
   const ceilingMaterials=[],state={level:1,from:1,since:0,instant:true};
   const neonLevel={value:1};
-  let probe=null,disposed=false;
+  const carReflectionMaterials=new Set();
+  let probe=null,carProbe=null,disposed=false;
 
-  async function loadEnvironment(signal) {
-    const response=await fetch(lightingUrl(),{signal});
+  async function loadProbe(url,signal) {
+    const response=await fetch(url,{signal});
     if(!response.ok)throw new Error('Workshop lighting could not load.');
     const data=new HDRLoader().parse(await response.arrayBuffer());
     if(signal?.aborted||disposed)throw new DOMException('Cancelled','AbortError');
     const texture=new THREE.DataTexture(data.data,data.width,data.height,THREE.RGBAFormat,data.type);
     Object.assign(texture,{colorSpace:data.colorSpace,minFilter:data.minFilter,magFilter:data.magFilter,generateMipmaps:false,flipY:true,mapping:THREE.EquirectangularReflectionMapping,needsUpdate:true});
     const pmrem=new THREE.PMREMGenerator(renderer);
-    try{probe=pmrem.fromEquirectangular(texture);scene.environment=probe.texture;}
+    try{return pmrem.fromEquirectangular(texture);}
     finally{texture.dispose();pmrem.dispose();}
+  }
+
+  async function loadEnvironment(signal) {
+    const results=await Promise.allSettled([
+      loadProbe(lightingUrl(),signal),
+      loadProbe(carLightingUrl(),signal),
+    ]);
+    if(disposed||signal?.aborted) {
+      results.forEach(result=>{if(result.status==='fulfilled')result.value.dispose();});
+      throw new DOMException('Cancelled','AbortError');
+    }
+    if(results[0].status==='fulfilled') {
+      probe?.dispose();probe=results[0].value;scene.environment=probe.texture;
+    }
+    if(results[1].status==='fulfilled') {
+      carProbe?.dispose();carProbe=results[1].value;
+      for(const material of carReflectionMaterials){material.envMap=carProbe.texture;material.needsUpdate=true;}
+    }
+    if(results[0].status==='rejected')throw results[0].reason;
+    // The dedicated paint probe can fall back to the normal workshop probe.
+    applyLevel(state.level);
   }
 
   function attach({car,garage}) {
     garage.updateMatrixWorld(true);
-    const sources=[],surfaces=new Map(),seenMaterials=new Set();
+    const sources=[],surfaces=new Map(),seenMaterials=new Set(),neonMaterials=new Set();
     garage.traverse(object=>{
-      if(!object.isMesh)return;
+      if(!object.isMesh||!object.visible)return;
       object.castShadow=false;object.receiveShadow=!compact;
+      for(const source of object.userData.taskLightSources??[]) {
+        const light=new THREE.PointLight('#f2f6ff',source.intensity,source.reach,2);
+        light.name=source.name??'Practical | white equipment task light';
+        object.localToWorld(light.position.fromArray(source.position));
+        practicalLights.add(light);dimmable.push({light,intensity:light.intensity});
+      }
+      // Sign cores and halos have their own palette and never become extra lights.
+      if(object.userData.neonCore||object.userData.neonHalo)return;
       for(const material of [object.material].flat().filter(Boolean)) {
         if(object.userData.ceilingRow!==undefined){ceilingMaterials.push(material);continue;}
         if(object.userData.surface==='floor'||/wet concrete/i.test(material.name)){object.material=floorMaterial();surfaces.set(object.material,true);material.dispose();continue;}
@@ -108,8 +138,13 @@ export function createGarageLook({renderer,scene,camera,compact=false}) {
         const practical=PRACTICALS.find(p=>p.test.test(material.name));
         if(!practical)continue;
         material.color.setRGB(0,0,0);material.emissive.setRGB(...practical.color);material.emissiveIntensity=practical.strength;
-        // Keep the neon cores saturated instead of tone-mapping blue into lavender/white.
-        if(practical.kind){material.toneMapped=false;material.emissiveIntensity=1.5;}
+        // The glass profile carries a narrow bright core; the coloured edges stay
+        // saturated instead of tone-mapping the entire tube into lavender/white.
+        if(practical.kind){
+          material.toneMapped=false;material.emissiveIntensity=1.8;
+          material.roughness=.24;material.metalness=0;
+          if(!neonMaterials.has(material)){addNeonTubeProfile(material);neonMaterials.add(material);}
+        }
         if(!practical.kind)continue;
         const sign=/Audi neon rings/i.test(object.name);
         const boxes=sign?[new THREE.Box3().setFromObject(object)]:meshComponents(object);
@@ -125,31 +160,43 @@ export function createGarageLook({renderer,scene,camera,compact=false}) {
     const selected=selectNeonSources(sources,compact?12:20);
     surfaces.forEach((floor,material)=>addNeonSurfaceResponse(material,selected,neonLevel,{floor}));
     for(const source of selectNeonSources(sources,compact?4:8)) {
-      const light=new THREE.PointLight(new THREE.Color(...source.color),source.sign?75:65,source.reach,2);
+      const light=new THREE.PointLight(new THREE.Color(...source.color),source.sign?85:58,source.reach,2);
       light.position.copy(source.center);
       // Move a wall-mounted source into the room, away from the wall's back face.
       if(Math.abs(light.position.x)>12)light.position.x-=Math.sign(light.position.x)*.18;
       if(Math.abs(light.position.z)>12)light.position.z-=Math.sign(light.position.z)*.18;
       light.name=source.sign?'Practical | Audi blue':'Practical | neon '+source.kind;
-      practicalLights.add(light);dimmable.push({light,intensity:light.intensity});
+      practicalLights.add(light);dimmable.push({light,intensity:light.intensity,neon:true});
     }
     scene.add(contactShadow());
     car.traverse(object=>{
       if(!object.isMesh)return;
       object.castShadow=!compact;object.receiveShadow=!compact;
-      for(const material of [object.material].flat().filter(Boolean))if(material.isMeshStandardMaterial)material.envMapIntensity=1.35;
+      for(const material of [object.material].flat().filter(Boolean)) {
+        if(!material.isMeshStandardMaterial)continue;
+        material.envMapIntensity=1.35;
+        if(/deep blue pearl|polished chrome|gloss black roof box|Imported Audi.*(?:paint|glass)/i.test(material.name)) {
+          carReflectionMaterials.add(material);
+          if(carProbe){material.envMap=carProbe.texture;material.needsUpdate=true;}
+        }
+      }
     });
     applyLevel(state.level);renderer.shadowMap.needsUpdate=true;
   }
   function applyLevel(level) {
-    neonLevel.value=level;
-    hemisphere.intensity=THREE.MathUtils.lerp(.26,.8,level);
-    dimmable.forEach(({light,intensity})=>{light.intensity=intensity*level;});
-    ceilingMaterials.forEach(material=>{material.emissive.setRGB(.92,.96,1);material.emissiveIntensity=THREE.MathUtils.lerp(1.8,4,level);});
-    scene.environmentIntensity=THREE.MathUtils.lerp(.3,.65,level);
+    // Dimming the ceiling makes the neon more prominent while its electrical
+    // output remains steady, as with separate workshop and sign circuits.
+    const normal=Math.min(level,1),boost=Math.max(0,level-1);
+    neonLevel.value=THREE.MathUtils.lerp(.82,1,normal)+boost*.1;
+    hemisphere.intensity=THREE.MathUtils.lerp(.26,.8,normal)+boost*.65;
+    dimmable.forEach(({light,intensity,neon})=>{light.intensity=intensity*(neon?neonLevel.value:level);});
+    ceilingMaterials.forEach(material=>{material.emissive.setRGB(.92,.96,1);material.emissiveIntensity=THREE.MathUtils.lerp(1.8,4,normal)+boost*4;});
+    scene.environmentIntensity=THREE.MathUtils.lerp(.3,.65,normal)+boost*.45;
+    // Explicit material probes do not inherit scene.environmentIntensity.
+    for(const material of carReflectionMaterials)material.envMapIntensity=carProbe?(THREE.MathUtils.lerp(.48,.94,normal)+boost*.48):1.35;
   }
   function setLightLevel(value,instant=false) {
-    state.from=state.level;state.level=THREE.MathUtils.clamp(value,.35,1);state.since=performance.now();state.instant=instant;
+    state.from=state.level;state.level=THREE.MathUtils.clamp(value,.35,2);state.since=performance.now();state.instant=instant;
     if(instant)applyLevel(state.level);
   }
   function render(now=performance.now()) {
@@ -157,6 +204,6 @@ export function createGarageLook({renderer,scene,camera,compact=false}) {
     applyLevel(THREE.MathUtils.lerp(state.from,state.level,t*t*(3-2*t)));
     renderer.info.reset();renderer.render(scene,camera);return t<1;
   }
-  function dispose(){disposed=true;probe?.dispose();base.traverse(object=>object.dispose?.());}
+  function dispose(){disposed=true;probe?.dispose();carProbe?.dispose();carReflectionMaterials.clear();base.traverse(object=>object.dispose?.());}
   return{attach,loadEnvironment,setSize(){},render,dispose,setLightLevel,get practicalLights(){return practicalLights;}};
 }

@@ -81,7 +81,11 @@ checkout.session.async_payment_succeeded
 checkout.session.async_payment_failed
 checkout.session.expired
 charge.refunded
+refund.failed
+refund.updated
 ```
+
+Each refund event makes the API recount the payment's refunds from Stripe, so the API's secret key needs read access to refunds. Failed or cancelled refunds are left out of the recount, which puts the money back into the totals. Without `refund.failed` and `refund.updated`, a failed refund stays subtracted.
 
 Test first with a test key and test endpoint secret. API/webhook modes must match. Checkout refuses to open without a signing secret. Run a test contribution to a part, a general contribution, a duplicate webhook replay, an async payment and a refund. Verify both aggregate RPCs and the return page. The redirect URL never confirms payment. Check Stripe webhook failures and reconcile the private ledger with Stripe when operating the site.
 
@@ -97,7 +101,7 @@ SUBSCRIPTION_SIGNING_SECRET=AT-LEAST-32-RANDOM-CHARACTERS
 
 Generate a signing secret locally with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`. Keep it stable and private: rotating it invalidates existing unsubscribe links.
 
-The API process runs the queue worker every 30 seconds. Keep the Node process running; an ephemeral static-only or request-only deployment cannot deliver this queue. Multiple always-running API instances can share the queue: PostgreSQL leases with `SKIP LOCKED` coordinate delivery and Resend receives a stable idempotency key. Retries stop at eight attempts or twelve hours; expired leases can be reclaimed. Failed delivery requires operator attention. Monitor your provider's bounce/complaint suppressions and account/domain health.
+Update emails wait 10 minutes before sending. Further edits to the same part or restoration update in that window rewrite the queued email instead of adding another. Each restoration update is emailed once per subscriber: unpublishing a queued one cancels it, and republishing never resends one already sent. Deleting a part or update cancels its queued emails. The API process runs the queue worker every 30 seconds. Keep the Node process running; an ephemeral static-only or request-only deployment cannot deliver this queue. Multiple always-running API instances can share the queue: PostgreSQL leases with `SKIP LOCKED` coordinate delivery and Resend receives a stable idempotency key. Retries stop at eight attempts or twelve hours; expired leases can be reclaimed. Failed delivery requires operator attention. Monitor your provider's bounce/complaint suppressions and account/domain health.
 
 The flow is:
 
@@ -127,6 +131,25 @@ node scripts/verify-funding.mjs
 node scripts/verify-csp.mjs
 ```
 
-`output/funding-verification/` contains screenshots and a browser report. No hosted database migration, live charge or real email send has been performed in this workspace: credentials were not supplied. Finish the live smoke tests above before calling the deployment production-ready.
+`output/funding-verification/` contains screenshots and a browser report. Hosted migrations are applied (see [SUPABASE-STATUS.md](SUPABASE-STATUS.md)); no live charge or real email send has been performed in this workspace. Finish the live smoke tests above before calling the deployment production-ready.
+
+## 6. Search, sharing and ad pixels
+
+**Before the production build**
+- Set `VITE_SITE_URL` to the final `https://` origin, without a trailing slash. Canonical links, `og:url`, share images, structured data and `sitemap.xml` need absolute URLs; without it they are left out rather than wrong. Use `VITE_NOINDEX=true` on staging and preview deployments.
+- The build writes a crawlable HTML page per route, including one per part (`/parts/<slug>`), each with its own title, description, canonical, share image and JSON-LD (breadcrumbs, the part, and the list of parts on `/parts`; no price or offer markup).
+- Adding or renaming a part: edit `src/seo/parts.js`, then run `node scripts/make-og-images.mjs` to rebuild `public/og/parts/<slug>.jpg`. Parts that exist only in the database still open at `/parts/<slug>` in the app, but are not pre-rendered or in the sitemap.
+
+**After launch**
+- Submit `https://<domain>/sitemap.xml` in Google Search Console and Bing Webmaster Tools, and request indexing for `/` and `/parts`.
+- Check share previews with the Facebook Sharing Debugger and LinkedIn Post Inspector for `/` and one part page.
+
+**Ad pixels** (all optional; each loads only after the visitor accepts marketing cookies)
+- Meta: `VITE_META_PIXEL_ID`. TikTok: `VITE_TIKTOK_PIXEL_ID`. Google Ads: `VITE_GOOGLE_ADS_ID` (`AW-…`) and `VITE_GOOGLE_ADS_DONATION_LABEL` from a "Donation" conversion action. If your GTM container holds ad tags, set `VITE_GTM_MARKETING=true`.
+- Set the same variables for the API process that serves the site: its CSP only allows a vendor's hosts when that vendor is configured.
+- In Meta and TikTok Events Manager keep **automatic advanced matching off**. The site's forms collect emails, which must not be sent to ad platforms. Meta's automatic event setup is already disabled in code.
+- Events: page views, `ViewContent` (part), `InitiateCheckout`, and for confirmed donations Meta `Donate`, TikTok `CompletePayment` and the Google Ads conversion, deduplicated with the hashed transaction id. Verify with Meta Pixel Helper, TikTok Pixel Helper and Google Tag Assistant after accepting cookies.
+- `node scripts/verify-csp.mjs` builds the site with every pixel configured and checks consent, CSP and secret removal in a real browser.
+- Pixels and analytics never see the Stripe session id or email-link tokens: they are moved out of the address before any tracker loads (`src/lib/urlScrub.js`, plus the same step inline before GTM).
 
 References: [Stripe fulfillment](https://docs.stripe.com/checkout/fulfillment), [Stripe custom components and policies](https://docs.stripe.com/payments/checkout/custom-components), [Supabase RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [Supabase function security](https://supabase.com/docs/guides/database/functions), [Resend send-email API](https://resend.com/docs/api-reference/emails/send-email).

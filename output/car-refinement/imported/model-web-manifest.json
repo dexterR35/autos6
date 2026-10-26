@@ -1,0 +1,100 @@
+{
+  "source": {
+    "file": "C:\\Users\\Dexter\\Downloads\\model.glb",
+    "bytes": 30335164,
+    "sha256": "508dd5252bfdb978ab4e82042e73245e41ab93acb99f3cc9fc59093e90b612ae",
+    "triangles": 924442,
+    "vertices": 504352,
+    "drawCalls": 1,
+    "bounds": {
+      "min": [
+        -1.652373320825717,
+        -0.749987120176911,
+        -0.8278042424027134
+      ],
+      "max": [
+        1.6527108489635367,
+        0.7500128519229747,
+        0.8283631037625341
+      ],
+      "size": [
+        3.3050841697892537,
+        1.4999999720998858,
+        1.6561673461652475
+      ]
+    },
+    "textures": [
+      {
+        "name": "Color_e912107d-5427-4e9c-9efa-7cbc385d9098",
+        "mimeType": "image/jpeg",
+        "bytes": 3100751,
+        "sha256": "f183f6a261ef9b20cc1c81d8d4143ba91437547506ad5b54e6fb5781409399a4"
+      }
+    ],
+    "extensions": []
+  },
+  "output": {
+    "file": "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\car-refinement\\imported\\model-web.glb",
+    "bytes": 5735936,
+    "sha256": "4dfa95847d1cad62d03788186e6b6dd70adb19ad218a724a96c4e13d52594cfc",
+    "triangles": 295819,
+    "vertices": 183746,
+    "drawCalls": 1,
+    "bounds": {
+      "min": [
+        -2.3985,
+        0.00026655369759243097,
+        -1.0498296730366146
+      ],
+      "max": [
+        2.3985,
+        1.8499954527755502,
+        1.049985992091717
+      ],
+      "size": [
+        4.797,
+        1.8497288990779577,
+        2.0998156651283315
+      ]
+    },
+    "textures": [
+      {
+        "name": "Color_e912107d-5427-4e9c-9efa-7cbc385d9098",
+        "mimeType": "image/jpeg",
+        "bytes": 3100751,
+        "sha256": "f183f6a261ef9b20cc1c81d8d4143ba91437547506ad5b54e6fb5781409399a4"
+      }
+    ],
+    "extensions": [
+      "EXT_meshopt_compression",
+      "KHR_mesh_quantization"
+    ]
+  },
+  "normalization": {
+    "scale": [
+      1.4514002529339145,
+      1.2333333562734277,
+      1.2679878062216474
+    ],
+    "translation": [
+      -0.0002449442123019357,
+      0.9249841320896323,
+      -0.0003543146948105096
+    ],
+    "targetDimensions": [
+      4.797,
+      1.85,
+      2.1
+    ],
+    "axes": "metres; Y up; nose +X; centred X/Z; ground Y=0"
+  },
+  "processing": {
+    "simplifyRatio": 0.32,
+    "simplifyError": 0.0005,
+    "meshoptLevel": "medium",
+    "positionBits": 16,
+    "normalBits": 14,
+    "uvBits": 16,
+    "texture": "Original 4096 JPEG bytes preserved"
+  }
+}

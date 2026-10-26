@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ExternalLink, Info, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import Modal from './Modal.jsx';
 import DemoBadge from './DemoBadge.jsx';
 import { DONATION_PRESETS_CENTS, formatCents, parseDollarsToCents, validateAmountCents } from '../lib/money.js';
@@ -9,10 +9,12 @@ import { useGarageState } from '../hooks/useGarageState.jsx';
 import { useProjectData } from '../hooks/useProjectData.jsx';
 import { Link } from 'react-router-dom';
 import AmountPicker from './AmountPicker.jsx';
-import PartProgress from './PartProgress.jsx';
+import FundMeter from './FundMeter.jsx';
 import { POLICY_VERSION } from '../lib/policies.js';
 
 const NAME_MAX = 40;
+// 1500 → "15", 1550 → "15.50": the text a visitor would type into the custom field.
+const centsToInput = (cents) => (cents % 100 ? (cents / 100).toFixed(2) : String(cents / 100));
 
 export default function DonationDialog() {
   const { donationOpen, closeDonation, draft, setDraft } = useGarageState();
@@ -42,7 +44,9 @@ export default function DonationDialog() {
     setError(null);
     setSubmitting(false);
     setDemoDone(false);
-    setCustom(draft.customAmount ? '' : isPreset || !draft.amountCents ? null : (draft.amountCents / 100).toString());
+    // A custom amount survives a cancelled checkout instead of reopening as a blank field.
+    const savedAmount = Number.isSafeInteger(draft.amountCents) && draft.amountCents > 0 ? centsToInput(draft.amountCents) : null;
+    setCustom(draft.customAmount ? savedAmount ?? '' : isPreset ? null : savedAmount);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [donationOpen]);
 
@@ -94,11 +98,9 @@ export default function DonationDialog() {
         <div className="demo-result" role="status">
           <DemoBadge>Demo mode</DemoBadge>
           <h3>No payment was taken</h3>
-          <p>
-            This site is running with demo fixtures. In live mode, “Continue to secure checkout” sends you to Stripe’s hosted
-            payment page for <strong>{formatCents(amountCents, currency)}</strong>
-            {part ? <> toward the <strong>{part.name}</strong></> : <> to the general restoration fund</>}. Totals only change after
-            Stripe confirms the payment.
+          <p className="muted">
+            Live checkout would open Stripe for <strong>{formatCents(amountCents, currency)}</strong>
+            {part ? <> toward <strong>{part.name}</strong></> : <> to the general fund</>}.
           </p>
           <div className="dialog-actions">
             <button type="button" className="btn btn--ghost" onClick={() => setDemoDone(false)}>Back</button>
@@ -107,57 +109,35 @@ export default function DonationDialog() {
         </div>
       ) : (
         <form className="donate-form" onSubmit={submit} noValidate>
-          {isDemo && (
-            <p className="note"><Info aria-hidden="true" /> Demo mode: you can try the form, but no payment will be taken.</p>
-          )}
-          {liveUnavailable && (
-            <p className="note note--warn" role="alert">{!legalReady ? 'Donations are not open yet. The project owner is completing the public terms and contact details.' : 'Donations are unavailable right now: live campaign data could not be loaded.'}</p>
-          )}
+          {isDemo && <p className="form-note">Demo mode: no payment is taken.</p>}
+          {liveUnavailable && <p className="form-note form-note--warn" role="alert">{!legalReady ? 'Donations open soon.' : 'Donations are unavailable right now.'}</p>}
 
           <fieldset>
-            <legend>Amount ({currency.toUpperCase()})</legend>
+            <legend className="form-label">Amount</legend>
             <AmountPicker amountCents={draft.amountCents} currency={currency} custom={custom} onCustom={(value) => { setCustom(value); setError(null); }} onChange={(value) => { setCustom(null); setDraft({ amountCents: value, customAmount: false }); setError(null); }} />
-            <p id="amount-help" className={`fine ${custom !== null && amountError ? 'is-error' : ''}`}>
-              {custom !== null && amountError ? amountError : 'Minimum $1, maximum $10,000 per donation.'}
-            </p>
+            {custom !== null && amountError && <p id="amount-help" className="fine is-error">{amountError}</p>}
           </fieldset>
 
           <label className="field">
-            <span>Put it toward</span>
+            <span>For</span>
             <select value={draft.partId ?? ''} onChange={(e) => setDraft({ partId: e.target.value || null })}>
-              <option value="">General restoration fund</option>
-              {fundable.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} — {formatCents(p.estimateCents, currency)} estimate
-                </option>
-              ))}
+              <option value="">General fund</option>
+              {fundable.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </label>
-          {part && (
-            <p className="fine">
-              A part contribution supports restoring the {part.name.toLowerCase()}. It isn’t a parts purchase, and the owner marks
-              parts as bought only after buying them.
-            </p>
-          )}
-          {part && <PartProgress part={part} currency={currency} />}
-          <p className="fine">Every contribution also moves the $10,000 campaign forward. After a part or the campaign is funded, additional support helps with fitting, running costs and future work.</p>
+          {part && <FundMeter label={part.name} raisedCents={part.raisedCents} goalCents={part.estimateCents} currency={currency} />}
 
           <label className="field">
-            <span>Display name <span className="muted">(optional)</span></span>
-            <input
-              value={draft.displayName}
-              maxLength={NAME_MAX}
-              autoComplete="nickname"
-              onChange={(e) => setDraft({ displayName: e.target.value })}
-            />
+            <span>Display name (optional)</span>
+            <input value={draft.displayName} maxLength={NAME_MAX} autoComplete="nickname" onChange={(e) => setDraft({ displayName: e.target.value })} />
           </label>
           <label className="check">
             <input type="checkbox" checked={draft.isPublic} onChange={(e) => setDraft({ isPublic: e.target.checked })} />
-            <span>Show my display name and amount on the public supporters list</span>
+            <span>Show me on the supporter wall</span>
           </label>
           <label className="check consent-check">
             <input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} />
-            <span>I agree to the <Link to="/terms" target="_blank" rel="noopener noreferrer">donation terms</Link> and have read the <Link to="/privacy" target="_blank" rel="noopener noreferrer">privacy notice</Link>. This is a voluntary contribution to a personal restoration.</span>
+            <span>I agree to the <Link to="/terms" target="_blank" rel="noopener noreferrer">terms</Link> and <Link to="/privacy" target="_blank" rel="noopener noreferrer">privacy notice</Link></span>
           </label>
 
           {error && <p className="form-error" role="alert">{error}</p>}
@@ -165,17 +145,13 @@ export default function DonationDialog() {
           <div className="dialog-actions">
             <button type="button" className="btn btn--ghost" onClick={closeDonation}>Cancel</button>
             <button type="submit" className="btn btn--donate" disabled={submitting || liveUnavailable} aria-busy={submitting}>
-              {isDemo ? <Info aria-hidden="true" /> : <Lock aria-hidden="true" />}
+              {!isDemo && <Lock aria-hidden="true" />}
               {submitting
                 ? 'Opening checkout…'
-                : `${isDemo ? 'Preview checkout' : 'Continue to secure checkout'}${amountCents && !amountError ? ` · ${formatCents(amountCents, currency)}` : ''}`}
-              {!isDemo && !submitting && <ExternalLink aria-hidden="true" className="ext" />}
+                : `${isDemo ? 'Preview' : 'Donate'}${amountCents && !amountError ? ` ${formatCents(amountCents, currency)}` : ''}`}
             </button>
           </div>
-          <p className="fine">
-            Payments are handled on Stripe’s hosted checkout; card details never touch this site. Project S6 is a personal
-            restoration project, not a registered charity.
-          </p>
+          <p className="form-footnote">Secure Stripe checkout · A contribution, not a parts purchase · Not tax-deductible</p>
         </form>
       )}
     </Modal>

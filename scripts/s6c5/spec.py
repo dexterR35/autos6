@@ -58,13 +58,13 @@ STATIONS = [
 ]
 
 # Wheel-arch flares (S6 widened wings): outward bulge around each opening.
-FLARE_F = dict(x=X_AXLE_F, z=WHEEL_Z, r=ARCH_R_F, amp=0.019, width=0.17)
-FLARE_R = dict(x=X_AXLE_R, z=WHEEL_Z, r=ARCH_R_R, amp=0.024, width=0.20)
+FLARE_F = dict(x=X_AXLE_F, z=WHEEL_Z, r=ARCH_R_F, amp=0.027, width=0.17)
+FLARE_R = dict(x=X_AXLE_R, z=WHEEL_Z, r=ARCH_R_R, amp=0.034, width=0.20)
 
 # Character lines on the body side: (z at x samples) and strength (m).
 SHOULDER_LINE = dict(xs=[2.10, 1.80, 1.47, 1.00, 0.00, -1.00, -1.75, -2.05],
                      zs=[0.790, 0.810, 0.835, 0.860, 0.873, 0.884, 0.880, 0.860], amp=0.0035, width=0.035)
-LOWER_CREASE = dict(x0=-0.95, x1=1.05, z=0.556, amp=0.0028, width=0.030)
+LOWER_CREASE = dict(x0=-0.95, x1=1.05, z=0.556, amp=0.0045, width=0.030)
 
 # Top edge of the lower body, front centre to rear centre (x, y, z): bonnet
 # leading edge, wing tops (bonnet shut line), window line (glass base), then
@@ -89,11 +89,17 @@ A_PILLAR_BASE_X = 1.00
 HOOD_CENTRE = [(2.300, 0.766), (2.200, 0.786), (2.000, 0.818), (1.700, 0.862), (1.400, 0.898), (1.130, 0.928), (0.950, 0.946)]
 HOOD_DOME = dict(y_front=0.38, y_rear=0.33, amp=0.0065, soft=0.13)
 
-# Greenhouse. DLO top (window frame top) side profile, measured on ref 14.
+# Greenhouse. The C5 Avant's cargo glass is a long trapezoid: its roof edge
+# stays nearly level behind the rear door and only then follows the tailgate
+# rake. Ending the aperture at -1.735 made a triangular pane and an oversized
+# painted D-pillar. The stock rear-quarter and wireframe references establish
+# the longer aperture and the slim curved pillar outside it.
 DLO_TOP = [(0.930, 0.912), (0.760, 1.0412), (0.577, 1.1794), (0.370, 1.2753), (0.000, 1.327),
-           (-0.400, 1.347), (-0.770, 1.355), (-1.150, 1.361), (-1.400, 1.363), (-1.560, 1.1794), (-1.735, 0.995)]
+           (-0.400, 1.347), (-0.770, 1.355), (-1.150, 1.358), (-1.450, 1.357),
+           (-1.600, 1.350), (-1.680, 1.318), (-1.800, 1.225), (-1.930, 1.111),
+           (-2.035, 1.012), (-2.070, 0.981)]
 DLO_FRONT_X = 0.930
-DLO_REAR_X = -1.735
+DLO_REAR_X = -2.070
 TUMBLEHOME = 0.40            # glass lean inward per metre of height
 GLASS_BOW = 0.010
 # Centreline: windscreen, roof and the raked tailgate glass.
@@ -107,11 +113,11 @@ REAR_GLASS_TOP_X = (-1.760, -1.760)
 # roof edge above the side windows, D-pillar (tailgate glass edge).
 PILLAR_EDGE = [
     (0.900, 0.735, 1.0203), (0.750, 0.690, 1.1288), (0.600, 0.648, 1.2494), (0.500, 0.624, 1.3129),
-    (0.380, 0.604, 1.359), (0.200, 0.594, 1.377), (-0.200, 0.592, 1.387), (-0.800, 0.591, 1.391),
-    (-1.300, 0.588, 1.385), (-1.560, 0.582, 1.375), (-1.680, 0.576, 1.365), (-1.760, 0.570, 1.337),
-    (-1.880, 0.576, 1.2537), (-2.020, 0.588, 1.1288), (-2.150, 0.596, 1.0203), (-2.229, 0.600, 0.961),
+    (0.380, 0.624, 1.359), (0.200, 0.615, 1.377), (-0.200, 0.614, 1.387), (-0.800, 0.613, 1.391),
+    (-1.300, 0.610, 1.385), (-1.560, 0.604, 1.375), (-1.680, 0.598, 1.365), (-1.760, 0.592, 1.337),
+    (-1.880, 0.594, 1.2537), (-2.020, 0.600, 1.1288), (-2.150, 0.602, 1.0203), (-2.229, 0.600, 0.961),
 ]
 
 # Pillars on the side window band, as (x at beltline, x at DLO top).
 B_PILLAR = ((-0.172, -0.170), (-0.095, -0.100))
-C_BAR = ((-0.995, -0.805), (-0.965, -0.775))
+C_BAR = ((-0.995, -0.925), (-0.965, -0.895))

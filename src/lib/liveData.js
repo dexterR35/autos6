@@ -1,6 +1,7 @@
 // Live-mode reads from Supabase using the publishable key. Only public tables and the
 // security-definer summary functions are touched; private donation rows are never read.
 // supabase-js is loaded on demand so demo mode doesn't ship it in the initial bundle.
+import { aggregateGarageSupporters, mapGarageSupporters } from './garageSupportersData.js';
 const client = async () => {
   const { supabase } = await import('./supabase.js');
   if (!supabase) throw new Error('Supabase is not configured.');
@@ -75,4 +76,27 @@ export async function fetchPublicContributions(slug, limit = 50) {
   const supabase = await client();
   const rows = check(await supabase.rpc('get_public_contributions', { p_slug: slug, p_limit: limit }));
   return rows.map((r) => ({ displayName: r.display_name, amountCents: r.amount_cents, partName: r.part_name, createdAt: r.created_at }));
+}
+
+/** Full public donor wall, paged on the server without exposing donor identities. */
+export async function fetchGarageSupporters(slug, { currency = 'usd', signal } = {}) {
+  const supabase = await client();
+  const rows = [];
+  const pageSize = 100;
+  for (let offset = 0; ; offset += pageSize) {
+    signal?.throwIfAborted();
+    let request = supabase.rpc('get_garage_supporters', { p_slug: slug, p_limit: pageSize, p_offset: offset });
+    if (signal) request = request.abortSignal(signal);
+    const result = await request;
+    if (result.error && offset === 0 && ['PGRST202', '42883'].includes(result.error.code)) {
+      // Deployments awaiting the new migration retain a truthful recent-only wall.
+      const recent = await fetchPublicContributions(slug, pageSize);
+      signal?.throwIfAborted();
+      return { rows: aggregateGarageSupporters(recent, { currency }), scope: 'recent' };
+    }
+    const page = check(result) ?? [];
+    rows.push(...mapGarageSupporters(page, { currency, offset }));
+    if (page.length < pageSize) break;
+  }
+  return { rows, scope: 'all' };
 }

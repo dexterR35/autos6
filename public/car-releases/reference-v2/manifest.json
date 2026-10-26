@@ -1,0 +1,93 @@
+{
+  "source": "output\\car-refinement\\reference-v2\\audi_s6_c5_reference_refined.blend",
+  "coordinates": {
+    "unit": "metres",
+    "up": "+Y",
+    "vehicleNose": "+X",
+    "driverSide": "+Z",
+    "ground": 0
+  },
+  "car": {
+    "file": "/car-releases/reference-v2/s6-c5.glb",
+    "bytes": 2349624,
+    "meshes": 70,
+    "drawCalls": 70,
+    "triangles": 354108,
+    "bounds": {
+      "min": [
+        -2.371917486190796,
+        -0.00004376994547783397,
+        -1.0499999523162842
+      ],
+      "max": [
+        2.4249629974365234,
+        1.8505029678344727,
+        1.0499999523162842
+      ]
+    },
+    "materials": [
+      "S6 | anthracite leather upholstery | web",
+      "S6 | badge red enamel | web",
+      "S6 | black ceramic glass frit | web",
+      "S6 | black window trim and seals | web",
+      "S6 | brake pad backing plate | web",
+      "S6 | brake pad friction compound | web",
+      "S6 | caliper lettering white | web",
+      "S6 | clear lightly blue lens | web",
+      "S6 | dark cabin trim | web",
+      "S6 | deep blue pearl with polished clearcoat | web",
+      "S6 | gloss black grille mesh | web",
+      "S6 | gloss black roof box | web",
+      "S6 | gunmetal satin wheel finish | web",
+      "S6 | headlamp phosphor white | web",
+      "S6 | headlamp silver housing | web",
+      "S6 | indicator amber | web",
+      "S6 | lamp chrome reflector | web",
+      "S6 | lamp housing dark grey | web",
+      "S6 | lightly tinted automotive glazing | web",
+      "S6 | machined brake steel | web",
+      "S6 | polished chrome | web",
+      "S6 | polished wheel lip | web",
+      "S6 | recessed panel gaps | web",
+      "S6 | red brake caliper | web",
+      "S6 | red lamp lens | web",
+      "S6 | registration plate B 08046 | web",
+      "S6 | reverse lamp white glow | web",
+      "S6 | rotor hat dark zinc | web",
+      "S6 | satin aluminium trim | web",
+      "S6 | satin tyre rubber | web",
+      "S6 | tail lamp red glow | web",
+      "S6 | tail lamp ruby reflector | web",
+      "S6 | textured black bumper plastic | web",
+      "S6 | wheel arch liner | web"
+    ],
+    "parts": [
+      "body",
+      "brake-kit",
+      "exhaust",
+      "front-bumper",
+      "hood",
+      "rear-bumper",
+      "roof-box",
+      "side-skirts",
+      "wheels"
+    ],
+    "extensions": [
+      "EXT_meshopt_compression",
+      "KHR_materials_clearcoat",
+      "KHR_materials_emissive_strength",
+      "KHR_mesh_quantization"
+    ],
+    "uncompressedBytes": 7472112,
+    "sha256": "af0db78b472eac0b6157eed40b890508c91d8213f2ee297efa6c6b8e4c1eefb1",
+    "compression": "Meshopt medium; 16-bit positions and 14-bit normals; triangle count retained"
+  },
+  "buildSeconds": 48.9,
+  "notes": [
+    "Car-only rebuild; existing garage GLB and original Blender scenes are unchanged.",
+    "Original references guide geometry and finish; this is not a photogrammetry scan."
+  ],
+  "release": "reference-v2",
+  "url": "/car-releases/reference-v2/s6-c5.glb",
+  "garageSha256": "6b6dc1426438c1428d99ff4d8d6d93358ce1ce9a95a4c493211173cdff028766"
+}

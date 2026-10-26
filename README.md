@@ -121,21 +121,21 @@ Donations use hosted **Stripe Checkout**, so card details never touch this site.
 
    ```bash
    stripe listen --forward-to localhost:3001/api/stripe/webhook \
-     --events checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired,charge.refunded
+     --events checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired,charge.refunded,refund.failed,refund.updated
    ```
 
    Copy the printed `whsec_…` into `STRIPE_WEBHOOK_SECRET` and restart the API.
 3. Run `npm run dev`, click **Donate**, and pay with test card `4242 4242 4242 4242`. The success page shows "Confirming…" until the webhook marks the donation paid, then it thanks the donor.
-4. To test a refund, refund the payment in the Dashboard. `charge.refunded` lowers the total.
+4. To test a refund, refund the payment in the Dashboard. `charge.refunded` lowers the total; if that refund later fails or is cancelled, `refund.failed` / `refund.updated` restore it.
 
 `stripe trigger checkout.session.completed` sends events without our `donation_id` metadata. The API acknowledges and ignores those, by design.
 
-**Production:** add an endpoint `https://<api-host>/api/stripe/webhook` in the Stripe Dashboard with the five events above, and use its signing secret.
+**Production:** add an endpoint `https://<api-host>/api/stripe/webhook` in the Stripe Dashboard with the seven events above, and use its signing secret.
 
 How the flow stays safe:
 
 - `POST /api/donations/checkout` validates the project, part and amount (integer cents, within limits), plus the display name and an `attemptId` UUID. It creates a *pending* row, then creates the Checkout Session with idempotency key `donation-checkout-<attemptId>`, so double-clicks and retries never create two donations. The submit button is disabled while the request runs.
-- `POST /api/stripe/webhook` verifies the signature against the **raw body**. It records each event id once (`stripe_events` primary key), inside the same transaction as the donation update. Status only moves forward: pending → processing → paid/failed, and pending → expired. A paid donation is never downgraded by a late `expired`. Async payment methods are handled. Refunds keep the cumulative maximum, so their order doesn't matter. An amount or currency mismatch is flagged `needs_review` and not counted. If the donation row isn't visible yet, the transaction rolls back and the API returns 500, so Stripe retries.
+- `POST /api/stripe/webhook` verifies the signature against the **raw body**. It records each event id once (`stripe_events` primary key), inside the same transaction as the donation update. Status only moves forward: pending → processing → paid/failed, and pending → expired. A paid donation is never downgraded by a late `expired`. Async payment methods are handled. On every refund event the API recounts the payment's refunds from Stripe (leaving out failed and cancelled ones) and stores that total, so event order doesn't matter and a failed refund puts the money back. An amount or currency mismatch is flagged `needs_review` and not counted. If the donation row isn't visible yet, the transaction rolls back and the API returns 500, so Stripe retries.
 - `GET /api/donations/status?session_id=cs_…` returns only status, amount, currency and part name, looked up by the unguessable Checkout Session id. The success URL alone never marks anything paid.
 - Other safeguards: helmet, a 10 KB JSON limit, an Origin check, per-IP rate limits, and redacted logs (emails, keys, Stripe ids).
 
@@ -179,10 +179,10 @@ Regenerate the images with `node scripts/make-brand-assets.js`.
 Set `VITE_GTM_ID=GTM-XXXXXXX` and rebuild. The plugin injects the following, in the order Google requires:
 
 1. **Consent Mode v2 defaults**, before GTM loads: `analytics_storage`, `ad_storage`, `ad_user_data` and `ad_personalization` all `denied`. A visitor's earlier choice is restored from `localStorage`.
-2. An **opt-in GTM loader** in `<head>`. The container starts only after analytics consent.
+2. An **opt-in GTM loader** in `<head>`. The container starts only after consent, and never while the address holds the Stripe session id or an email-link token (they are moved to session storage first; see `src/lib/urlScrub.js`).
 3. No noscript tracking iframe is injected, because it cannot request consent. The legacy `VITE_GTM_NOSCRIPT` setting is ignored.
 
-With GTM set, a small banner asks visitors to allow analytics. "Allow" grants only `analytics_storage`; ad signals stay denied. Visitors can reopen the choice from About or Privacy → Cookie settings. Revocation reloads the page to stop the container. Without an ID, no GTM loads and no banner shows. GTM is eligible in production builds only, unless `VITE_GTM_IN_DEV=true`, and still requires consent.
+With GTM or a pixel set, a small banner offers **Reject all**, **Accept all** and **Choose** (analytics and marketing separately). Analytics grants `analytics_storage`; marketing grants the `ad_*` signals and loads the Meta, TikTok and Google Ads pixels configured with `VITE_META_PIXEL_ID`, `VITE_TIKTOK_PIXEL_ID` and `VITE_GOOGLE_ADS_ID` (+ `VITE_GOOGLE_ADS_DONATION_LABEL`). Set `VITE_GTM_MARKETING=true` if the GTM container itself holds ad tags. Visitors can reopen the choice from About or Privacy. Revocation reloads the page to stop the container. Without an ID, no GTM loads and no banner shows. GTM is eligible in production builds only, unless `VITE_GTM_IN_DEV=true`, and still requires consent.
 
 **dataLayer events** (no names, emails or Stripe ids are ever pushed):
 
@@ -190,6 +190,7 @@ With GTM set, a small banner asks visitors to allow analytics. "Allow" grants on
 | --- | --- | --- |
 | `virtual_page_view` | Every route change (SPA) | `page_path`, `page_title`, `page_location` (query strings removed) |
 | `select_item` | Part chosen from a dot, card or list | `selection_source`, `ecommerce.items[]` |
+| `view_item` | A part page (`/parts/<slug>`) or its details opened | `ecommerce.items[]` |
 | `select_angle` | Camera view changed | `angle_id` |
 | `search` | Search settles (1.2 s debounce) | Catalogue names matching the query; raw search text is not sent |
 | `donate_dialog_open` | Donation dialog opened | `part_id` |
@@ -197,7 +198,9 @@ With GTM set, a small banner asks visitors to allow analytics. "Allow" grants on
 | `purchase` | **Only after the server confirms payment**; once per donation | `ecommerce.transaction_id` (SHA-256 of the session id), value, items |
 | `donation_cancel` | Return from a cancelled checkout | `part_id` |
 | `donation_demo_preview` | Demo-mode submit (kept out of ecommerce reports) | value, currency |
-| `consent_update` | Visitor made a consent choice | `analytics_consent` |
+| `consent_update` | Visitor made a consent choice | `analytics_consent`, `marketing_consent` |
+
+**Pixel events** (marketing consent only; part ids, amounts and currency, never personal data): page views; `ViewContent` for a part; `InitiateCheckout` for a live checkout; and for a Stripe-confirmed donation Meta `Donate`, TikTok `CompletePayment` and a Google Ads conversion, each with the hashed transaction id for deduplication.
 
 Ecommerce events are preceded by `{ ecommerce: null }`, as Google recommends.
 

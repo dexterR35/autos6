@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useProjectData } from '../hooks/useProjectData.jsx';
 import { formatCents } from '../lib/money.js';
-import { ANALYTICS_ENABLED, openConsentSettings } from '../lib/analytics.js';
+import { CONSENT_ENABLED, openConsentSettings } from '../lib/analytics.js';
 import SubscribeButton from '../components/SubscribeButton.jsx';
 
 // Placeholder copy where facts are unknown — edit freely (or move to Supabase `projects.description`).
@@ -42,11 +42,11 @@ export default function About() {
       <p>
         See the <Link to="/progress">progress log</Link> for updates, or the <Link to="/donations">donations page</Link> for the campaign summary.
       </p>
-      {ANALYTICS_ENABLED && (
+      {CONSENT_ENABLED && (
         <>
           <h2>Privacy</h2>
           <p>
-            Analytics runs only if you allow it. Payment details are handled by Stripe and never reach this site.{' '}
+            Optional analytics and ad cookies run only if you allow them. Payment details are handled by Stripe and never reach this site.{' '}
             <button type="button" className="link-btn" onClick={openConsentSettings}>Cookie settings</button>
           </p>
         </>

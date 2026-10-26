@@ -7,6 +7,9 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { meshComponents } from './meshComponents.js';
 import { NEON_BLUE } from './neonLighting.js';
+import { replaceGarageLifts } from './garageLifts.js';
+import { arrangeGarageEquipment } from './garageEquipment.js';
+import { createGarageOffice } from './garageOffice.js';
 
 const SIDE_X = 13.82; // inner face of both side walls
 const FRONT_Z = 13.92; // inner face of the new front wall
@@ -116,15 +119,19 @@ function audiEmblem(root, blueMesh) {
   sign.emissiveIntensity=1.5;
   sign.toneMapped=false;
   const tubes = new Builder();
+  const cores = new Builder();
+  const coreMaterial = new THREE.MeshBasicMaterial({ name: 'Audi sign | luminous glass core', color: '#9bcaff', toneMapped: false });
   const emblem = new THREE.Box3();
   for (const box of rings) {
     const centre = box.getCenter(new THREE.Vector3());
     const radius = box.getSize(new THREE.Vector3()).x / 2 - 0.026;
-    tubes.add(sign, new THREE.TorusGeometry(radius, 0.031, 18, 128).translate(centre.x, centre.y, centre.z + 0.012));
+    tubes.add(sign, new THREE.TorusGeometry(radius, 0.034, 12, 96).translate(centre.x, centre.y, centre.z + 0.022));
+    cores.add(coreMaterial, new THREE.TorusGeometry(radius, 0.009, 8, 96).translate(centre.x, centre.y, centre.z + 0.054));
     emblem.union(box);
   }
   // One dedicated, stronger wall wash for the sign (see the practical lights in garageLook).
   root.add(tubes.build('Garage extension | Audi neon rings', { lightBudget: 1, lightPower: 2.2, lightReach: 3.5, emissiveStrength: 6 }));
+  root.add(cores.build('Garage extension | Audi glass cores', { neonCore: true }));
   const centre = emblem.getCenter(new THREE.Vector3());
   const size = emblem.getSize(new THREE.Vector3());
   const halo = new THREE.Mesh(
@@ -132,16 +139,20 @@ function audiEmblem(root, blueMesh) {
     new THREE.MeshBasicMaterial({
       name: 'Audi sign | blue halo', map: glowTexture(), color: new THREE.Color(...NEON_BLUE).multiplyScalar(.32),
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      toneMapped: false,
     }),
   );
   halo.position.set(centre.x, centre.y, emblem.min.z - 0.01);
   halo.name = 'Garage extension | Audi sign halo';
+  halo.userData.neonHalo = true;
   halo.renderOrder = 2;
   root.add(halo);
 }
 
 /** Adds the missing walls and dressing to the loaded garage scene (glTF space, Y up). */
 export function extendGarage(garage) {
+  arrangeGarageEquipment(garage);
+  replaceGarageLifts(garage);
   garage.updateMatrixWorld(true);
   const meshes = [];
   garage.traverse((object) => { if (object.isMesh) meshes.push(object); });
@@ -249,9 +260,30 @@ export function extendGarage(garage) {
     const normal = [-side, 0, 0];
     fixtures(side < 0 ? 'west neon' : 'east neon', [
       [m.blue, [[[x, 5.35, -11], [x, 5.3, -6.3], normal], [[x, 5.3, 5.2], [x, 5.35, 11], normal]]],
-      [m.red, [[[x, 1.75, side < 0 ? 1.4 : -1.4], [x, 3.15, side < 0 ? 1.4 : -1.4], normal], [[x, 1.75, side < 0 ? 12.4 : 12.2], [x, 3.15, side < 0 ? 12.4 : 12.2], normal]]],
+      [m.red, [
+        ...(side < 0 ? [[[x, 1.75, 1.4], [x, 3.15, 1.4], normal]] : []),
+        [[x, 1.75, side < 0 ? 12.4 : 12.2], [x, 3.15, side < 0 ? 12.4 : 12.2], normal],
+      ]],
     ]);
   }
+  // Two white twin-tube task lights over the organized equipment station.
+  // Their visible housings and wall brackets match the ceiling battens.
+  const taskHardware = new Builder();
+  const taskTubes = new Builder();
+  const taskWhite = new THREE.MeshStandardMaterial({
+    name: 'Equipment station | white fluorescent diffuser', color: 0x000000,
+    emissive: new THREE.Color(.92, .96, 1), emissiveIntensity: 4, toneMapped: false,
+  });
+  const taskLightSources = [];
+  for (const z of [-3.4, -0.5]) {
+    taskHardware.box(m.steel, [0.12, 0.2, 1.95], [SIDE_X - 0.12, 3.3, z]);
+    for (const end of [-0.93, 0.93]) taskHardware.box(m.silver, [0.15, 0.2, 0.06], [SIDE_X - 0.15, 3.3, z + end]);
+    for (const dy of [-0.045, 0.045]) taskTubes.rod(taskWhite, [SIDE_X - 0.22, 3.3 + dy, z - 0.88], [SIDE_X - 0.22, 3.3 + dy, z + 0.88], 0.025, 10);
+    for (const end of [-0.68, 0.68]) taskHardware.box(m.steel, [0.12, 0.08, 0.08], [SIDE_X - 0.02, 3.3, z + end]);
+    taskLightSources.push({ position: [SIDE_X - 0.65, 3.15, z], intensity: 55, reach: 6 });
+  }
+  root.add(taskHardware.build('Garage extension | equipment light housings'));
+  root.add(taskTubes.build('Garage extension | two white equipment lights', { ceilingRow: 'equipment', taskLightSources }));
   const front = [0, 0, -1];
   const fz = FRONT_Z - 0.08;
   fixtures('front neon', [
@@ -342,8 +374,11 @@ export function extendGarage(garage) {
     }
   };
   for (const side of [-1, 1]) {
-    cabinetRun(side, side < 0 ? 4.6 : 3.9, 5);
-    for (const y of [2.38, 3.12]) shelf(side, side < 0 ? 4.3 : 3.7, side < 0 ? 10.4 : 9.6, y);
+    // The eastern wall bay is reserved for the garage office.
+    if (side < 0) {
+      cabinetRun(side, 4.6, 5);
+      for (const y of [2.38, 3.12]) shelf(side, 4.3, 10.4, y);
+    }
     for (const y of [2.38, 3.12]) shelf(side, -11.6, -6.4, y);
   }
   root.add(dressing.build('Garage extension | cabinets and shelves'));
@@ -384,6 +419,7 @@ export function extendGarage(garage) {
     [-1, -9.9], [-1, -8.1], [1, -9.6], [1, -7.8], [-1, 6.4], [-1, 8.6], [1, 5.7], [1, 7.9],
   ];
   prints.forEach(([side, z], index) => {
+    if (side > 0 && z > 3.7 && z < 10.4) return;
     const source = posters[index % posters.length];
     if (!source) return;
     const rotation = side < 0 ? Math.PI / 2 : -Math.PI / 2;
@@ -393,6 +429,7 @@ export function extendGarage(garage) {
     framed.box(m.paper, [0.014, size.y + 0.1, width + 0.06], [side * (SIDE_X - 0.05), 4.15, z]);
   });
   root.add(framed.build('Garage extension | print frames'));
+  root.add(createGarageOffice());
   if (flag) hang(flag, [0, 3.95, FRONT_Z - 0.12], Math.PI);
 
   garage.add(root);

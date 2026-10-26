@@ -1,4 +1,23 @@
-# Connected Supabase status · 21 October 2026
+# Connected Supabase status · 21 October 2026 (updated 25 October 2026)
+
+## 25 October 2026 update
+
+- **Migrations:** `20261025154352_garage_supporters` and `20261025154428_audit_hardening` were applied through the Supabase connector, so all thirteen are live. A drift check beforehand matched the hosted functions to the local files. After applying, `queue_project_notification`, `process_stripe_event` and `get_garage_supporters` matched the local files exactly (identical `pg_get_functiondef` fingerprints). Local filenames were renamed to the hosted versions.
+- **Access review (catalog queries):**
+  - All ten tables in `public` and `private` have RLS enabled.
+  - Donations, Stripe events, subscribers, email jobs and owner invitations have no browser grants.
+  - `community_posts` is now readable by column only, excluding `author_id` and `consent_version`.
+  - Owner writes are column-scoped and policy-checked.
+  - Storage has no anonymous policies; both buckets keep their size and MIME limits.
+  - Every SECURITY DEFINER function pins `search_path`. Payment, subscription and email functions are executable by `service_role` only.
+- **Rollback smoke test** (on the live database; it ended with an exception, so nothing persisted, and that was confirmed afterwards):
+  - Two quick part edits queued one delayed email with the latest text.
+  - Unpublish cancelled an update email, republish revived it, delete cancelled it.
+  - A refund then a failed refund moved the refunded total 3000 → 0, and a replayed event was a duplicate.
+  - A signed-in non-owner could not read `author_id` or donations and updated zero parts.
+- **Advisors:** no new kinds of finding. `get_garage_supporters` joins the reviewed, deliberately public SECURITY DEFINER aggregates. Leaked-password protection is still off. Performance shows only unused-index notices (no data yet).
+- **Live probes** with the publishable key: anonymous `author_id`/`consent_version` reads now fail with 42501, and `get_garage_supporters` returns 200. `node scripts/verify-supabase.mjs` passes.
+- **Owner access:** one invitation is still pending and **expires 27 October 2026 at 22:32 UTC**. The one Auth user has not confirmed an email, so there are no owners yet.
 
 Project `hbjtppfmqyunzeddfjzt` is initialized through the authenticated, project-scoped MCP connection. It was empty before initialization. All eleven migrations are applied, and the local migration filenames now match hosted history (versions use UTC timestamps).
 

@@ -47,6 +47,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Garage />} />
             <Route path="/parts" element={<Parts />} />
+            <Route path="/parts/:partId" element={<Parts />} />
             <Route path="/donations" element={<Donations />} />
             <Route path="/progress" element={<Progress />} />
             <Route path="/about" element={<About />} />

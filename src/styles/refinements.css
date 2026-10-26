@@ -1,7 +1,7 @@
 /* Shared components, using the same root palette on every page. */
 .btn { min-height: 42px; height: auto; padding: 10px 16px; text-transform: none; letter-spacing: 0; }
 .btn--primary { background: var(--blue); border-color: var(--blue); }
-.btn--donate { background: var(--red-2); border-color: var(--red); box-shadow: 0 4px 20px #ff123b20; }
+.btn--donate { background: var(--red-2); border-color: var(--red); }
 .btn--ghost { background: transparent; }
 .icon-btn { border-color: transparent; background: transparent; border-radius: var(--radius-sm); }
 .icon-btn:hover { background: #ffffff0c; }
@@ -86,7 +86,7 @@
 .part-drawer__desc { line-height: 1.7; }
 .three-toolbar { gap: 8px; }
 .three-toolbar__views, .three-toolbar__zoom { background: transparent; border: 0; padding: 0; border-radius: 0; backdrop-filter: none; box-shadow: none; }
-.three-toolbar button, .three-toolbar button.three-toolbar__lights { width: 44px; height: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 10px; background: transparent; backdrop-filter: none; color: white; filter: drop-shadow(0 1px 3px #000); }
+.three-toolbar button, .three-toolbar button.three-toolbar__lights { width: 44px; height: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 10px; background: transparent; backdrop-filter: none; color: white; }
 .three-toolbar button:hover, .three-toolbar button[aria-pressed='true'], .three-toolbar button[aria-expanded='true'] { background: transparent; color: var(--blue-bright); border: 0; }
 .three-hint { background: transparent; padding-left: 0; text-shadow: 0 1px 5px black; }
 .app[data-route='garage'] .panel,

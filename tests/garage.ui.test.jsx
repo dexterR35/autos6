@@ -170,13 +170,44 @@ describe('donation dialog (demo mode)', () => {
     expect(within(dialog).getByText('$12.34')).toBeInTheDocument();
   });
 
+  it('keeps a custom amount when the dialog is reopened', async () => {
+    sessionStorage.clear();
+    renderApp();
+    fireEvent.click(screen.getByRole('button', { name: /Donate now/i }));
+    let dialog = await screen.findByRole('dialog', { hidden: true, name: 'Support the restoration' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Custom', hidden: true }));
+    fireEvent.change(within(dialog).getByPlaceholderText('e.g. 15.50'), { target: { value: '15.5' } });
+    fireEvent.click(within(dialog).getByLabelText(/I agree to the/));
+    fireEvent.submit(dialog.querySelector('form'));
+    fireEvent.click(await within(dialog).findByRole('button', { name: 'Done', hidden: true }));
+    fireEvent.click(screen.getByRole('button', { name: /Donate now/i }));
+    dialog = await screen.findByRole('dialog', { hidden: true, name: 'Support the restoration' });
+    expect(within(dialog).getByPlaceholderText('e.g. 15.50')).toHaveValue('15.50');
+    expect(within(dialog).queryByText(/Enter an amount like/)).not.toBeInTheDocument();
+    sessionStorage.clear();
+  });
+
   it('"Fund this part" preselects the part', async () => {
     renderApp();
     fireEvent.click(document.querySelector('.hotspot[data-part-id="hood"]'));
     fireEvent.click(screen.getByRole('button', { name: /Fund this part/i }));
     const dialog = await screen.findByRole('dialog', { hidden: true, name: 'Support the restoration' });
     expect(within(dialog).getByRole('combobox', { hidden: true })).toHaveValue('hood');
-    expect(within(dialog).getByText(/isn’t a parts purchase/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/not a parts purchase/)).toBeInTheDocument();
+  });
+});
+
+describe('parts page (demo mode)', () => {
+  it('shows every part’s funding and funds a part in one tap', async () => {
+    renderApp('/parts');
+    expect(screen.getAllByRole('progressbar')).toHaveLength(11); // the total plus one per part
+    expect(screen.getByRole('progressbar', { name: 'Hood funding' })).toHaveAttribute('aria-valuetext', '$210 of $650');
+    const bought = screen.getAllByRole('listitem').filter((item) => item.classList.contains('is-bought'));
+    expect(bought).toHaveLength(1);
+    expect(within(bought[0]).queryByRole('button', { name: /^Fund / })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Fund Hood' }));
+    const dialog = await screen.findByRole('dialog', { hidden: true, name: 'Support the restoration' });
+    expect(within(dialog).getByRole('combobox', { hidden: true })).toHaveValue('hood');
   });
 });
 
@@ -186,7 +217,7 @@ describe('routes', () => {
     ['/donations', /Donations/],
     ['/progress', /Progress/],
     ['/about', /PROJECT S6/],
-    ['/community', /A garage for/],
+    ['/community', /Community/],
     ['/terms', /Donation terms/],
     ['/privacy', /Privacy notice/],
     ['/admin', /Owner admin/],

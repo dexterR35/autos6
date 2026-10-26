@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CAR_TARGET, cameraPreset, findMeshPart, partAnchors3D } from '../src/lib/garage3d.js';
 import { availableViews } from '../src/data/views.js';
 import { demoParts } from '../src/data/demoProject.js';
-import sceneInfo from '../public/models/scene-info.json';
+import carRelease from '../public/car-releases/imported-v3/manifest.json';
 
 const distance = ({ position, target }) => Math.hypot(...position.map((value, index) => value - target[index]));
 
@@ -53,7 +53,7 @@ describe('3D garage coordinates', () => {
   });
 
   it('places every anchor on the exported car, not beside it', () => {
-    const { min, max } = sceneInfo.car.bounds;
+    const { min, max } = carRelease.car.bounds;
     for (const [id, candidates] of Object.entries(partAnchors3D())) {
       for (const { position } of candidates) {
         position.forEach((value, axis) => {

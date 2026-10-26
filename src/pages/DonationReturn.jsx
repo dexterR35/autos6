@@ -6,6 +6,7 @@ import { formatCents, parseDollarsToCents } from '../lib/money.js';
 import { track, trackPurchaseOnce } from '../lib/analytics.js';
 import { useGarageState } from '../hooks/useGarageState.jsx';
 import { useProjectData } from '../hooks/useProjectData.jsx';
+import { readScrubbed } from '../lib/urlScrub.js';
 
 const POLL_MS = 2500;
 const MAX_WAIT_MS = 60_000;
@@ -16,7 +17,8 @@ const MAX_WAIT_MS = 60_000;
  */
 export function DonationSuccess() {
   const [params] = useSearchParams();
-  const sessionId = params.get('session_id');
+  // main.jsx moves session_id out of the address before trackers load (urlScrub.js).
+  const sessionId = params.get('session_id') ?? readScrubbed('session_id', '/donation/success');
   const { refreshSummary, isDemo } = useProjectData();
   const [state, setState] = useState({ phase: sessionId ? 'pending' : 'missing', data: null });
   const started = useRef(Date.now());

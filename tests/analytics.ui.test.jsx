@@ -121,17 +121,19 @@ describe('purchase & consent', () => {
 
   it('the consent banner only appears when GTM is configured', async () => {
     renderApp('/');
-    expect(screen.queryByRole('region', { name: /Analytics cookies/ })).toBeNull();
+    expect(screen.queryByRole('region', { name: /Cookies/ })).toBeNull();
     cleanup();
     vi.resetModules();
     vi.stubEnv('VITE_GTM_ID', 'GTM-TEST123');
     try {
       const { default: Banner } = await import('../src/components/ConsentBanner.jsx');
       render(<Banner />);
-      const region = screen.getByRole('region', { name: /Analytics cookies/ });
-      fireEvent.click(within(region).getByRole('button', { name: 'Reject' }));
-      expect(screen.queryByRole('region', { name: /Analytics cookies/ })).toBeNull();
+      const region = screen.getByRole('region', { name: /Cookies/ });
+      expect(within(region).queryByText(/Marketing/)).toBeNull(); // no ad tags configured
+      fireEvent.click(within(region).getByRole('button', { name: 'Reject all' }));
+      expect(screen.queryByRole('region', { name: /Cookies/ })).toBeNull();
       expect(localStorage.getItem('project-s6:analytics-consent')).toBe('denied');
+      expect(localStorage.getItem('project-s6:marketing-consent')).toBeNull();
     } finally {
       vi.unstubAllEnvs();
     }

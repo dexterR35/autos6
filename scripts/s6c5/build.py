@@ -258,7 +258,7 @@ class Builder:
         bp, cb = spec.B_PILLAR, spec.C_BAR
         win_front = [(bp[1][0], 0), (spec.DLO_FRONT_X + 0.05, 0), (spec.DLO_FRONT_X + 0.05, 1), (bp[1][1], 1)]
         win_rear = [(cb[1][0], 0), (bp[0][0], 0), (bp[0][1], 1), (cb[1][1], 1)]
-        win_quarter = [(spec.DLO_REAR_X - 0.05, 0), (cb[0][0], 0), (cb[0][1], 1), (spec.DLO_REAR_X - 0.05, 1)]
+        win_quarter = [(spec.DLO_REAR_X, 0), (cb[0][0], 0), (cb[0][1], 1), (spec.DLO_REAR_X, 1)]
         b_pillar = [(bp[0][0], 0), (bp[1][0], 0), (bp[1][1], 1), (bp[0][1], 1)]
         c_bar = [(cb[0][0], 0), (cb[1][0], 0), (cb[1][1], 1), (cb[0][1], 1)]
         windscreen = [(spec.WINDSCREEN_TOP_X[0], 2.0), (spec.COWL_X_CENTRE + 0.1, 2.0), (spec.COWL_X_CENTRE + 0.1, 3.01), (spec.WINDSCREEN_TOP_X[1], 3.01)]
@@ -295,14 +295,17 @@ class Builder:
         sides = np.stack([xs, np.full_like(xs, 2.0)], axis=1)
         self.glass_frit('S6 | windscreen ceramic frit', np.vstack([header, sides[1:]]), (0.75, 2.6),
                         [0.075] * len(header) + [0.055] * (len(sides) - 1))
+        # Cut the rear ceramic border in the same curved parameter surface as
+        # the glass. Offset strips in world space could fold across the pane at
+        # its tight corners and leave large triangular patches in a close view.
         rg = spec.REAR_GLASS_TOP_X[0]
-        ts = np.linspace(3.0, 2.0, 30)
-        bottom = np.stack([np.full_like(ts, b.x_green_end + 0.001), ts], axis=1)
-        xs = np.linspace(b.x_green_end + 0.001, rg, 60)
-        dpil = np.stack([xs, np.full_like(xs, 2.0)], axis=1)
-        top = np.stack([np.full_like(ts, rg), ts[::-1]], axis=1)
-        self.glass_frit('S6 | tailgate glass ceramic frit', np.vstack([bottom, dpil[1:], top[1:]]), (-2.0, 2.6),
-                        [0.05] * (len(bottom) + len(dpil) + len(top) - 2))
+        gx = b.x_green_end
+        outer = [(gx - .001, 1.999), (rg + .001, 1.999), (rg + .001, 3.01), (gx - .001, 3.01)]
+        inner = [(gx + .024, 2.04), (rg - .023, 2.04), (rg - .023, 3.02), (gx + .024, 3.02)]
+        frit = param_mesh('S6 | tailgate glass ceramic frit', x, t,
+                          lambda xx, tt: self.gh_offset(xx, tt, -.0047),
+                          regions=[Region(inner)], keep=outer, materials=[self.m['frit']])
+        self.add(frit)
         return obj
 
     def glass_frit(self, name, path, inside_xt, widths, glass_off=-0.0048):
@@ -363,7 +366,8 @@ class Builder:
         b = self.body
         s = np.linspace(0, b.L, 200)
         e = b.outline.at(s)
-        z = b.z_of(s, np.zeros_like(s)) + 0.02
+        # A recessed flat tray avoids a folded strip below the central sills.
+        z = np.maximum(b.z_of(s, np.zeros_like(s)) + 0.02, 0.205)
         inner = e * np.array([0.97, 0.94])
         verts = [(p[0], p[1], zz) for p, zz in zip(inner, z)] + [(p[0], 0.0, zz) for p, zz in zip(inner, z)]
         n = len(s)

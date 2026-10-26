@@ -38,3 +38,17 @@ The connected Supabase project's migrations, model release and hosted access che
 The operator must still apply migrations, configure credentials/Dashboard settings, test provider integrations, complete/review legal identity and policies, provision owners, secure account access, configure database backups and retention, monitor Stripe/reconciliation and email failures, and configure trusted proxies accurately. In-memory IP rate limits are **per API instance**; deployments with several instances should add shared gateway limits. Confirm actual RLS/grants and storage settings on the hosted Supabase project. A public static host needs the frontend security headers too. Follow the concrete steps in [LAUNCH.md](LAUNCH.md).
 
 Resend handles provider suppressions; this build does not ingest bounce/complaint webhooks. Notification retries stop and remain visible as failed queue rows. Identity-based community rate limits and moderation limit publication abuse; production Auth email/CAPTCHA settings remain operator configuration. Dependency audit results only cover known package advisories, not every possible vulnerability.
+
+## Follow-up review · 25 October 2026
+
+| Finding | Resolution |
+| --- | --- |
+| New advisories: body-parser DoS through compressed bodies (high, every API route), ip-address quadratic parsing (moderate, via express-rate-limit), undici (high, dev-only via jsdom) | `npm audit fix` updated them to body-parser 2.4.0, ip-address 10.7.5 and undici 8.12.3; npm audit reports zero known advisories |
+| Anonymous readers could select `community_posts.author_id`, linking posts by account | Column-level read grants exclude `author_id` and `consent_version`; the row policy still lets members see their own pending posts |
+| The supporter wall folded unnamed public donations into the donor's named row by private email | Unnamed donations (empty, "Anonymous", or an email-like name) stay separate rows; named donations still combine by email |
+| Every part edit, and every unpublish/republish of an update, emailed all subscribers | 10-minute batching window per part or update; one email per restoration update and subscriber; drafts and deleted items cancel queued emails |
+| A failed or cancelled Stripe refund stayed subtracted from funding totals | Refund events (`charge.refunded`, `refund.failed`, `refund.updated`) recount refunds from Stripe and store that total |
+| Community posting showed raw database errors, including constraint names | Only the posting function's member-facing messages are shown; other errors use fixed copy |
+| Build scripts loaded whichever glTF Transform CLI was in the npx cache | `@gltf-transform/cli` pinned at 4.5.1 as a dev dependency; the npx-cache search was removed |
+
+`supabase/migrations/20261025154428_audit_hardening.sql` (and the preceding `20261025154352_garage_supporters.sql`) were applied to the hosted project on 25 October 2026; hosted function definitions were checked against the local files. Still to do: add the two new refund events to the Stripe webhook endpoint (see [LAUNCH.md](LAUNCH.md)).

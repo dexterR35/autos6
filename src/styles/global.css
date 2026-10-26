@@ -39,7 +39,7 @@ code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 4px;
   height: 38px; padding: 0 16px; border-radius: var(--radius-sm);
   border: 1px solid var(--border); background: linear-gradient(180deg, #16222f, #0d1620);
   font-weight: 600; letter-spacing: 0.01em; text-decoration: none; color: var(--text);
-  transition: filter 0.15s, box-shadow 0.15s, transform 0.05s;
+  transition: filter 0.15s, transform 0.05s;
 }
 .btn svg { width: 18px; height: 18px; }
 .btn:hover { filter: brightness(1.15); }
@@ -52,7 +52,7 @@ code { background: rgba(255,255,255,0.07); padding: 1px 5px; border-radius: 4px;
 .btn--ghost { background: rgba(255,255,255,0.03); }
 .btn--donate {
   background: linear-gradient(180deg, #ff2a4e, #e10b31); border-color: #ff4a68; color: #fff;
-  text-transform: uppercase; box-shadow: 0 0 18px rgba(255, 18, 59, 0.35), inset 0 1px 0 rgba(255,255,255,0.25);
+  text-transform: uppercase;
 }
 .btn--donate .ext { width: 14px; height: 14px; opacity: 0.8; }
 .icon-btn {
@@ -184,4 +184,7 @@ legend { font-size: 13px; color: var(--muted); margin-bottom: 8px; padding: 0; }
 .consent h2 { display: flex; align-items: center; gap: 8px; font-size: 15px; margin-bottom: 6px; }
 .consent h2 svg { width: 18px; height: 18px; color: var(--blue-bright); }
 .consent p { margin: 0; font-size: 13px; color: var(--muted); }
-.consent__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
+.consent__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.consent__actions .btn { min-height: 38px; }
+.consent__choices { display: grid; gap: 2px; margin-top: 10px; }
+.consent__choices .check { margin: 4px 0; }

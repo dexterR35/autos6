@@ -20,7 +20,11 @@ export function createStripeDouble() {
     if (opts?.idempotencyKey) byKey.set(opts.idempotencyKey, session);
     return session;
   });
-  return { webhooks: real.webhooks, checkout: { sessions: { create } } };
+  // Refunds Stripe currently holds, per payment intent. Tests set them with setRefunds.
+  const refunds = [];
+  const list = vi.fn((params) => ({ autoPagingToArray: async () => refunds.filter((r) => r.payment_intent === params.payment_intent) }));
+  const setRefunds = (rows) => { refunds.splice(0, refunds.length, ...rows); };
+  return { webhooks: real.webhooks, checkout: { sessions: { create } }, refunds: { list }, setRefunds };
 }
 
 export async function createTestServer(overrides = {}) {
@@ -51,4 +55,9 @@ export function sessionEvent(type, session, extra = {}) {
 export function chargeRefundedEvent(charge) {
   evt += 1;
   return { id: `evt_test_${evt}_refund`, object: 'event', type: 'charge.refunded', livemode: false, data: { object: { object: 'charge', ...charge } } };
+}
+/** refund.failed / refund.updated: the event object is a Refund, not a Charge. */
+export function refundEvent(type, refund) {
+  evt += 1;
+  return { id: `evt_test_${evt}_${type.replace('.', '_')}`, object: 'event', type, livemode: false, data: { object: { object: 'refund', ...refund } } };
 }

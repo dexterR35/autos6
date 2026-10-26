@@ -1,15 +1,17 @@
 // Run against a running Vite server: node scripts/verify-orbit.mjs [baseUrl] [outputDir]
 // Uses real WebGL, GLB requests and browser input; no renderer or controls mocks.
+// The unrelated supporter feed is an explicitly empty transport fixture.
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium } from 'playwright';
 import * as THREE from 'three';
+import { partAnchors3D } from '../src/lib/garage3d.js';
 
 const base = (process.argv[2] || 'http://127.0.0.1:5173').replace(/\/$/, '');
 const output = resolve(process.argv[3] || 'output/orbit-verification');
 mkdirSync(output, { recursive: true });
-const report = { base, checks: [], assets: [], screenshots: [], runtimeErrors: [], consoleErrors: [] };
+const report = { base, supporterFeed: 'synthetic empty transport fixture; no database writes', checks: [], assets: [], screenshots: [], runtimeErrors: [], consoleErrors: [] };
 const browser = await chromium.launch({
   channel: process.env.PLAYWRIGHT_CHANNEL || 'msedge',
   args: ['--enable-unsafe-swiftshader'],
@@ -60,7 +62,8 @@ async function screenshot(page, name) {
   await page.screenshot({ path, fullPage: page.viewportSize().width > 900 });
   report.screenshots.push(path);
 }
-function monitor(page) {
+async function monitor(page) {
+  await page.route('**/rest/v1/rpc/get_garage_supporters', route => route.fulfill({ json: [] }));
   page.on('pageerror', (error) => report.runtimeErrors.push(error.message));
   page.on('console', (message) => {
     if (message.type() === 'error') report.consoleErrors.push(message.text());
@@ -93,7 +96,7 @@ async function carSurfacePoint(page, position) {
 }
 
 async function checkLighting(page) {
-  assert.equal(await page.locator(viewerSelector).getAttribute('data-light-level'), '100', 'Lights start at full brightness');
+  assert.equal(await page.locator(viewerSelector).getAttribute('data-light-level'), '100', 'Lights start at normal brightness');
   const lighting = page.getByRole('button', { name: 'Adjust garage lighting' });
   await lighting.click();
   assert.equal(await lighting.getAttribute('aria-expanded'), 'true');
@@ -102,7 +105,7 @@ async function checkLighting(page) {
   await page.keyboard.press('Home');
   assert.equal(await slider.inputValue(), '35', 'Minimum brightness keeps lights on');
   await page.keyboard.press('End');
-  assert.equal(await slider.inputValue(), '100');
+  assert.equal(await slider.inputValue(), '200', 'Brightness can boost the workshop above its normal level');
   await page.keyboard.press('Escape');
   assert.equal(await lighting.getAttribute('aria-expanded'), 'false');
   report.checks.push({ name: 'lights start on; accessible brightness control never switches them off' });
@@ -110,7 +113,7 @@ async function checkLighting(page) {
 
 try {
   const desktop = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 });
-  monitor(desktop);
+  await monitor(desktop);
   const canvas = await ready(desktop);
   assert.equal(await desktop.locator(`${viewerSelector} .hotspot`).count(), 0, 'No idle part markers obscure the car');
   await checkLighting(desktop);
@@ -155,7 +158,7 @@ try {
   await desktop.locator('[data-angle="exterior-a"]').click();
   await settled(desktop);
   const hood = desktop.locator(`${viewerSelector} [data-part-id="hood"]`);
-  const hoodPoint = await carSurfacePoint(desktop, [1.72, 0.89, 0]);
+  const hoodPoint = await carSurfacePoint(desktop, partAnchors3D().hood[0].position);
   await desktop.mouse.click(hoodPoint.x, hoodPoint.y);
   assert.equal(await hood.count(), 1, 'The selected component has one marker');
   await desktop.getByRole('complementary', { name: 'Hood', exact: true }).waitFor();
@@ -234,7 +237,7 @@ try {
   report.checks.push({ name: 'extreme zoom out and upward orbit stay inside workshop', position: extremePose.position, distance: distance(extremePose) });
 
   const mobile = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
-  monitor(mobile);
+  await monitor(mobile);
   const mobileCanvas = await ready(mobile);
   assert.equal(await mobile.locator(`${viewerSelector} .hotspot`).count(), 0, 'Mobile starts without component dots');
   await checkLighting(mobile);
@@ -301,13 +304,13 @@ try {
   await desktop.close();
 
   const failedAsset = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-  await failedAsset.route('**/models/*.glb', (route) => route.fulfill({ status: 503, contentType: 'text/plain', body: 'Intentional unavailable model for regression check' }));
+  await failedAsset.route('**/car-releases/*/s6-c5.glb', (route) => route.fulfill({ status: 503, contentType: 'text/plain', body: 'Intentional unavailable model for regression check' }));
   await failedAsset.goto(`${base}/`, { waitUntil: 'networkidle' });
   await failedAsset.getByRole('alert').filter({ hasText: 'The 3D garage could not open.' }).waitFor();
   assert.equal(await failedAsset.locator(`${viewerSelector}[data-loaded="true"]`).count(), 0);
   assert.equal(await failedAsset.locator('.viewer__img').count(), 0, 'Asset failures do not silently pretend image fallback is 3D');
   await screenshot(failedAsset, 'asset-failure-recovery');
-  await failedAsset.unroute('**/models/*.glb');
+  await failedAsset.unroute('**/car-releases/*/s6-c5.glb');
   await failedAsset.getByRole('button', { name: 'Retry 3D', exact: true }).click();
   await failedAsset.locator(`${viewerSelector}[data-loaded="true"]`).waitFor({ timeout: 120000 });
   assert.equal(await failedAsset.getByRole('alert').count(), 0);

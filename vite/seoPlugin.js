@@ -13,16 +13,21 @@ import { ROUTES, NOT_FOUND, getRouteMeta, headFor, renderHeadHtml, renderNoscrip
 const HEAD_RE = /<!--seo:head-->[\s\S]*?<!--\/seo:head-->/;
 const NOSCRIPT_RE = /<!--seo:noscript-->[\s\S]*?<!--\/seo:noscript-->/;
 
-export function gtmHeadSnippet(id) {
-  // Consent defaults MUST run before the container loads (Consent Mode v2).
+export function gtmHeadSnippet(id, { marketing = false } = {}) {
+  // Consent defaults MUST run before the container loads (Consent Mode v2). Marketing
+  // choices only apply when the container holds ad tags (VITE_GTM_MARKETING=true).
+  const marketingGranted = marketing ? "localStorage.getItem('project-s6:marketing-consent')==='granted'" : 'false';
   return `<script>
       window.dataLayer = window.dataLayer || [];
       function gtag(){dataLayer.push(arguments);}
       gtag('consent', 'default', { ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied', analytics_storage: 'denied', functionality_storage: 'granted', security_storage: 'granted', wait_for_update: 500 });
-      try { if (localStorage.getItem('project-s6:analytics-consent') === 'granted') gtag('consent', 'update', { analytics_storage: 'granted' }); } catch (e) {}
+      try { var s6a = localStorage.getItem('project-s6:analytics-consent') === 'granted', s6m = ${marketingGranted}, s6u = {};
+        if (s6a) s6u.analytics_storage = 'granted';
+        if (s6m) { s6u.ad_storage = 'granted'; s6u.ad_user_data = 'granted'; s6u.ad_personalization = 'granted'; }
+        if (s6a || s6m) gtag('consent', 'update', s6u); } catch (e) {}
     </script>
-    <!-- Google Tag Manager: loaded only after opt-in -->
-    <script>window.__s6StartAnalytics=function(){if(window.__s6GtmStarted)return;window.__s6GtmStarted=true;(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${id}');};try{if(localStorage.getItem('project-s6:analytics-consent')==='granted')window.__s6StartAnalytics();}catch(e){}</script>
+    <!-- Google Tag Manager: loaded only after opt-in, never while the address holds a secret (src/lib/urlScrub.js) -->
+    <script>window.__s6StartAnalytics=function(){if(window.__s6GtmStarted)return;window.__s6GtmStarted=true;(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','${id}');};(function(){try{var L=location,p=new URLSearchParams(L.search),h=new URLSearchParams(L.hash.slice(1)),v={path:L.pathname};if(L.pathname==='/donation/success'&&p.has('session_id')){v.session_id=p.get('session_id');p.delete('session_id');}if(L.pathname.indexOf('/subscription/')===0&&h.has('token'))v.token=h.get('token');if(v.session_id||v.token){sessionStorage.setItem('project-s6:url-secrets',JSON.stringify(v));var q=p.toString();history.replaceState(history.state,'',L.pathname+(q?'?'+q:'')+(v.token?'':L.hash));}var clean=L.pathname.indexOf('/admin')!==0&&!/(^|[?&])session_id=/.test(L.search)&&!/(access_token|refresh_token|token=|error_description|code=)/.test(L.hash+L.search);if(clean&&(localStorage.getItem('project-s6:analytics-consent')==='granted'||${marketingGranted}))window.__s6StartAnalytics();}catch(e){}})();</script>
     <!-- End Google Tag Manager -->`;
 }
 
@@ -58,7 +63,7 @@ export default function seoPlugin(env) {
         let out = renderPage(html, getRouteMeta('/'), { siteUrl, noindex });
         const withGtm = validGtm && (isBuild || env.VITE_GTM_IN_DEV === 'true');
         if (withGtm) {
-          out = out.replace('<!--gtm:head-->', gtmHeadSnippet(gtmId));
+          out = out.replace('<!--gtm:head-->', gtmHeadSnippet(gtmId, { marketing: env.VITE_GTM_MARKETING === 'true' }));
           if (env.VITE_GTM_NOSCRIPT !== 'false') out = out.replace('<!--gtm:body-->', gtmBodySnippet(gtmId));
         }
         return out.replace('<!--gtm:head-->', '').replace('<!--gtm:body-->', '');

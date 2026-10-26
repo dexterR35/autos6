@@ -1,0 +1,119 @@
+{
+  "base": "http://127.0.0.1:5173",
+  "supporterFeed": "synthetic empty transport fixture; no database writes",
+  "checks": [
+    {
+      "name": "lights start on; accessible brightness control never switches them off"
+    },
+    {
+      "name": "mouse drag orbits the real camera",
+      "movement": 6.96370368410374
+    },
+    {
+      "name": "wheel zoom",
+      "before": 10.28385924641134,
+      "after": 8.269778050226016
+    },
+    {
+      "name": "zoom button direction is correct"
+    },
+    {
+      "name": "Front preset moves the camera",
+      "position": [
+        -1.677,
+        2.761,
+        7.386
+      ]
+    },
+    {
+      "name": "Garage view expands the orbit"
+    },
+    {
+      "name": "clicking actual car body selects component, shows one subtle marker, and opens matching details"
+    },
+    {
+      "name": "search and status filters apply to catalogue and 3D hotspots"
+    },
+    {
+      "name": "real car and garage GLBs loaded and rendered"
+    },
+    {
+      "name": "full horizontal orbit using keyboard",
+      "degrees": 479.946925609622
+    },
+    {
+      "name": "right-drag pans camera and target",
+      "targetMovement": 0.5844364807230978
+    },
+    {
+      "name": "extreme zoom out and upward orbit stay inside workshop",
+      "position": [
+        4.599,
+        6.4,
+        -10.331
+      ],
+      "distance": 12.500456991646345
+    },
+    {
+      "name": "lights start on; accessible brightness control never switches them off"
+    },
+    {
+      "name": "mobile zoom buttons and direct component taps work without persistent dots"
+    },
+    {
+      "name": "mobile touch drag orbits the real camera",
+      "movement": 6.724647574408641
+    },
+    {
+      "name": "two-finger pinch zooms without selecting parts"
+    },
+    {
+      "name": "explicit image fallback still supports angle changes"
+    },
+    {
+      "name": "failed GLB exposes error; Retry 3D reloads successfully"
+    },
+    {
+      "name": "unavailable WebGL offers explicit, accurately labeled image fallback"
+    }
+  ],
+  "assets": [
+    {
+      "url": "http://127.0.0.1:5173/car-releases/reference-v2/s6-c5.glb",
+      "status": 200
+    },
+    {
+      "url": "https://hbjtppfmqyunzeddfjzt.supabase.co/storage/v1/object/public/project-models/006db33e-7594-4b89-b604-4c7c49f58a51/v1/garage.glb",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:5173/car-releases/reference-v2/s6-c5.glb",
+      "status": 200
+    },
+    {
+      "url": "https://hbjtppfmqyunzeddfjzt.supabase.co/storage/v1/object/public/project-models/006db33e-7594-4b89-b604-4c7c49f58a51/v1/garage.glb",
+      "status": 200
+    }
+  ],
+  "screenshots": [
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\car-refinement\\reference-v2\\orbit-check\\desktop-before-orbit.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\car-refinement\\reference-v2\\orbit-check\\desktop-after-orbit.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\car-refinement\\reference-v2\\orbit-check\\desktop-front-preset.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\car-refinement\\reference-v2\\orbit-check\\desktop-garage-orbit.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\car-refinement\\reference-v2\\orbit-check\\desktop-selected-part.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\car-refinement\\reference-v2\\orbit-check\\desktop-extreme-orbit-bounds.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\car-refinement\\reference-v2\\orbit-check\\mobile-selected-component.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\car-refinement\\reference-v2\\orbit-check\\mobile-before-orbit.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\car-refinement\\reference-v2\\orbit-check\\mobile-after-orbit.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\car-refinement\\reference-v2\\orbit-check\\mobile-narrow-controls.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\car-refinement\\reference-v2\\orbit-check\\asset-failure-recovery.png"
+  ],
+  "runtimeErrors": [],
+  "consoleErrors": [],
+  "renderer": {
+    "renderer": "three",
+    "drawCalls": 143,
+    "triangles": 483802
+  },
+  "passed": true
+}

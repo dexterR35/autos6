@@ -186,16 +186,19 @@ function UpdatesEditor({ projectId, userId }) {
 
   const create = async (e) => {
     e.preventDefault();
+    // Validate everything before uploading, so a bad field never leaves orphaned photos.
+    const costInput = form.cost.trim();
+    const cost_cents = costInput ? parseDollarsToCents(costInput) : null;
+    if (costInput && cost_cents == null) return setMsg('Enter the cost as an amount like 120 or 120.50, or leave it empty.');
+    if (files.length > 10 || files.some((f) => !['image/jpeg','image/png','image/webp'].includes(f.type) || f.size > 5 * 1024 * 1024)) return setMsg('Choose up to 10 JPG, PNG or WebP photos, each under 5 MB.');
     setMsg('Saving…');
     const image_urls = [];
-    if (files.length > 10 || files.some((f) => !['image/jpeg','image/png','image/webp'].includes(f.type) || f.size > 5 * 1024 * 1024)) return setMsg('Choose up to 10 JPG, PNG or WebP photos, each under 5 MB.');
     for (const f of files) {
       const path = `${projectId}/updates/${crypto.randomUUID()}-${f.name.replace(/[^\w.-]/g, '_')}`;
       const { error } = await supabase.storage.from('project-media').upload(path, f, { contentType: f.type });
       if (error) return setMsg(`Upload failed: ${error.message}`);
       image_urls.push(supabase.storage.from('project-media').getPublicUrl(path).data.publicUrl);
     }
-    const cost_cents = form.cost ? parseDollarsToCents(form.cost) : null;
     const { error } = await supabase.from('restoration_updates').insert({
       project_id: projectId, title: form.title, body: form.body, image_urls, cost_cents, created_by: userId,
       published_at: form.publish ? new Date().toISOString() : null,

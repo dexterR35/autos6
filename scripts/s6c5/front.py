@@ -6,7 +6,7 @@ import numpy as np
 from mathutils import Matrix
 
 from .features import densify
-from .meshgen import mesh_from_arrays
+from .meshgen import Region, mesh_from_arrays, param_mesh
 from .util import disc_ring, frame_from_normal, inside, runs, torus
 
 
@@ -116,35 +116,74 @@ def headlamps(B):
     lamp = B.inset('S6 | headlamp', lay.headlamp_lens, 0.12, m['lamp_silver'], m['lamp_dark'], lens_mat=m['lens'],
                    lens_inset=0.0012, step=0.008)
     sf = b.s_front
-    # Silver housing with three round units, as in the reference: a large
-    # high-beam dome by the grille, the bright low-beam projector in the middle
-    # and a small side light in the outer corner.
-    for label, y, z, bowl, lens_r, glow in [('inner high beam', 0.508, 0.690, 0.056, 0.050, True),
-                                           ('centre projector', 0.628, 0.688, 0.050, 0.036, True),
-                                           ('outer side light', 0.738, 0.686, 0.040, 0.024, False)]:
+    # Two main reflector/projector units inside a single silver C5 assembly.
+    # The outer corner is a faceted indicator, rather than a third round lamp.
+    units = [('inner high beam', 0.523, 0.691, 0.068, 0.060),
+             ('centre projector', 0.681, 0.690, 0.065, 0.053)]
+    outline = B.sv_poly(lay.headlamp_lens, 0.008)
+    uv = np.asarray(outline)
+    holes = []
+    for _, y, z, bowl, _ in units:
+        sc = float(sf(y))
+        circle = [(sc + (bowl + .006) * math.cos(a), z + (bowl + .006) * math.sin(a))
+                  for a in np.linspace(0, math.tau, 48, endpoint=False)]
+        holes.append(Region(B.sv_poly(circle, .006), 'hole'))
+    # Bring the shaped reflector carrier close to the cover. A deep, empty
+    # recess made the previous exported lamps look like loose circles in paint.
+    mapper = lambda s, v: b.wall(s, v) - b.wall_out(s, v) * .028
+    carrier = param_mesh('S6 | headlamp sculpted silver reflector carrier',
+                         np.linspace(uv[:, 0].min() - .001, uv[:, 0].max() + .001, 56),
+                         np.linspace(uv[:, 1].min() - .001, uv[:, 1].max() + .001, 25),
+                         mapper, regions=holes, keep=outline, materials=[m['lamp_silver']])
+    B.link(carrier, mirror=True)
+    B.wall_line('S6 | headlamp black perimeter gasket', lay.headlamp_lens, .0030, m['black'],
+                offset=.0005, closed=True, clip_holes=False, flatten=.55)
+    B.wall_line('S6 | headlamp polished perimeter trim', lay.headlamp_lens, .0013, m['chrome'],
+                offset=.002, closed=True, clip_holes=False, flatten=.55)
+    for label, y, z, bowl, lens_r in units:
         s = float(sf(y))
         p, n = B.frame_at(s, z)
         f = horizontal(n)
         rr, uu, nn = frame_from_normal(f)
-        c = p - n * 0.05
-        B.link(disc_ring('S6 | headlamp ' + label + ' chrome bowl', c - f * 0.035, rr, uu, nn,
-                         [(0.008, -0.025), (bowl * 0.45, -0.018), (bowl * 0.8, -0.006), (bowl, 0.012), (bowl + 0.004, 0.014)],
-                         m['reflector'], 56), mirror=True)
+        c = p - n * 0.030
+        is_reflector = label == 'inner high beam'
+        B.link(disc_ring('S6 | headlamp ' + label + ' chrome bowl', c - f * 0.023, rr, uu, nn,
+                         [(0.006, -0.018), (bowl * 0.32, -0.015), (bowl * 0.64, -0.007),
+                          (bowl * 0.88, 0.006), (bowl, 0.017), (bowl + 0.003, 0.018)],
+                         m['reflector'], 32 if is_reflector else 56,
+                         smooth=not is_reflector), mirror=True)
         B.link(disc_ring('S6 | headlamp ' + label + ' bezel', c, rr, uu, nn,
-                         [(lens_r + 0.002, -0.004), (lens_r + 0.007, 0.0), (lens_r + 0.007, 0.004), (lens_r + 0.001, 0.006)],
+                         [(lens_r + 0.002, -0.003), (lens_r + 0.006, 0.0), (lens_r + 0.006, 0.004), (lens_r + 0.001, 0.006)],
                          m['chrome'], 48), mirror=True)
         B.link(disc_ring('S6 | headlamp ' + label + ' lens', c, rr, uu, nn,
-                         [(0.0005, 0.006 + lens_r * 0.45), (lens_r * 0.5, 0.006 + lens_r * 0.36), (lens_r * 0.85, 0.006 + lens_r * 0.16), (lens_r, 0.004)],
+                         [(0.0005, 0.006 + lens_r * 0.25), (lens_r * 0.5, 0.006 + lens_r * 0.20), (lens_r * 0.85, 0.006 + lens_r * 0.10), (lens_r, 0.004)],
                          m['lens'], 48), mirror=True)
-        if glow:
-            B.link(disc_ring('S6 | headlamp ' + label + ' glow', c - f * 0.004, rr, uu, nn,
-                             [(0.0005, 0.0), (lens_r * 0.9, 0.0)], m['lamp_white'], 32), mirror=True)
+        if is_reflector:
+            # The high beam has a small bulb in a broad chrome bowl, not the
+            # luminous radial spokes of a second projector assembly.
+            B.link(disc_ring('S6 | headlamp high beam bulb', c - f * .021, rr, uu, nn,
+                             [(0.0005, .002), (.0055, .002), (.0065, -.003)],
+                             m['lamp_white'], 24), mirror=True)
+        else:
+            B.link(disc_ring('S6 | headlamp projector illuminated rim', c - f * 0.004, rr, uu, nn,
+                             [(lens_r * .91, 0.0), (lens_r * .98, 0.0)], m['lamp_white'], 48), mirror=True)
+    # Segmented reflector prism and amber strip in the outer lens corner.
+    for k, y in enumerate(np.linspace(.754, .812, 10)):
+        sc = float(sf(y))
+        z0, z1 = .627 + k * .0015, .755 + k * .0005
+        B.wall_line('S6 | headlamp indicator reflector prism %02d' % k,
+                    [(sc, z0), (sc + .005, (z0 + z1) / 2), (sc, z1)], .0033,
+                    m['reflector'], offset=-.018, mirror=True, clip_holes=False, step=.005)
+    indicator = [(float(sf(.785)), .641), (float(sf(.798)), .645),
+                 (float(sf(.798)), .744), (float(sf(.785)), .744)]
+    B.wall_line('S6 | headlamp outer amber reflector', indicator, .0028, m['lamp_amber'],
+                offset=-.017, closed=True, clip_holes=False, flatten=.6)
     # Polished divider and the amber indicator in the outer corner.
-    pts = [(float(sf(y)), 0.629) for y in np.linspace(0.47, 0.80, 30)]
+    pts = [(float(sf(y)), 0.625) for y in np.linspace(0.445, 0.79, 30)]
     pos = b.on_wall(np.array(pts), -0.03)
     from .meshgen import tube
     B.link(tube('S6 | headlamp chrome divider', pos, 0.004, m['reflector'], sides=8), mirror=True)
-    p, n = B.frame_at(float(b.s_of_side_x(2.15)), 0.722)
+    p, n = B.frame_at(float(sf(.793)), 0.710)
     rr, uu, nn = frame_from_normal(horizontal(n))
     B.link(disc_ring('S6 | headlamp indicator bulb', p - n * 0.045, rr, uu, nn,
                      [(0.0005, 0.012), (0.012, 0.008), (0.014, -0.004), (0.004, -0.01)], m['lamp_amber'], 24), mirror=True)
@@ -163,7 +202,7 @@ def grille(B):
     z0, z1 = lay.grille_z
     zc = (z0 + z1) / 2 + 0.004
     p, n = B.frame_at(0.0, zc, -0.002)
-    audi_rings(B, 'S6 | front audi rings ring', p, n, 0.041, 0.0052, m['chrome'])
+    audi_rings(B, 'S6 | front audi rings ring', p, n, 0.045, 0.0045, m['chrome'])
     # S6 badge at the lower left of the grille (the car's right-hand side).
     y = 0.215
     p, n = B.frame_at(float(b.s_front(y)), z0 + 0.03, 0.002)
@@ -212,8 +251,29 @@ def front_plate(B):
     plate(B, 'S6 | front plate B 08046', p, n, m['plate'], m['plastic'])
 
 
+def bumper_details(B):
+    """Flush washer covers and the subtle upper bumper split in the references."""
+    b, m = B.body, B.m
+    centre_s = float(b.s_front(.545))
+    from .features import rrect
+    cover = rrect(centre_s - .044, centre_s + .044, .443, .491, .010)
+    B.wall_line('S6 | front bumper headlamp washer cover', cover, .0013, m['seam'],
+                offset=.0012, closed=True, clip_holes=False, flatten=.45)
+    seam = [(float(b.s_front(y)), .553) for y in np.linspace(0, .805, 72)]
+    B.wall_line('S6 | front bumper upper molding split', seam, .0011, m['seam'],
+                offset=.001, clip_holes=True, flatten=.4)
+    # Flush tow-eye cover, on one side only (the washer covers above are paired).
+    tow_s = float(b.s_front(.355))
+    tow = [(tow_s + .014 * math.cos(a), .466 + .014 * math.sin(a))
+           for a in np.linspace(0, math.tau, 40, endpoint=False)]
+    B.wall_line('S6 | front bumper tow eye cover', tow, .0009, m['seam'],
+                offset=.001, closed=True, mirror=False, clip_holes=False, flatten=.35)
+
+
 def build(B):
     headlamps(B)
     grille(B)
     intakes(B)
-    front_plate(B)
+    bumper_details(B)
+    # The supplied reference car has a clean blue front bumper. Its B 08046
+    # registration is fitted at the rear only; retain front_plate for variants.

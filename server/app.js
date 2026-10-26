@@ -4,7 +4,7 @@ import { rateLimit } from 'express-rate-limit';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SESSION_ID_RE, validateCheckoutBody } from './validation.js';
-import { extractEvent } from './stripeEvents.js';
+import { extractEvent, refundedTotal } from './stripeEvents.js';
 import { createLogger } from './logger.js';
 import { ROUTES, normalizePath } from '../src/seo/config.js';
 import { registerSubscriptions } from './subscriptions.js';
@@ -54,6 +54,7 @@ export function createApp({ stripe = null, db = null, config, logger = createLog
     if (!args) return res.json({ received: true, ignored: true });
 
     try {
+      if (args.syncRefunds) args.amountRefunded = await refundedTotal(stripe, args.paymentIntentId);
       const result = await db.processStripeEvent(args);
       logger.info(`webhook ${event.type} ${event.id}: ${result}`);
       return res.json({ received: true, result });

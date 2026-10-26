@@ -20,7 +20,7 @@ K = spec.RIM_R / 0.2413                 # radial scale of the rim drawing (19 in
 R_AX = np.array([1.0, 0.0, 0.0])
 U_AX = np.array([0.0, 0.0, 1.0])
 FACE = 0.124                            # axial position of the rim lip / spoke tips
-DISH = 0.042                            # spoke dish: hub face sits this far inboard of the lip
+DISH = 0.028                            # shallow cast dish, with broad faces visible from oblique views
 HUB = FACE - DISH                       # hub face
 MOUNT = 0.050                           # hub mounting face (rotor hat face)
 BRAKE_SHIFT = 0.030                     # brakes sit inboard so the face can be dished
@@ -48,7 +48,7 @@ def tyre(B, tag, c):
     B.link(lathe('S6 | %s wheel | tyre 255/30 R21' % tag, c, prof, B.m['rubber'], 96), mirror=True)
 
 
-def spoke_mesh(c, n_spokes=5, r0=0.070, r1=None):
+def spoke_mesh(c, n_spokes=5, r0=0.064, r1=None):
     """Broad flat spokes, dished towards the hub, with chamfered edges and a fillet into the rim."""
     r1 = r1 or K * 0.234
     parts = []
@@ -57,15 +57,19 @@ def spoke_mesh(c, n_spokes=5, r0=0.070, r1=None):
         radial = np.array([math.cos(a), 0, math.sin(a)])
         tang = np.array([-math.sin(a), 0, math.cos(a)])
         sections = []
-        for r in np.linspace(r0, r1, 28):
+        for r in np.linspace(r0, r1, 24):
             t = (r - r0) / (r1 - r0)
-            # Nearly parallel sides, slightly wider at the rim, flaring into it.
-            half = 0.034 + 0.007 * t + 0.016 * max(0.0, (t - 0.84) / 0.16) ** 2
-            # Concave dish: steep near the rim, flat at the hub.
-            face = FACE - 0.003 - DISH * (1 - t * t)
-            back = max(face - 0.036, MOUNT if r < 0.1 else MOUNT - 0.004)
-            ch = 0.003
-            sec = [(-half - 0.004, back), (-half, face - ch), (-half + ch, face), (0.0, face + 0.0008),
+            # Broad, almost parallel cast arms, with a modest root fillet at
+            # the rim. A large flare and deep curved dish made the old arms
+            # read as thin bent blades whenever the bevel caught a light.
+            half = 0.039 + 0.004 * math.sin(math.pi * t) - 0.003 * t
+            half += 0.006 * max(0.0, (t - 0.88) / 0.12) ** 2
+            # Most of the arm is a gently inclined broad plane. Ease the last
+            # fifth into the rim instead of curving the whole face sharply.
+            face = HUB - 0.002 + (DISH - 0.001) * (0.72 * t + 0.28 * t ** 3)
+            back = max(face - 0.033, MOUNT if r < 0.1 else MOUNT - 0.004)
+            ch = 0.0045
+            sec = [(-half - 0.004, back), (-half, face - ch), (-half + ch, face), (0.0, face + 0.0005),
                    (half - ch, face), (half, face - ch), (half + 0.004, back)]
             sections.append([c + radial * r + tang * w + AX * yy for w, yy in sec])
         S = np.array(sections)

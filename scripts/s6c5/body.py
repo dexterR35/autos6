@@ -343,10 +343,26 @@ class Body:
         out[a, 1:] = (B + band * ta[:, None])[a, 1:]
         out[a, 1] += spec.GLASS_BOW * np.sin(math.pi * ta[a]) * np.clip(band[a, 2] / 0.06, 0, 1)
         tb = np.clip(t - 1, 0, 1)
-        frame = (R + (P - R) * tb[:, None])
-        bulge = 0.009 * np.sin(math.pi * tb)
-        out[b, 1:] = frame[b, 1:]
-        out[b, 1] += bulge[b]
+        # Roll the roof side between the side glazing and the roof/screen.
+        # A straight strip plus a sine bulge put hard creases along both sides
+        # of the roof and the D-pillar. Cubic controls instead follow the glass
+        # tangent at R and the crowned roof tangent at P. Endpoints stay fixed,
+        # so every inset glass patch, chrome surround and roof rail still joins.
+        span = np.linalg.norm(P[:, 1:] - R[:, 1:], axis=1)
+        glass_tangent = np.stack([band[:, 1] - math.pi * spec.GLASS_BOW,
+                                  band[:, 2]], axis=1)
+        roof_tangent = np.stack([-P[:, 1], 2 * (zc - P[:, 2])], axis=1)
+        for tangent in (glass_tangent, roof_tangent):
+            tangent /= np.linalg.norm(tangent, axis=1, keepdims=True) + 1e-12
+        control_a = R[:, 1:] + glass_tangent * (span * 0.48)[:, None]
+        control_b = P[:, 1:] - roof_tangent * (span * 0.48)[:, None]
+        lo, hi = np.minimum(R[:, 1:], P[:, 1:]), np.maximum(R[:, 1:], P[:, 1:])
+        control_a = np.clip(control_a, lo, hi)
+        control_b = np.clip(control_b, lo, hi)
+        q = tb[:, None]
+        frame = ((1 - q) ** 3 * R[:, 1:] + 3 * (1 - q) ** 2 * q * control_a
+                 + 3 * (1 - q) * q ** 2 * control_b + q ** 3 * P[:, 1:])
+        out[b, 1:] = frame[b]
         tc = np.clip(t - 2, 0, 1)
         out[c, 1] = P[c, 1] * (1 - tc[c])
         out[c, 2] = P[c, 2] + (zc[c] - P[c, 2]) * (1 - (1 - tc[c]) ** 2)

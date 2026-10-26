@@ -64,13 +64,10 @@ const PartDetailsDrawer = forwardRef(function PartDetailsDrawer({ part, viewId, 
         </div>
       )}
 
-      {part.status === 'bought' ? (
-        <p className="note note--ok">Already purchased. General contributions still help with fitting and finishing.</p>
-      ) : null}
+      {part.status === 'bought' && <p className="note note--ok">Bought. Extra support helps with fitting.</p>}
       <button type="button" className="btn btn--donate btn--block" onClick={() => onFund(part.id)}>
         <HandHeart aria-hidden="true" /> Fund this part
       </button>
-      <p className="fine">Supports the restoration of this part — it isn’t a purchase of the part.</p>
       <SubscribeButton partId={part.id} />
     </aside>
   );

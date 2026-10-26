@@ -3,16 +3,19 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RotateCcw, Plus, Minus, Warehouse, Lightbulb } from 'lucide-react';
+import { RotateCcw, Plus, Minus, Warehouse, Lightbulb, Users } from 'lucide-react';
 import HotspotButton from './HotspotButton.jsx';
 import { cameraPreset, GARAGE_TARGET, findMeshPart, partAnchors3D } from '../lib/garage3d.js';
 import { createGarageLook } from '../lib/garageLighting.js';
 import { modelUrl } from '../lib/modelAssets.js';
 import { extendGarage } from '../lib/garageExtension.js';
 import { RayIndex } from '../lib/rayIndex.js';
+import { createGarageSupportersBoard, SUPPORTER_WALL, supporterWallCamera } from '../lib/garageSupporters.js';
+import GarageSupportersDialog from './GarageSupportersDialog.jsx';
 
 const ANCHORS = partAnchors3D();
 const MODEL_URLS = [modelUrl('s6-c5.glb'), modelUrl('garage.glb')];
+const EMPTY_SUPPORTERS = { rows: [], state: 'ready', scope: 'all', isDemo: true };
 
 function disposeObject(root) {
   const geometries = new Set();
@@ -73,7 +76,7 @@ async function loadGlb(url, loader, signal, onProgress) {
 export default function ThreeCarViewer({
   viewId, resetKey = 0, partsById = {}, visiblePartIds, selectedPartId, hoveredPartId,
   onPartSelect, onPartHover, reservedRefs = [], overlayRefs = [], compact = false,
-  currency = 'usd', onViewError, onFallback,
+  currency = 'usd', onViewError, onFallback, supporters = EMPTY_SUPPORTERS,
 }) {
   const stageRef = useRef(null);
   const mountRef = useRef(null);
@@ -83,12 +86,14 @@ export default function ThreeCarViewer({
   const markersRef = useRef(new Map());
   const runtimeRef = useRef(null);
   const propsRef = useRef(null);
-  propsRef.current = { viewId, compact, partsById, visiblePartIds, selectedPartId, onPartSelect, onPartHover, reservedRefs, overlayRefs, onViewError };
   const [attempt, setAttempt] = useState(0);
   const [status, setStatus] = useState({ state: 'loading', progress: 0 });
   const [garageView, setGarageView] = useState(false);
   const [lightLevel, setLightLevel] = useState(100);
   const [lightingOpen, setLightingOpen] = useState(false);
+  const [supportersOpen, setSupportersOpen] = useState(false);
+  const [supporterView, setSupporterView] = useState(false);
+  propsRef.current = { viewId, compact, partsById, visiblePartIds, selectedPartId, onPartSelect, onPartHover, reservedRefs, overlayRefs, onViewError, supporters, lightLevel };
 
   useEffect(() => {
     const host = mountRef.current;
@@ -101,6 +106,8 @@ export default function ThreeCarViewer({
     let resizeObserver;
     let look;
     let car;
+    let supporterBoard;
+    let inspectingSupporters = false;
     let tween;
     let width = 1;
     let height = 1;
@@ -127,6 +134,7 @@ export default function ThreeCarViewer({
 
     setStatus({ state: 'loading', progress: 0 });
     setGarageView(false);
+    setSupporterView(false);
 
     function fail(error) {
       if (disposed || failed || error?.name === 'AbortError') return;
@@ -249,15 +257,21 @@ export default function ThreeCarViewer({
       // Keep the inspection target in the workshop and the camera below its ceiling.
       // The azimuth stays unrestricted, so the complete horizontal orbit remains free.
       previousTarget.copy(controls.target);
-      controls.target.x = THREE.MathUtils.clamp(controls.target.x, -8, 8);
-      controls.target.y = THREE.MathUtils.clamp(controls.target.y, 0.2, 3.5);
+      controls.target.x = THREE.MathUtils.clamp(controls.target.x, inspectingSupporters ? SUPPORTER_WALL.position[0] : -8, 8);
+      controls.target.y = THREE.MathUtils.clamp(controls.target.y, 0.2, inspectingSupporters ? 5 : 3.5);
       controls.target.z = THREE.MathUtils.clamp(controls.target.z, -10, 8);
       camera.position.add(previousTarget.sub(controls.target).negate());
       const distance = camera.position.distanceTo(controls.target);
       // A full orbit stays inside all four walls, including after a pan.
-      controls.maxDistance = Math.min(12.5, 13.2 - Math.abs(controls.target.x), 14.1 + controls.target.z, 13.1 - controls.target.z);
+      controls.maxDistance = inspectingSupporters ? 12.5
+        : Math.min(12.5, 13.2 - Math.abs(controls.target.x), 14.1 + controls.target.z, 13.1 - controls.target.z);
       controls.minPolarAngle = Math.max(0.12, Math.acos(THREE.MathUtils.clamp((6.4 - controls.target.y) / Math.max(0.1, distance), -1, 1)));
       const changed = controls.update();
+      if (inspectingSupporters) {
+        camera.position.x = THREE.MathUtils.clamp(camera.position.x, -13.65, 13.2);
+        camera.position.z = THREE.MathUtils.clamp(camera.position.z, -14.1, 13.1);
+        camera.lookAt(controls.target);
+      }
       if (camera.position.y > 6.4) {
         camera.position.y = 6.4;
         camera.lookAt(controls.target);
@@ -307,8 +321,10 @@ export default function ThreeCarViewer({
     }
 
     function reset() {
+      inspectingSupporters = false;
       const preset = cameraPreset(propsRef.current.viewId, propsRef.current.compact);
       setGarageView(false);
+      setSupporterView(false);
       flyTo(preset.position, preset.target);
     }
 
@@ -436,8 +452,26 @@ export default function ThreeCarViewer({
       runtimeRef.current = {
         reset, invalidate: requestFrame,
         zoom,
+        updateSupporters: (data) => {
+          supporterBoard?.update(data.rows, { status: data.state, isDemo: data.isDemo, scope: data.scope });
+          requestFrame();
+        },
+        showSupporters: () => {
+          inspectingSupporters = true;
+          setGarageView(false);
+          setSupporterView(true);
+          const pose = supporterWallCamera(propsRef.current.compact);
+          flyTo(pose.position, pose.target, false, pose.fov);
+        },
+        turnBoardPage: () => {
+          if (!supporterBoard) return;
+          supporterBoard.setPage(supporterBoard.page + 1);
+          requestFrame();
+        },
         setLightLevel: (level) => { look.setLightLevel(level / 100, reducedMotion); requestFrame(); },
         showGarage: (enabled) => {
+          inspectingSupporters = false;
+          setSupporterView(false);
           setGarageView(enabled);
           if (enabled) flyTo([6.5, 4.4, 8.1], GARAGE_TARGET, false, 50);
           else reset();
@@ -453,19 +487,16 @@ export default function ThreeCarViewer({
         });
         if (disposed || failed) { disposeObject(model); return; }
         // Close the open front of the exported workshop so a full orbit shows a room.
-        if (index === 1) extendGarage(model);
+        if (index === 1) {
+          extendGarage(model);
+          const data = propsRef.current.supporters;
+          supporterBoard = createGarageSupportersBoard({ rows: data.rows, status: data.state, isDemo: data.isDemo, scope: data.scope });
+          model.add(supporterBoard.group);
+        }
         model.traverse((object) => {
           if (!object.isMesh) return;
           object.castShadow = index === 0;
           object.receiveShadow = true;
-          for (const material of [object.material].flat().filter(Boolean)) {
-            if (/paint|pearl|clearcoat|roof box/i.test(material.name)) {
-              material.roughness = Math.min(material.roughness ?? 0.19, 0.19);
-              material.metalness = Math.min(material.metalness ?? 0.55, 0.55);
-              if ('clearcoat' in material) { material.clearcoat = 1; material.clearcoatRoughness = 0.055; }
-              material.envMapIntensity = 1.1;
-            }
-          }
         });
         scene.add(model);
         occluders.push(model);
@@ -477,6 +508,7 @@ export default function ThreeCarViewer({
       await yieldToPage();
       if (disposed || failed) return;
       look.attach({ car, garage: occluders.find((model) => model !== car) });
+      look.setLightLevel(propsRef.current.lightLevel / 100, true);
       await yieldToPage();
       if (disposed || failed) return;
       // Expensive BVH partitioning runs in a worker, leaving page input responsive.
@@ -516,6 +548,7 @@ export default function ThreeCarViewer({
 
   useEffect(() => { runtimeRef.current?.reset(); }, [viewId, resetKey, compact]);
   useEffect(() => { runtimeRef.current?.setLightLevel(lightLevel); }, [lightLevel, attempt]);
+  useEffect(() => { runtimeRef.current?.updateSupporters(supporters); }, [supporters]);
   useEffect(() => { runtimeRef.current?.invalidate(); }, [selectedPartId, visiblePartIds, hoveredPartId, status.state, reservedRefs, overlayRefs, lightingOpen]);
 
   useEffect(() => {
@@ -566,6 +599,7 @@ export default function ThreeCarViewer({
             <div className="three-toolbar__views">
               <button type="button" onClick={() => runtimeRef.current?.reset()} aria-label="Reset view" title="Reset view"><RotateCcw aria-hidden="true" /></button>
               <button type="button" className={garageView ? 'is-active' : ''} aria-label="Garage view" aria-pressed={garageView} onClick={() => runtimeRef.current?.showGarage(!garageView)} title="Garage view"><Warehouse aria-hidden="true" /></button>
+              <button type="button" className={supporterView ? 'is-active' : ''} aria-label="Supporter wall" aria-pressed={supporterView} onClick={() => runtimeRef.current?.showSupporters()} title="Supporter wall"><Users aria-hidden="true" /></button>
             </div>
             <div className="three-toolbar__zoom" role="group" aria-label="Zoom">
               <button type="button" onClick={() => runtimeRef.current?.zoom(-1)} aria-label="Zoom out" title="Zoom out"><Minus aria-hidden="true" /></button>
@@ -576,13 +610,18 @@ export default function ThreeCarViewer({
           {lightingOpen && (
             <div ref={lightingRef} id="garage-lighting" className="three-lighting" role="group" aria-label="Garage lighting">
               <label htmlFor="garage-brightness">Brightness <output htmlFor="garage-brightness">{lightLevel}%</output></label>
-              <input id="garage-brightness" type="range" min="35" max="100" step="5" value={lightLevel} onChange={(event) => setLightLevel(Number(event.target.value))} />
-              <div><span>Soft</span><span>Bright</span></div>
+              <input id="garage-brightness" type="range" min="35" max="200" step="5" value={lightLevel} onChange={(event) => setLightLevel(Number(event.target.value))} />
+              <div><span>Soft</span><span>Extra bright</span></div>
             </div>
           )}
-          <p ref={hintRef} className={`three-hint ${lightingOpen ? 'is-hidden' : ''}`}>{compact ? 'Drag to explore · Tap a car part for details' : 'Drag to orbit · Scroll to zoom · Click a car part for details'}</p>
+          {supporterView && <div className="three-supporters-actions">
+            <button type="button" onClick={() => setSupportersOpen(true)}>Read supporter table</button>
+            {supporters.rows.length > 10 && <button type="button" onClick={() => runtimeRef.current?.turnBoardPage()}>Next board page</button>}
+          </div>}
+          <p ref={hintRef} className={`three-hint ${lightingOpen || supporterView ? 'is-hidden' : ''}`}>{compact ? 'Drag to explore · Tap a car part for details' : 'Drag to orbit · Scroll to zoom · Click a car part for details'}</p>
         </>
       )}
+      <GarageSupportersDialog open={supportersOpen} onClose={() => setSupportersOpen(false)} supporters={supporters} />
     </div>
   );
 }

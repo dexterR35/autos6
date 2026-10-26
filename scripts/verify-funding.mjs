@@ -36,21 +36,21 @@ try {
     const bounds = await dialog.boundingBox();
     assert.ok(bounds.y >= 0 && bounds.y + bounds.height <= viewport.height + 1, 'Modal fits the visible viewport');
     await shot('donation');
-    await dialog.getByRole('button',{name:/Preview checkout/}).click();
+    await dialog.getByRole('button',{name:/^Preview/}).click();
     await dialog.getByRole('heading',{name:'No payment was taken'}).waitFor();
     await dialog.getByRole('button',{name:'Done',exact:true}).click();
     for (const path of ['/parts','/community','/terms','/privacy']) {
       await page.goto(`http://localhost:5173${path}`);
       await page.getByRole('heading',{level:1}).waitFor();
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'No horizontal page overflow');
-      if (path==='/parts') {assert.equal(await page.getByRole('progressbar').count(),10);}
+      if (path==='/parts') {assert.equal(await page.getByRole('progressbar').count(),11);}
       if (path==='/community') {
-        await page.getByRole('button',{name:'Subscribe to build updates'}).click();
-        const subscribe=page.getByRole('dialog',{name:'Stay in the build'});
-        await subscribe.getByLabel('Email address').fill('preview@example.com');
-        await subscribe.getByLabel(/I want email updates/).check();
-        await subscribe.getByRole('button',{name:'Send confirmation email'}).click();
-        await subscribe.getByRole('heading',{name:'Demo preview · no email sent'}).waitFor();
+        await page.getByRole('button',{name:'Get updates'}).click();
+        const subscribe=page.getByRole('dialog',{name:'Build updates'});
+        await subscribe.getByLabel('Email',{exact:true}).fill('preview@example.com');
+        await subscribe.getByLabel(/Email me build updates/).check();
+        await subscribe.getByRole('button',{name:'Subscribe',exact:true}).click();
+        await subscribe.getByRole('heading',{name:'Demo · no email sent'}).waitFor();
         await subscribe.getByRole('button',{name:'Done',exact:true}).click();
       }
       await shot(path.slice(1));

@@ -87,6 +87,62 @@ describe('email consent and delivery', () => {
     expect((await pg.query('select state,payload from email_jobs')).rows).toEqual([{state:'sent',payload:{}}]);
     expect((await pg.query('select status from subscribers')).rows[0].status).toBe('pending');
   });
+  const activeSubscriber = async (partSlug = null) => {
+    const token = 'c'.repeat(64);
+    await db.requestSubscription({slug:'project-s6',email:'member@example.com',partSlug,hash:hashToken(token),url:`${origin}/subscription/confirm#token=${token}`,consent:'2026-10-21'});
+    expect(await db.confirmSubscription(hashToken(token))).toBe(true);
+  };
+  const updateJobs = async () => (await pg.query("select id,state,payload,available_at>now()+interval '9 minutes' as delayed from email_jobs where kind='update' order by created_at,id")).rows;
+
+  it('batches a run of part edits into one delayed email with the latest details', async () => {
+    await activeSubscriber();
+    await pg.query("update parts set estimate_cents=estimate_cents+100 where slug='hood'");
+    await pg.query("update parts set description='Fresh paint booked' where slug='hood'");
+    await pg.query("update parts set status='bought' where slug='hood'");
+    const [job, ...others] = await updateJobs();
+    expect(others).toHaveLength(0);
+    expect(job).toMatchObject({ state: 'pending', delayed: true, payload: { title: 'Part update: Hood', path: '/parts', source: expect.stringMatching(/^part:/) } });
+    expect(job.payload.body).toContain('bought');
+    expect(job.payload.body).toContain('Fresh paint booked');
+    expect(await db.claimEmailJobs()).toEqual([]); // still inside the batching window
+    await pg.query("update email_jobs set available_at=now() where kind='update'");
+    const fetchImpl = vi.fn(async () => ({ ok:true, json:async()=>({id:'email_provider_2'}) }));
+    await deliverEmailJobs({db,config,logger,fetchImpl});
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body).text).toContain('Fresh paint booked');
+    // After that email is sent, the next edit starts a new one.
+    await pg.query("update parts set condition='Primed' where slug='hood'");
+    expect((await updateJobs()).map((j) => j.state)).toEqual(['sent', 'pending']);
+  });
+
+  it('emails a restoration update once: never a draft, never again on republish', async () => {
+    await activeSubscriber();
+    const [update] = (await pg.query("insert into restoration_updates(project_id,title,body,published_at) values($1,'Engine out','First draft',now()) returning id",[projectId])).rows;
+    await pg.query("update restoration_updates set body='Corrected text' where id=$1",[update.id]);
+    let jobs = await updateJobs();
+    expect(jobs).toHaveLength(1);
+    expect(jobs[0]).toMatchObject({ state: 'pending', payload: { title: 'Engine out', body: 'Corrected text', source: `update:${update.id}` } });
+    await pg.query("update restoration_updates set published_at=null where id=$1",[update.id]);
+    expect((await updateJobs())[0].state).toBe('cancelled');
+    await pg.query("update restoration_updates set published_at=now() where id=$1",[update.id]);
+    jobs = await updateJobs();
+    expect(jobs.map((j) => j.state)).toEqual(['pending']);
+    await pg.query("update email_jobs set state='sent',payload='{}' where id=$1",[jobs[0].id]);
+    await pg.query("update restoration_updates set published_at=null where id=$1",[update.id]);
+    await pg.query("update restoration_updates set published_at=now(), body='Edited after sending' where id=$1",[update.id]);
+    expect((await updateJobs()).map((j) => j.state)).toEqual(['sent']);
+  });
+
+  it('cancels queued emails about deleted parts and updates', async () => {
+    await activeSubscriber();
+    await pg.query("update parts set description='Soon' where slug='hood'");
+    const [update] = (await pg.query("insert into restoration_updates(project_id,title,body,published_at) values($1,'Removed','Text',now()) returning id",[projectId])).rows;
+    expect((await updateJobs()).map((j) => j.state)).toEqual(['pending', 'pending']);
+    await pg.query("delete from parts where slug='hood'");
+    await pg.query('delete from restoration_updates where id=$1',[update.id]);
+    expect((await updateJobs()).map((j) => j.state)).toEqual(['cancelled', 'cancelled']);
+  });
+
   it('rejects forged unsubscribe tokens and expired confirmations', async () => {
     await subscribe({});
     await pg.query("update subscribers set token_expires_at=now()-interval '1 day'");
@@ -98,9 +154,9 @@ describe('email consent and delivery', () => {
 });
 
 describe('community authorization and moderation', () => {
+  const sql = "select create_community_post('project-s6',null,'Helpful member','help','Suspension question','Can anyone help source this part?','2026-10-21') as id";
   it('publishes only after owner review and enforces rate limits and column protection', async () => {
     await createUser(pg,OWNER,'owner@example.com'); await createUser(pg,MEMBER,'member@example.com'); await createUser(pg,OTHER,'other@example.com'); await makeOwner(pg,OWNER);
-    const sql = "select create_community_post('project-s6',null,'Helpful member','help','Suspension question','Can anyone help source this part?','2026-10-21') as id";
     const [post] = await asRole(pg,'authenticated',sql,[],MEMBER);
     expect(await asRole(pg,'anon','select id from community_posts')).toHaveLength(0);
     expect(await asRole(pg,'authenticated','select id from community_posts',[],MEMBER)).toHaveLength(1);
@@ -111,5 +167,17 @@ describe('community authorization and moderation', () => {
     await asRole(pg,'authenticated',"update community_posts set status='approved' where id=$1",[post.id],OWNER);
     expect(await asRole(pg,'anon','select id from community_posts')).toHaveLength(1);
     await denied(asRole(pg,'anon',sql));
+  });
+  it('never exposes the author account id, while members still see their own pending posts', async () => {
+    await createUser(pg,OWNER,'owner@example.com'); await createUser(pg,MEMBER,'member@example.com'); await makeOwner(pg,OWNER);
+    const [post] = await asRole(pg,'authenticated',sql,[],MEMBER);
+    const columns = 'id,project_id,parent_id,display_name,category,title,body,status,created_at';
+    expect(await asRole(pg,'authenticated',`select ${columns} from community_posts`,[],MEMBER)).toHaveLength(1);
+    await denied(asRole(pg,'authenticated','select author_id from community_posts',[],MEMBER));
+    await denied(asRole(pg,'authenticated','select * from community_posts',[],OWNER));
+    await asRole(pg,'authenticated',"update community_posts set status='approved' where id=$1 and project_id=$2",[post.id,projectId],OWNER);
+    expect(await asRole(pg,'anon',`select ${columns} from community_posts`)).toHaveLength(1);
+    await denied(asRole(pg,'anon','select author_id from community_posts'));
+    await denied(asRole(pg,'anon','select consent_version from community_posts'));
   });
 });

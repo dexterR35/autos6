@@ -1,0 +1,50 @@
+{
+  "source": "output\\car-refinement\\reference-v2\\audi_s6_c5_reference_refined.blend",
+  "coordinates": {
+    "unit": "metres",
+    "up": "+Y",
+    "vehicleNose": "+X",
+    "driverSide": "+Z",
+    "ground": 0
+  },
+  "car": {
+    "file": "/models/s6-c5.glb",
+    "bytes": 7472112,
+    "meshes": 70,
+    "drawCalls": 70,
+    "triangles": 354108,
+    "bounds": {
+      "min": [
+        -2.371917486190796,
+        -4.376994547783397e-05,
+        -1.0499999523162842
+      ],
+      "max": [
+        2.4249629974365234,
+        1.8505029678344727,
+        1.0499999523162842
+      ]
+    },
+    "materials": 34,
+    "parts": [
+      "body",
+      "brake-kit",
+      "exhaust",
+      "front-bumper",
+      "hood",
+      "rear-bumper",
+      "roof-box",
+      "side-skirts",
+      "wheels"
+    ],
+    "extensions": [
+      "KHR_materials_clearcoat",
+      "KHR_materials_emissive_strength"
+    ]
+  },
+  "buildSeconds": 48.9,
+  "notes": [
+    "Car-only rebuild; existing garage GLB and original Blender scenes are unchanged.",
+    "Original references guide geometry and finish; this is not a photogrammetry scan."
+  ]
+}

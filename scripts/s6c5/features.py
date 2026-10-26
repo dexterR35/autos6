@@ -76,14 +76,16 @@ class Layout:
         self.L = L
 
         # ---- front ---------------------------------------------------------
-        # Headlamp: hood line on top, straight lower edge, a near-rectangular
-        # unit whose tall outer end turns round the corner onto the wing.
+        # C5 lamp: the inner edge follows the grille's taper; the outer edge
+        # ends at the nose/wing corner instead of continuing along the wing.
+        # The previous long rounded wrap made the front resemble a generic
+        # box with circular optics pasted onto it.
         s_in = float(sf(0.452))
-        lamp_bottom = [(s_in, 0.642), (float(sf(0.466)), 0.605), (float(sf(0.60)), 0.602),
-                       (float(sf(0.70)), 0.604), (float(sf(0.78)), 0.609), (float(sx(2.24)), 0.616),
-                       (float(sx(2.19)), 0.630), (float(sx(2.155)), 0.660), (float(sx(2.135)), 0.705),
-                       (float(sx(2.125)), 0.742)]
-        s_end = float(sx(2.118))
+        lamp_bottom = [(float(sf(0.428)), 0.610), (float(sf(0.54)), 0.606),
+                       (float(sf(0.66)), 0.606), (float(sf(0.76)), 0.611),
+                       (float(sx(2.215)), 0.622), (float(sx(2.190)), 0.640),
+                       (float(sx(2.180)), 0.747)]
+        s_end = float(sx(2.180))
         lamp_top = [(s, top(s, 0.03)) for s in np.linspace(s_end, s_in - 0.004, 24)]
         self.headlamp = np.array(lamp_bottom + [(s_end, top(s_end, 0.03))] + lamp_top)
         self.headlamp_lens = np.array(lamp_bottom + [(s_end, top(s_end, -0.0015))]
@@ -114,9 +116,12 @@ class Layout:
         s_arch_f = float(sx(spec.X_AXLE_F + spec.ARCH_R_F + 0.005))
         self.front_lip = np.array([(-0.05, -0.2), (s_arch_f, -0.2), (s_arch_f, 0.168), (-0.05, 0.168)])
 
-        # Front bumper / wing split: from the lamp's rear corner to the arch.
+        # The bumper meets the wing below the lamp, then follows its shoulder
+        # into the wheel arch. Starting at the top of the lamp made an
+        # incorrect long diagonal cut across the painted wing.
         x_seam = spec.X_AXLE_F + math.sqrt((spec.ARCH_R_F - 0.006) ** 2 - 0.20 ** 2)
-        self.front_seam = np.array([(float(sx(2.112)), 0.738), (float(sx(2.0)), 0.63), (float(sx(x_seam)), spec.WHEEL_Z + 0.20)])
+        self.front_seam = np.array([(float(sx(2.190)), 0.624), (float(sx(2.015)), 0.606),
+                                    (float(sx(x_seam)), spec.WHEEL_Z + 0.20)])
         self.front_bumper = np.array([(-0.06, -0.3), (float(sx(spec.X_AXLE_F)), -0.3), (float(sx(spec.X_AXLE_F)), 0.40),
                                       *self.front_seam[::-1], (float(sf(0.75)), 0.66), (s_in + 0.02, 0.66),
                                       (s_in + 0.02, 1.4), (-0.06, 1.4)])

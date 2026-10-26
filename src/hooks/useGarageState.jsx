@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { DEFAULT_VIEW_ID, getView, viewHasPart, viewsContainingPart } from '../data/views.js';
 import { loadDraft, saveDraft } from '../lib/donations.js';
 import { track } from '../lib/analytics.js';
+import { pixelViewPart } from '../lib/pixels.js';
 import { useProjectData } from './useProjectData.jsx';
 
 const GarageContext = createContext(null);
@@ -62,6 +63,7 @@ export function GarageStateProvider({ children, initialViewId = DEFAULT_VIEW_ID 
             items: [{ item_id: part.id, item_name: part.name, item_category: `part_${part.status}`, price: part.estimateCents / 100 }],
           },
         });
+        pixelViewPart(part);
       }
       if (!partId || source !== 'list') return;
       if (!viewHasPart(viewId, partId)) {

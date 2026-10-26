@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { getRouteMeta, headFor, jsonLdString } from './config.js';
-import { trackPageView } from '../lib/analytics.js';
+import { startTrackers, trackPageView } from '../lib/analytics.js';
 
 const env = import.meta.env ?? {};
 export const SITE_URL = (env.VITE_SITE_URL || '').replace(/\/+$/, '');
@@ -47,6 +47,8 @@ export function useSeo() {
     // Query strings are dropped on purpose: /donation/success carries the Stripe session id.
     if (lastTrackedPath !== pathname) {
       lastTrackedPath = pathname;
+      // Starts consented trackers once the address is clean (e.g. after a sign-in callback).
+      startTrackers();
       trackPageView({ path: pathname, title: head.title, location: `${window.location.origin}${pathname}` });
     }
   }, [pathname]);

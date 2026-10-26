@@ -1,6 +1,6 @@
 import request from 'supertest';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { APP_ORIGIN, chargeRefundedEvent, createTestServer, sessionEvent, signedEvent } from './helpers/server.js';
+import { APP_ORIGIN, chargeRefundedEvent, createTestServer, refundEvent, sessionEvent, signedEvent } from './helpers/server.js';
 
 let t;
 let donation; // { id, sessionId }
@@ -117,15 +117,50 @@ describe('POST /api/stripe/webhook', () => {
     expect((await statusOf()).status).toBe('expired');
   });
 
-  it('subtracts refunds (cumulative, order-independent)', async () => {
+  const refund = (id, amount, status = 'succeeded') => ({ id, object: 'refund', payment_intent: 'pi_test_abc123', charge: 'ch_test_1', amount, status });
+
+  it('subtracts refunds using Stripe’s current total, whatever order events arrive in', async () => {
     await deliver(sessionEvent('checkout.session.completed', session()));
+    t.stripe.setRefunds([refund('re_1', 1000), refund('re_2', 2000)]);
     await deliver(chargeRefundedEvent({ payment_intent: 'pi_test_abc123', amount_refunded: 3000 }));
-    await deliver(chargeRefundedEvent({ payment_intent: 'pi_test_abc123', amount_refunded: 1000 })); // late, older event
+    // A late, older event carries a stale amount; the recount from Stripe still wins.
+    await deliver(chargeRefundedEvent({ payment_intent: 'pi_test_abc123', amount_refunded: 1000 }));
     expect(await raised()).toBe(2000);
     expect((await statusOf()).status).toBe('partially_refunded');
+    expect(t.stripe.refunds.list).toHaveBeenLastCalledWith({ payment_intent: 'pi_test_abc123', limit: 100 });
+    t.stripe.setRefunds([refund('re_1', 1000), refund('re_2', 2000), refund('re_3', 2000, 'pending')]);
     await deliver(chargeRefundedEvent({ payment_intent: 'pi_test_abc123', amount_refunded: 5000 }));
     expect(await raised()).toBe(0);
     expect((await statusOf()).status).toBe('refunded');
+  });
+
+  it('puts a failed or cancelled refund back into the totals', async () => {
+    await deliver(sessionEvent('checkout.session.completed', session()));
+    t.stripe.setRefunds([refund('re_1', 3000)]);
+    await deliver(chargeRefundedEvent({ payment_intent: 'pi_test_abc123', amount_refunded: 3000 }));
+    expect(await raised()).toBe(2000);
+    t.stripe.setRefunds([refund('re_1', 3000, 'failed')]);
+    const failed = await deliver(refundEvent('refund.failed', refund('re_1', 3000, 'failed')));
+    expect(failed.body.result).toBe('applied');
+    expect(await raised()).toBe(5000);
+    expect((await statusOf()).status).toBe('paid');
+    t.stripe.setRefunds([refund('re_1', 3000, 'failed'), refund('re_2', 1000, 'canceled')]);
+    await deliver(refundEvent('refund.updated', refund('re_2', 1000, 'canceled')));
+    expect(await raised()).toBe(5000);
+  });
+
+  it('ignores routine refund updates and retries when Stripe cannot be reached', async () => {
+    await deliver(sessionEvent('checkout.session.completed', session()));
+    const routine = await deliver(refundEvent('refund.updated', refund('re_1', 1000, 'succeeded')));
+    expect(routine.body).toEqual({ received: true, ignored: true });
+    expect(t.stripe.refunds.list).not.toHaveBeenCalled();
+    t.stripe.refunds.list.mockImplementationOnce(() => ({ autoPagingToArray: async () => { throw new Error('stripe unavailable'); } }));
+    const ev = chargeRefundedEvent({ payment_intent: 'pi_test_abc123', amount_refunded: 1000 });
+    expect((await deliver(ev)).status).toBe(500);
+    expect(Number((await t.pg.query('select count(*) from stripe_events where event_id = $1', [ev.id])).rows[0].count)).toBe(0);
+    t.stripe.setRefunds([refund('re_1', 1000)]);
+    expect((await deliver(ev)).body.result).toBe('applied');
+    expect(await raised()).toBe(4000);
   });
 
   it('flags amount mismatches for review instead of counting them', async () => {

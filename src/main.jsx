@@ -4,11 +4,16 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import { ProjectDataProvider } from './hooks/useProjectData.jsx';
 import { GarageStateProvider } from './hooks/useGarageState.jsx';
+import { scrubSensitiveUrl } from './lib/urlScrub.js';
 import './styles/tokens.css';
 import './styles/global.css';
 import './styles/garage.css';
 import './styles/pages.css';
 import './styles/refinements.css';
+import './styles/studio.css';
+
+// Before the router or any tracker reads the address (see urlScrub.js).
+scrubSensitiveUrl();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

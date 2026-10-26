@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Bell } from 'lucide-react';
+import { readScrubbed } from '../lib/urlScrub.js';
 
 export default function SubscriptionReturn() {
   const { pathname, hash } = useLocation();
   const confirm = pathname.endsWith('/confirm');
-  const [token] = useState(() => new URLSearchParams(hash.slice(1)).get('token') || '');
+  // main.jsx moves the token out of the address before trackers load (urlScrub.js).
+  const [token] = useState(() => new URLSearchParams(hash.slice(1)).get('token') || readScrubbed('token', pathname) || '');
   const [state, setState] = useState('idle');
   const [error, setError] = useState('');
   const submit = async () => {

@@ -51,7 +51,21 @@ describe('production build', () => {
     expect(gtm).toBeGreaterThan(consent);
     expect(html).toContain("'GTM-TEST123'");
     expect(html).not.toContain('ns.html?id=GTM-TEST123');
-    expect(html).toContain("if(localStorage.getItem('project-s6:analytics-consent')==='granted')window.__s6StartAnalytics()");
+    // GTM starts only after opt-in, and only once secrets are moved out of the address.
+    expect(html).toContain("if(clean&&(localStorage.getItem('project-s6:analytics-consent')==='granted'||false))window.__s6StartAnalytics()");
+    const scrub = html.indexOf("sessionStorage.setItem('project-s6:url-secrets'");
+    expect(scrub).toBeGreaterThan(-1);
+    expect(scrub).toBeLessThan(html.indexOf('if(clean&&'));
+    expect(html).toContain('<meta name="referrer" content="strict-origin-when-cross-origin" />');
+  });
+
+  it('writes an indexable page for every part with its own title and share image', () => {
+    const html = read('parts/hood/index.html');
+    expect(html).toContain('<title>Hood · Audi S6 Restoration | Project S6</title>');
+    expect(html).toContain(`content="${SITE}/og/parts/hood.jpg"`);
+    expect(html).toContain(`href="${SITE}/parts/hood"`);
+    expect(existsSync(path.join(out, 'og/parts/hood.jpg'))).toBe(true);
+    expect(read('sitemap.xml')).toContain(`<loc>${SITE}/parts/interior</loc>`);
   });
 
   it('does not compete with 3D loading by preloading an unused hero photo', () => {
@@ -67,6 +81,10 @@ describe('static serving (SERVE_STATIC=true)', () => {
     expect(res.text).toContain('<title>About the Project | Project S6</title>');
     const trailing = await request(app).get('/parts/');
     expect(trailing.text).toContain('Parts Needed for the Audi S6 Restoration');
+    const part = await request(app).get('/parts/exhaust');
+    expect(part.status).toBe(200);
+    expect(part.text).toContain('<title>Exhaust System · Audi S6 Restoration | Project S6</title>');
+    expect((await request(app).get('/parts/not-a-part')).status).toBe(404);
   });
 
   it('returns a real 404 (not a soft 404) for unknown paths', async () => {

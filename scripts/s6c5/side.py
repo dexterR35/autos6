@@ -81,6 +81,12 @@ def mouldings(B):
     for x0, x1 in [(0.978, -0.160), (-0.184, -0.902)]:
         pts = [(s, z) for s in np.linspace(sx(x0), sx(x1), 120)]
         B.wall_line('S6 | lower door molding', pts, 0.016, m['paint'], offset=0.0, sides=8, step=0.02, flatten=0.42)
+    # The S6 sill has a rolled painted edge that catches a continuous highlight
+    # between the wheel openings, distinct from the recessed black floor tray.
+    pts = [(sx(x), .221 + .007 * ((x + .05) / 1.02) ** 2)
+           for x in np.linspace(1.07, -.91, 100)]
+    B.wall_line('S6 | side skirt lower rolled edge', pts, .007, m['paint'],
+                offset=.009, sides=8, step=.02, flatten=.65)
     # Side repeater on the front wing.
     p, n = B.frame_at(sx(1.105), 0.748)
     r, u, nn = frame_from_normal(n)

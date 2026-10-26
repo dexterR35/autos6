@@ -10,9 +10,11 @@ import { useProjectData } from '../hooks/useProjectData.jsx';
 import { useShell } from '../hooks/useShell.js';
 import { useMediaQuery } from '../hooks/useMediaQuery.js';
 import { getView } from '../data/views.js';
+import useGarageSupporters from '../hooks/useGarageSupporters.js';
 
 export default function GarageStage() {
-  const { parts, partsById, project } = useProjectData();
+  const { parts, partsById, project, isDemo, status } = useProjectData();
+  const supporters = useGarageSupporters({ project, isDemo, status });
   const g = useGarageState();
   const { headerRef } = useShell();
   const angleRef = useRef(null);
@@ -67,6 +69,7 @@ export default function GarageStage() {
           overlayRefs={overlayRefs}
           compact={stacked}
           currency={currency}
+          supporters={supporters}
           calibrate={calibrate}
           onViewError={setViewError}
           onFallback={() => { setViewError(null); setImageFallback(true); }}

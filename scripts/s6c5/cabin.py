@@ -5,7 +5,7 @@ import numpy as np
 
 from . import spec
 from .meshgen import param_mesh, tube
-from .util import disc_ring, frame_from_normal, rounded_box, torus
+from .util import disc_ring, frame_from_normal, loft, rounded_box, torus
 
 
 def seat(B, name, x, y, width, back_h=0.62, lean=0.22):
@@ -23,11 +23,57 @@ def seat(B, name, x, y, width, back_h=0.62, lean=0.22):
     B.link(rounded_box(name + ' headrest', (top_x, y, 0.50 + back_h + 0.10), (0.10, width * 0.52, 0.15), m['leather'], 3.0, (20, 8)))
 
 
+def rear_bench(B):
+    """Three seating positions with individual headrests below the roof line."""
+    m = B.m
+    # Separate cushions and backrests create the seat divisions visible through
+    # the rear glass, without a full-width headrest or one broad sloping plane.
+    for label, y, width in [('left', .41, .40), ('centre', 0.0, .39), ('right', -.41, .40)]:
+        B.link(rounded_box('S6 | rear bench %s cushion' % label,
+                           (-.86, y, .47), (.47, width, .13), m['leather'], 3.5, (20, 8)))
+        back_h, lean = .53, .16
+
+        def recline(a, b, c):
+            h = c + back_h / 2
+            return a - h * math.sin(lean), b * (1 - .06 * (h / back_h) ** 2), c
+
+        B.link(rounded_box('S6 | rear bench %s backrest' % label,
+                           (-1.10, y, .50 + back_h / 2), (.12, width, back_h),
+                           m['leather'], 3.5, (20, 10), recline))
+        top_x = -1.10 - back_h * math.sin(lean)
+        centre = label == 'centre'
+        head_z = 1.105 if centre else 1.125
+        head_w = .19 if centre else .235
+        for dy in (-head_w * .28, head_w * .28):
+            B.link(tube('S6 | rear bench %s headrest post' % label,
+                        [(top_x, y + dy, 1.015), (top_x, y + dy, head_z - .04)],
+                        .004, m['alloy'], sides=8))
+        B.link(rounded_box('S6 | rear bench %s headrest' % label,
+                           (top_x - .01, y, head_z), (.105, head_w, .135),
+                           m['leather'], 3.3, (20, 8)))
+
+
+def load_cover(B):
+    """Low tapered retractable cover, safely below the raked rear glazing."""
+    b, m = B.body, B.m
+    xs = np.array([-1.30, -1.50, -1.75, -1.90, -2.02, -2.10])
+    # Reserve at least 14 cm inside the side shell. The last station is inboard
+    # of the tailgate; the old 1.42 m wide box extended into its tapering glass.
+    widths = np.minimum(.66, b.top_at_x(xs, 'rear')[:, 1] - .14)
+    sections = [[(x, -w, .874), (x, w, .874), (x, w, .890), (x, -w, .890)]
+                for x, w in zip(xs, widths)]
+    B.link(loft('S6 | tapered luggage cover', sections, m['cabin'], smooth=False))
+    B.link(tube('S6 | luggage cover leading roller',
+                [(-1.30, -.64, .883), (-1.30, .64, .883)], .018, m['cabin'], sides=12))
+    B.link(rounded_box('S6 | luggage cover recessed handle',
+                       (-2.015, 0.0, .892), (.075, .13, .012), m['black'], 3, (12, 6)))
+
+
 def build(B):
     b, m = B.body, B.m
     for y in (0.375, -0.375):
         seat(B, 'S6 | front sport seat', 0.02, y, 0.50)
-    seat(B, 'S6 | rear bench', -0.86, 0.0, 1.24, 0.56, 0.26)
+    rear_bench(B)
     # Dashboard under the windscreen with the binnacle and centre console.
     B.link(rounded_box('S6 | dashboard', (0.78, 0.0, 0.86), (0.42, 1.50, 0.26), m['cabin'], 3.0, (40, 12),
                        lambda a, bb, c: (a - 0.25 * max(0.0, c), bb * (1 - 0.06 * (a / 0.21 + 1)), c)))
@@ -63,4 +109,4 @@ def build(B):
         B.add(pil, orient=False)
     # Carpet and the Avant load-space cover at the belt line.
     B.link(rounded_box('S6 | carpet', (-0.6, 0.0, 0.30), (3.2, 1.5, 0.04), m['cabin'], 4, (24, 6)))
-    B.link(rounded_box('S6 | luggage cover', (-1.64, 0.0, 0.955), (1.0, 1.42, 0.02), m['cabin'], 5, (24, 6)))
+    load_cover(B)

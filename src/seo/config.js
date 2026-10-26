@@ -4,6 +4,7 @@
 //     right <head> already in it (for crawlers and link previews that don't run JS),
 //   • the API's optional static server, to answer unknown paths with a real 404.
 // Plain JS with no browser/Node APIs so all three can import it.
+import { SEO_PARTS, partSharePath } from './parts.js';
 
 export const SITE = {
   name: 'Project S6',
@@ -15,9 +16,24 @@ export const SITE = {
   lang: 'en',
   themeColor: '#060b10',
   twitterSite: '', // e.g. '@projects6' — left empty until a real handle exists
-  ogImage: { path: '/og-image.jpg', width: 1200, height: 630, alt: 'Dark blue Audi S6 Avant in a neon-lit garage — Project S6' },
-  vehicle: { name: 'Audi S6 C5 Avant 4.2 V8 (2003)', brand: 'Audi', model: 'S6 Avant', year: '2003' },
+  ogImage: { path: '/og-image.jpg', width: 1200, height: 630, type: 'image/jpeg', alt: 'Dark blue Audi S6 Avant in a neon-lit garage — Project S6' },
+  // No engine in the name: the owner's live data is the source of truth for the spec.
+  vehicle: { name: 'Audi S6 C5 Avant (2003)', brand: 'Audi', model: 'S6 Avant', year: '2003' },
 };
+
+/** One indexable page per part, so each part can be found and shared on its own. */
+export const PART_ROUTES = SEO_PARTS.map((part) => ({
+  path: `/parts/${part.slug}`,
+  title: `${part.name} · Audi S6 Restoration`,
+  description: `${part.name}: ${part.summary} Help fund it for Project S6, a 2003 Audi S6 C5 Avant restoration.`,
+  h1: part.name,
+  breadcrumb: part.name,
+  parent: { path: '/parts', name: 'Parts' },
+  changefreq: 'weekly',
+  priority: 0.6,
+  image: { path: partSharePath(part.slug), width: 1200, height: 630, type: 'image/jpeg', alt: `${part.name} for the Project S6 Audi S6 Avant restoration` },
+  part,
+}));
 
 /**
  * Per-route metadata. Titles stay ≤ 60 characters and descriptions ≤ 160 so search
@@ -42,7 +58,9 @@ export const ROUTES = [
     breadcrumb: 'Parts',
     changefreq: 'weekly',
     priority: 0.8,
+    listsParts: true,
   },
+  ...PART_ROUTES,
   {
     path: '/donations',
     title: 'Support the Restoration',
@@ -70,7 +88,7 @@ export const ROUTES = [
     changefreq: 'monthly',
     priority: 0.5,
   },
-  { path: '/community', title: 'The Garage Community', description: 'Share your build, ask for repair help and connect with enthusiasts. A welcoming community built around the Project S6 restoration.', h1: 'A garage for all of us', breadcrumb: 'Community', changefreq: 'daily', priority: 0.7 },
+  { path: '/community', title: 'The Garage Community', description: 'Share your build, ask for repair help and connect with enthusiasts. A welcoming community built around the Project S6 restoration.', h1: 'The Project S6 community', breadcrumb: 'Community', changefreq: 'daily', priority: 0.7 },
   { path: '/terms', title: 'Donation Terms & Community Guidelines', description: 'How Project S6 contributions work, what happens after funding goals are reached, refund requests and community guidelines.', h1: 'Donation terms and community guidelines', breadcrumb: 'Terms', changefreq: 'monthly', priority: 0.2 },
   { path: '/privacy', title: 'Privacy Notice', description: 'How Project S6 handles payment information, community accounts, email subscriptions, consent and your privacy choices.', h1: 'Privacy notice', breadcrumb: 'Privacy', changefreq: 'monthly', priority: 0.2 },
   { path: '/subscription/confirm', title: 'Confirm Email Updates', description: 'Confirm your email subscription.', h1: 'Confirm your subscription', index: false },
@@ -97,10 +115,15 @@ export const fullTitle = (route) => (route.absoluteTitle ? route.title : `${rout
 const trimSlash = (u) => (u || '').replace(/\/+$/, '');
 export const absoluteUrl = (siteUrl, path) => (siteUrl ? `${trimSlash(siteUrl)}${path === '/' ? '/' : path}` : null);
 
-/** JSON-LD graph for a route: WebSite + the car, plus breadcrumbs on sub-pages. */
+const routeImage = (route) => route.image ?? SITE.ogImage;
+
+/** JSON-LD graph for a route: WebSite + the car, breadcrumbs on sub-pages, the part a
+ *  part page is about, and the list of part pages on /parts. */
 export function structuredData(route, siteUrl) {
   if (!siteUrl || route.index === false) return null;
   const home = absoluteUrl(siteUrl, '/');
+  const pageUrl = absoluteUrl(siteUrl, route.path);
+  const image = absoluteUrl(siteUrl, routeImage(route).path);
   const graph = [
     {
       '@type': 'WebSite',
@@ -122,23 +145,42 @@ export function structuredData(route, siteUrl) {
     },
     {
       '@type': 'WebPage',
-      '@id': `${absoluteUrl(siteUrl, route.path)}#webpage`,
-      url: absoluteUrl(siteUrl, route.path),
+      '@id': `${pageUrl}#webpage`,
+      url: pageUrl,
       name: fullTitle(route),
       description: route.description,
       isPartOf: { '@id': `${home}#website` },
-      about: { '@id': `${home}#car` },
-      primaryImageOfPage: absoluteUrl(siteUrl, SITE.ogImage.path),
+      about: route.part ? { '@id': `${pageUrl}#part` } : { '@id': `${home}#car` },
+      primaryImageOfPage: { '@type': 'ImageObject', url: image, width: routeImage(route).width, height: routeImage(route).height },
       inLanguage: SITE.lang,
     },
   ];
+  if (route.part) {
+    // A restoration item for the car, not a product for sale: no offer or price.
+    graph.push({
+      '@type': 'Thing',
+      '@id': `${pageUrl}#part`,
+      name: route.part.name,
+      description: route.part.summary,
+      image,
+      url: pageUrl,
+      subjectOf: { '@id': `${home}#car` },
+    });
+  }
+  if (route.listsParts) {
+    graph.push({
+      '@type': 'ItemList',
+      '@id': `${pageUrl}#parts`,
+      name: 'Parts needed for the Audi S6 restoration',
+      numberOfItems: PART_ROUTES.length,
+      itemListElement: PART_ROUTES.map((r, i) => ({ '@type': 'ListItem', position: i + 1, name: r.part.name, url: absoluteUrl(siteUrl, r.path) })),
+    });
+  }
   if (route.path !== '/') {
+    const trail = [{ name: 'Garage', path: '/' }, ...(route.parent ? [route.parent] : []), { name: route.breadcrumb ?? route.title, path: route.path }];
     graph.push({
       '@type': 'BreadcrumbList',
-      itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Garage', item: home },
-        { '@type': 'ListItem', position: 2, name: route.breadcrumb ?? route.title, item: absoluteUrl(siteUrl, route.path) },
-      ],
+      itemListElement: trail.map((step, i) => ({ '@type': 'ListItem', position: i + 1, name: step.name, item: absoluteUrl(siteUrl, step.path) })),
     });
   }
   return { '@context': 'https://schema.org', '@graph': graph };
@@ -152,8 +194,9 @@ export function structuredData(route, siteUrl) {
 export function headFor(route, { siteUrl = '', noindex = false } = {}) {
   const title = fullTitle(route);
   const url = absoluteUrl(siteUrl, route.path);
-  const image = absoluteUrl(siteUrl, SITE.ogImage.path);
-  const robots = noindex || route.index === false ? 'noindex, nofollow' : 'index, follow, max-image-preview:large';
+  const img = routeImage(route);
+  const image = absoluteUrl(siteUrl, img.path);
+  const robots = noindex || route.index === false ? 'noindex, nofollow' : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
   const tags = [
     { tag: 'meta', key: 'description', attrs: { name: 'description', content: route.description } },
     { tag: 'meta', key: 'robots', attrs: { name: 'robots', content: robots } },
@@ -173,11 +216,12 @@ export function headFor(route, { siteUrl = '', noindex = false } = {}) {
   if (image) {
     tags.push(
       { tag: 'meta', key: 'og:image', attrs: { property: 'og:image', content: image } },
-      { tag: 'meta', key: 'og:image:width', attrs: { property: 'og:image:width', content: String(SITE.ogImage.width) } },
-      { tag: 'meta', key: 'og:image:height', attrs: { property: 'og:image:height', content: String(SITE.ogImage.height) } },
-      { tag: 'meta', key: 'og:image:alt', attrs: { property: 'og:image:alt', content: SITE.ogImage.alt } },
+      { tag: 'meta', key: 'og:image:type', attrs: { property: 'og:image:type', content: img.type } },
+      { tag: 'meta', key: 'og:image:width', attrs: { property: 'og:image:width', content: String(img.width) } },
+      { tag: 'meta', key: 'og:image:height', attrs: { property: 'og:image:height', content: String(img.height) } },
+      { tag: 'meta', key: 'og:image:alt', attrs: { property: 'og:image:alt', content: img.alt } },
       { tag: 'meta', key: 'twitter:image', attrs: { name: 'twitter:image', content: image } },
-      { tag: 'meta', key: 'twitter:image:alt', attrs: { name: 'twitter:image:alt', content: SITE.ogImage.alt } },
+      { tag: 'meta', key: 'twitter:image:alt', attrs: { name: 'twitter:image:alt', content: img.alt } },
     );
   }
   if (SITE.twitterSite) tags.push({ tag: 'meta', key: 'twitter:site', attrs: { name: 'twitter:site', content: SITE.twitterSite } });
@@ -206,9 +250,13 @@ export const renderNoscriptHtml = (route) =>
 
 export function renderSitemap(siteUrl, lastmod) {
   const urls = ROUTES.filter((r) => r.index !== false)
-    .map((r) => `  <url>\n    <loc>${esc(absoluteUrl(siteUrl, r.path))}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>${r.changefreq}</changefreq>\n    <priority>${r.priority.toFixed(1)}</priority>\n  </url>`)
+    .map((r) => {
+      const img = routeImage(r);
+      const image = `\n    <image:image>\n      <image:loc>${esc(absoluteUrl(siteUrl, img.path))}</image:loc>\n    </image:image>`;
+      return `  <url>\n    <loc>${esc(absoluteUrl(siteUrl, r.path))}</loc>\n    <lastmod>${lastmod}</lastmod>\n    <changefreq>${r.changefreq}</changefreq>\n    <priority>${r.priority.toFixed(1)}</priority>${image}\n  </url>`;
+    })
     .join('\n');
-  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">\n${urls}\n</urlset>\n`;
 }
 
 export function renderRobots(siteUrl, { noindex = false } = {}) {

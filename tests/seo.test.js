@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
-  NOT_FOUND, ROUTES, fullTitle, getRouteMeta, headFor, jsonLdString, renderHeadHtml, renderRobots, renderSitemap,
+  NOT_FOUND, PART_ROUTES, ROUTES, fullTitle, getRouteMeta, headFor, jsonLdString, renderHeadHtml, renderRobots, renderSitemap,
 } from '../src/seo/config.js';
 
 const SITE = 'https://projects6.example';
-const nav = ['/', '/parts', '/donations', '/progress', '/about', '/community', '/terms', '/privacy'];
+const nav = ['/', '/parts', ...PART_ROUTES.map((r) => r.path), '/donations', '/progress', '/about', '/community', '/terms', '/privacy'];
 
 describe('route metadata', () => {
   it('every public page has a unique title (≤ 60 chars) and description (70–160 chars)', () => {
@@ -43,7 +43,28 @@ describe('route metadata', () => {
     expect(tag('twitter:card').content).toBe('summary_large_image');
     expect(tag('robots').content).toMatch(/^index, follow/);
     const types = h.jsonLd['@graph'].map((n) => n['@type']);
-    expect(types).toEqual(['WebSite', 'Car', 'WebPage', 'BreadcrumbList']);
+    expect(types).toEqual(['WebSite', 'Car', 'WebPage', 'ItemList', 'BreadcrumbList']);
+    const list = h.jsonLd['@graph'].find((n) => n['@type'] === 'ItemList');
+    expect(list.itemListElement).toHaveLength(10);
+    expect(list.itemListElement[1]).toEqual({ '@type': 'ListItem', position: 2, name: 'Hood', url: `${SITE}/parts/hood` });
+  });
+
+  it('every part has its own indexable page, share image and breadcrumbs, with no price or offer', () => {
+    expect(PART_ROUTES.map((r) => r.path)).toEqual(['/parts/front-bumper', '/parts/hood', '/parts/wheels', '/parts/side-skirts', '/parts/rear-bumper', '/parts/exhaust', '/parts/coilovers', '/parts/brake-kit', '/parts/roof-box', '/parts/interior']);
+    const h = headFor(getRouteMeta('/parts/hood/'), { siteUrl: SITE });
+    const tag = (k) => h.tags.find((t) => t.key === k)?.attrs;
+    expect(h.title).toBe('Hood · Audi S6 Restoration | Project S6');
+    expect(tag('canonical').href).toBe(`${SITE}/parts/hood`);
+    expect(tag('og:image').content).toBe(`${SITE}/og/parts/hood.jpg`);
+    expect(tag('og:image:type').content).toBe('image/jpeg');
+    expect(tag('og:image:alt').content).toMatch(/^Hood /);
+    expect(tag('robots').content).toContain('max-image-preview:large');
+    const graph = h.jsonLd['@graph'];
+    expect(graph.find((n) => n['@type'] === 'WebPage').about).toEqual({ '@id': `${SITE}/parts/hood#part` });
+    expect(graph.find((n) => n['@type'] === 'Thing')).toMatchObject({ name: 'Hood', image: `${SITE}/og/parts/hood.jpg` });
+    expect(graph.find((n) => n['@type'] === 'BreadcrumbList').itemListElement.map((i) => i.name)).toEqual(['Garage', 'Parts', 'Hood']);
+    expect(JSON.stringify(h.jsonLd)).not.toMatch(/"(offers|price|Product)"/);
+    expect(getRouteMeta('/parts/not-a-part')).toBe(NOT_FOUND);
   });
 
   it('without a site URL, absolute-only tags are omitted instead of being wrong', () => {
@@ -70,7 +91,10 @@ describe('rendering', () => {
 
   it('sitemap lists only indexable pages with absolute URLs; robots points at it', () => {
     const xml = renderSitemap(SITE, '2026-10-04');
-    expect(xml.match(/<loc>/g)).toHaveLength(8);
+    expect(xml.match(/<loc>/g)).toHaveLength(18);
+    expect(xml).toContain(`<loc>${SITE}/parts/hood</loc>`);
+    expect(xml).toContain(`<image:loc>${SITE}/og/parts/hood.jpg</image:loc>`);
+    expect(xml).toContain('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"');
     expect(xml).not.toMatch(/admin|donation\//);
     expect(xml).toContain(`<loc>${SITE}/parts</loc>`);
     const robots = renderRobots(SITE);
