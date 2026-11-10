@@ -1,4 +1,4 @@
-import carRelease from '../../public/car-releases/imported-v3/manifest.json';
+import carRelease from '../../public/car-releases/imported-v4/manifest.json' with { type: 'json' };
 
 // The GLB uses Y-up, nose +X. Anchors come from actual imported triangle
 // surfaces and receive the same calibration as the car and its glazing.

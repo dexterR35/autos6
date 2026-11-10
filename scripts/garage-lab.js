@@ -11,6 +11,7 @@ import { extendGarage } from '../src/lib/garageExtension.js';
 import { cameraPreset, GARAGE_TARGET } from '../src/lib/garage3d.js';
 import { createGarageSupportersBoard, supporterWallCamera } from '../src/lib/garageSupporters.js';
 import { modelUrl } from '../src/lib/modelAssets.js';
+import { applyWheelSetup, DEFAULT_WHEEL_SETUP } from '../src/lib/wheelSetup.js';
 
 const params = new URLSearchParams(location.search);
 const comparing=params.get('compare')==='1';
@@ -43,7 +44,9 @@ const shots = {
   carrearphoto: { position: [-12.2, 1.38, 0], target: [0, 0.82, 0], fov: 15 },
   carrear34: { position: [-5.9, 1.4, 6.2], target: [-.2, .75, 0], fov: 30 },
 };
-const shot = shots[params.get('shot')] ?? shots.reference;
+let shot = shots[params.get('shot')] ?? shots.reference;
+// cam=x,y,z,tx,ty,tz,fov frames any detail without adding a named shot.
+if (params.get('cam')) { const c = params.get('cam').split(',').map(Number); shot = { position: c.slice(0, 3), target: c.slice(3, 6), fov: c[6] || 30 }; }
 const referenceImage = { reference: '/ChatGPT Image Oct 4, 2026, 01_38_30 AM-1.png', s6: '/ChatGPT Image Oct 4, 2026, 01_38_30 AM-1.png' }[params.get('shot') ?? 'reference'];
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: true });
@@ -82,8 +85,29 @@ const overlay = document.getElementById('reference');
 if (referenceImage) { overlay.src = referenceImage; overlay.style.width = `${width}px`; overlay.style.height = `${height}px`; }
 
 const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-const carUrl=params.get('candidate')==='staging'?'/output/car-refinement/imported-v3/s6-c5.glb':params.get('candidate')==='web'?'/output/car-refinement/imported/model-web.glb':params.get('candidate')==='1'?'/output/car-refinement/imported/model.glb':params.get('original')==='1'?'/models/s6-c5.glb':modelUrl('s6-c5.glb');
+const carUrl=params.get('candidate')==='staging'?'/output/car-refinement/imported-v4/s6-c5.glb':params.get('candidate')==='web'?'/output/car-refinement/imported/model-web.glb':params.get('candidate')==='1'?'/output/car-refinement/imported/model.glb':params.get('original')==='1'?'/models/s6-c5.glb':modelUrl('s6-c5.glb');
 const [car, garage] = await Promise.all([carUrl, '/models/garage.glb'].map(async (url) => (await loader.loadAsync(url)).scene));
+applyWheelSetup(car, { ...DEFAULT_WHEEL_SETUP, tyre: params.get('tyre') || 'road', rimColor: params.get('rim') || DEFAULT_WHEEL_SETUP.rimColor, caliperColor: params.get('caliper') || DEFAULT_WHEEL_SETUP.caliperColor });
+// Inspect geometry independently of the imported photographic trim atlas.
+if (params.get('surface') === 'paint') {
+  car.traverse(object => {
+    if (!object.isMesh) return;
+    for (const material of [object.material].flat()) if (/detailed trim/.test(material.name)) {
+      material.map = null; material.metalnessMap = null; material.roughnessMap = null;
+      material.clearcoatMap = null; material.clearcoatRoughnessMap = null;
+      material.color.setRGB(.008, .027, .085); material.metalness = .72; material.roughness = .22;
+      material.clearcoat = 1; material.clearcoatRoughness = .065; material.needsUpdate = true;
+    }
+  });
+}
+if (params.get('surface') === 'clay' || params.get('surface') === 'ids') {
+  const ids = params.get('surface') === 'ids', cache = new Map();
+  car.traverse(object => {
+    if (!object.isMesh) return;
+    const make = material => { if (!cache.has(material.name)) { const hue = [...material.name].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 360, 7); cache.set(material.name, new THREE.MeshStandardMaterial({ color: ids ? new THREE.Color().setHSL(hue / 360, .75, .5) : '#8d9199', roughness: ids ? .8 : .32, metalness: 0, side: material.side, name: 'lab ' + material.name })); } return cache.get(material.name); };
+    object.material = Array.isArray(object.material) ? object.material.map(make) : make(object.material);
+  });
+}
 if(params.get('candidate')==='1') {
   if(params.get('rotate'))car.rotation.x=THREE.MathUtils.degToRad(Number(params.get('rotate')));
   const box=new THREE.Box3().setFromObject(car),size=box.getSize(new THREE.Vector3());
@@ -92,6 +116,8 @@ if(params.get('candidate')==='1') {
   car.position.set(-center.x,-aligned.min.y,-center.z);
   if(params.get('flip')==='1')car.rotation.y=Math.PI;
 }
+// hide=regex removes matching car nodes, e.g. hide=glass to inspect the cabin.
+if (params.get('hide')) { const hidden = new RegExp(params.get('hide'), 'i'); car.traverse(object => { if (hidden.test(object.name)) object.visible = false; }); }
 car.traverse((object) => { if (object.isMesh) { object.castShadow = true; object.receiveShadow = true; } });
 if (shot.carYaw && params.get('yaw') !== '0') car.rotation.y = THREE.MathUtils.degToRad(shot.carYaw);
 if (params.get('extend') !== '0') extendGarage(garage);

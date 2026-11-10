@@ -162,4 +162,43 @@ describe('reference car release', () => {
     for (let i = 0; i < hdr.data.length; i += 4) maximum = Math.max(maximum, hdr.data[i], hdr.data[i + 1], hdr.data[i + 2]);
     expect(maximum).toBeGreaterThan(1);
   });
+
+  it('ships real clearcoat paint and distinct component finishes within the geometry budget', async () => {
+    const { gltf } = await decodedCar();
+    const manifest = JSON.parse(readFileSync(`${directory}/manifest.json`, 'utf8'));
+    const material = pattern => gltf.materials.find(entry => pattern.test(entry.name));
+    const paint = material(/deep blue pearl paint/);
+    expect(paint.pbrMetallicRoughness.baseColorTexture).toBeUndefined();
+    expect(paint.pbrMetallicRoughness.metallicFactor).toBeGreaterThan(.6);
+    expect(paint.pbrMetallicRoughness.roughnessFactor).toBeLessThan(.3);
+    expect(paint.extensions.KHR_materials_clearcoat.clearcoatFactor).toBe(1);
+    expect(material(/tyre rubber/).pbrMetallicRoughness.roughnessFactor).toBeGreaterThan(.8);
+    expect(material(/S6.Modular.RimPaint/).pbrMetallicRoughness.metallicFactor).toBeGreaterThan(.8);
+    expect(material(/polished chrome trim/).pbrMetallicRoughness.metallicFactor).toBeGreaterThan(.9);
+    expect(material(/lamp lenses/).extensions.KHR_materials_clearcoat.clearcoatFactor).toBe(1);
+    // Full-detail panels: the body is no longer pre-simplified to a third.
+    expect(manifest.car.triangles).toBeLessThan(560_000);
+    expect(material(/tailgate privacy glass/).pbrMetallicRoughness.roughnessFactor).toBeLessThan(.1);
+    expect(manifest.topology.lockedBorders).toBe(true);
+    expect(manifest.topology.trianglesAfter).toBe(manifest.car.triangles);
+    expect(manifest.topology.simplifiedFaces).toBeGreaterThan(150_000);
+    expect(manifest.surfaceCleanup.panelFairing).toHaveLength(3);
+  });
+
+  it('preserves separately configurable Blender components at all four wheel positions', async () => {
+    const { gltf } = await decodedCar();
+    const manifest = JSON.parse(readFileSync(`${directory}/manifest.json`, 'utf8'));
+    for (const corner of ['FL', 'FR', 'RL', 'RR']) {
+      const nodes = gltf.nodes.filter(node => node.extras?.wheelCorner === corner);
+      expect(nodes.filter(node => node.extras?.assemblyId)).toHaveLength(1);
+      const components = new Set(nodes.map(node => node.extras?.componentId));
+      for (const component of ['rim', 'tyre', 'brake-disc', 'caliper', 'brake-pad', 'pad-backing-plate', 'backing-plate']) expect(components.has(component), `${corner}: ${component}`).toBe(true);
+      expect(nodes.filter(node => node.extras?.tyreVariant === 'road')).toHaveLength(1);
+      expect(nodes.filter(node => node.extras?.tyreVariant === 'track')).toHaveLength(1);
+      expect(nodes.filter(node => node.extras?.componentId).every(node => node.extras.authoredIn === 'Blender')).toBe(true);
+    }
+    expect(manifest.modularWheels.corners).toEqual(['FL', 'FR', 'RL', 'RR']);
+    expect(manifest.modularWheels.removedImportedGeometry.removedTriangles).toBeGreaterThan(50_000);
+    expect(manifest.car.drawCalls).toBeLessThan(100);
+  });
 });

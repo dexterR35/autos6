@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 
 const shots = (process.argv[2] || 'reference').split(',');
 const query = process.argv[3] || '';
-const base = process.env.LAB_BASE || 'http://localhost:5173';
+const base = process.env.LAB_BASE || 'http://127.0.0.1:5173';
 const output = resolve('output/garage');
 mkdirSync(output, { recursive: true });
 const browser = await chromium.launch({

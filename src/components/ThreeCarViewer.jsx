@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RotateCcw, Plus, Minus, Warehouse, Lightbulb, Users } from 'lucide-react';
+import { RotateCcw, Plus, Minus, Warehouse, Lightbulb, Users, Settings2 } from 'lucide-react';
 import HotspotButton from './HotspotButton.jsx';
 import { cameraPreset, GARAGE_TARGET, findMeshPart, partAnchors3D } from '../lib/garage3d.js';
 import { createGarageLook } from '../lib/garageLighting.js';
@@ -12,6 +12,8 @@ import { extendGarage } from '../lib/garageExtension.js';
 import { RayIndex } from '../lib/rayIndex.js';
 import { createGarageSupportersBoard, SUPPORTER_WALL, supporterWallCamera } from '../lib/garageSupporters.js';
 import GarageSupportersDialog from './GarageSupportersDialog.jsx';
+import WheelSetupPanel from './WheelSetupPanel.jsx';
+import { applyWheelSetup, readWheelSetup, saveWheelSetup } from '../lib/wheelSetup.js';
 
 const ANCHORS = partAnchors3D();
 const MODEL_URLS = [modelUrl('s6-c5.glb'), modelUrl('garage.glb')];
@@ -83,6 +85,7 @@ export default function ThreeCarViewer({
   const toolbarRef = useRef(null);
   const hintRef = useRef(null);
   const lightingRef = useRef(null);
+  const wheelPanelRef = useRef(null);
   const markersRef = useRef(new Map());
   const runtimeRef = useRef(null);
   const propsRef = useRef(null);
@@ -91,9 +94,12 @@ export default function ThreeCarViewer({
   const [garageView, setGarageView] = useState(false);
   const [lightLevel, setLightLevel] = useState(100);
   const [lightingOpen, setLightingOpen] = useState(false);
+  const [wheelSetup, setWheelSetup] = useState(readWheelSetup);
+  const [wheelSetupOpen, setWheelSetupOpen] = useState(false);
+  const closeWheelSetup = useCallback(() => setWheelSetupOpen(false), []);
   const [supportersOpen, setSupportersOpen] = useState(false);
   const [supporterView, setSupporterView] = useState(false);
-  propsRef.current = { viewId, compact, partsById, visiblePartIds, selectedPartId, onPartSelect, onPartHover, reservedRefs, overlayRefs, onViewError, supporters, lightLevel };
+  propsRef.current = { viewId, compact, partsById, visiblePartIds, selectedPartId, onPartSelect, onPartHover, reservedRefs, overlayRefs, onViewError, supporters, lightLevel, wheelSetup };
 
   useEffect(() => {
     const host = mountRef.current;
@@ -153,7 +159,7 @@ export default function ThreeCarViewer({
       if (!car || !sceneReady) return;
       const current = propsRef.current;
       const bounds = stage.getBoundingClientRect();
-      const covered = [...current.reservedRefs, ...current.overlayRefs, toolbarRef, hintRef, lightingRef]
+      const covered = [...current.reservedRefs, ...current.overlayRefs, toolbarRef, hintRef, lightingRef, wheelPanelRef]
         .map((ref) => ref?.current?.getBoundingClientRect()).filter((rect) => rect?.width && rect?.height);
       const occupied = [];
       const entries = [...markersRef.current.entries()].sort(([a], [b]) => Number(b === current.selectedPartId) - Number(a === current.selectedPartId));
@@ -469,6 +475,11 @@ export default function ThreeCarViewer({
           requestFrame();
         },
         setLightLevel: (level) => { look.setLightLevel(level / 100, reducedMotion); requestFrame(); },
+        setWheelSetup: (setup) => {
+          applyWheelSetup(car, setup);
+          renderer.shadowMap.needsUpdate = true;
+          requestFrame();
+        },
         showGarage: (enabled) => {
           inspectingSupporters = false;
           setSupporterView(false);
@@ -500,7 +511,7 @@ export default function ThreeCarViewer({
         });
         scene.add(model);
         occluders.push(model);
-        if (index === 0) car = model;
+        if (index === 0) { car = model; applyWheelSetup(car, propsRef.current.wheelSetup); }
         requestFrame();
       })]);
       if (disposed || failed) return;
@@ -549,7 +560,8 @@ export default function ThreeCarViewer({
   useEffect(() => { runtimeRef.current?.reset(); }, [viewId, resetKey, compact]);
   useEffect(() => { runtimeRef.current?.setLightLevel(lightLevel); }, [lightLevel, attempt]);
   useEffect(() => { runtimeRef.current?.updateSupporters(supporters); }, [supporters]);
-  useEffect(() => { runtimeRef.current?.invalidate(); }, [selectedPartId, visiblePartIds, hoveredPartId, status.state, reservedRefs, overlayRefs, lightingOpen]);
+  useEffect(() => { runtimeRef.current?.setWheelSetup(wheelSetup); saveWheelSetup(wheelSetup); }, [wheelSetup]);
+  useEffect(() => { runtimeRef.current?.invalidate(); }, [selectedPartId, visiblePartIds, hoveredPartId, status.state, reservedRefs, overlayRefs, lightingOpen, wheelSetupOpen]);
 
   useEffect(() => {
     if (!lightingOpen) return undefined;
@@ -567,7 +579,7 @@ export default function ThreeCarViewer({
   const ready = status.state === 'ready';
   const selectPart = (id) => onPartSelect?.(id, { source: 'hotspot' });
   return (
-    <div ref={stageRef} className="viewer viewer--three" data-testid="three-viewer" data-renderer="three" data-view-id={viewId} data-loaded={ready} data-light-level={lightLevel}>
+    <div ref={stageRef} className="viewer viewer--three" data-testid="three-viewer" data-renderer="three" data-view-id={viewId} data-loaded={ready} data-light-level={lightLevel} data-tyre-variant={wheelSetup.tyre} data-rim-color={wheelSetup.rimColor} data-caliper-color={wheelSetup.caliperColor}>
       <div ref={mountRef} className="three-canvas-mount" />
       {status.state === 'loading' && (
         <div className="three-loading" role="status" aria-live="polite">
@@ -605,7 +617,8 @@ export default function ThreeCarViewer({
               <button type="button" onClick={() => runtimeRef.current?.zoom(-1)} aria-label="Zoom out" title="Zoom out"><Minus aria-hidden="true" /></button>
               <button type="button" onClick={() => runtimeRef.current?.zoom(1)} aria-label="Zoom in" title="Zoom in"><Plus aria-hidden="true" /></button>
             </div>
-            <button type="button" className="three-toolbar__lights" aria-expanded={lightingOpen} aria-controls="garage-lighting" aria-label="Adjust garage lighting" onClick={() => setLightingOpen((open) => !open)} title="Adjust garage lighting"><Lightbulb aria-hidden="true" /></button>
+            <button type="button" className="three-toolbar__wheels" aria-expanded={wheelSetupOpen} aria-controls="wheel-setup" aria-label="Customize wheels and brakes" onClick={() => { setWheelSetupOpen(open => !open); setLightingOpen(false); }} title="Customize wheels and brakes"><Settings2 aria-hidden="true" /></button>
+            <button type="button" className="three-toolbar__lights" aria-expanded={lightingOpen} aria-controls="garage-lighting" aria-label="Adjust garage lighting" onClick={() => { setLightingOpen((open) => !open); setWheelSetupOpen(false); }} title="Adjust garage lighting"><Lightbulb aria-hidden="true" /></button>
           </div>
           {lightingOpen && (
             <div ref={lightingRef} id="garage-lighting" className="three-lighting" role="group" aria-label="Garage lighting">
@@ -614,11 +627,12 @@ export default function ThreeCarViewer({
               <div><span>Soft</span><span>Extra bright</span></div>
             </div>
           )}
+          {wheelSetupOpen && <WheelSetupPanel setup={wheelSetup} onChange={setWheelSetup} onClose={closeWheelSetup} panelRef={wheelPanelRef} />}
           {supporterView && <div className="three-supporters-actions">
             <button type="button" onClick={() => setSupportersOpen(true)}>Read supporter table</button>
             {supporters.rows.length > 10 && <button type="button" onClick={() => runtimeRef.current?.turnBoardPage()}>Next board page</button>}
           </div>}
-          <p ref={hintRef} className={`three-hint ${lightingOpen || supporterView ? 'is-hidden' : ''}`}>{compact ? 'Drag to explore · Tap a car part for details' : 'Drag to orbit · Scroll to zoom · Click a car part for details'}</p>
+          <p ref={hintRef} className={`three-hint ${lightingOpen || wheelSetupOpen || supporterView ? 'is-hidden' : ''}`}>{compact ? 'Drag to explore · Tap a car part for details' : 'Drag to orbit · Scroll to zoom · Click a car part for details'}</p>
         </>
       )}
       <GarageSupportersDialog open={supportersOpen} onClose={() => setSupportersOpen(false)} supporters={supporters} />

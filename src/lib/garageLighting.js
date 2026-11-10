@@ -4,6 +4,8 @@ import * as THREE from 'three';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { meshComponents } from './meshComponents.js';
 import { lightingUrl, carLightingUrl } from './modelAssets.js';
+import { finishCarMaterials } from './carLook.js';
+import { captureGarageReflections, addBoxProjection, measureRoom } from './garageReflections.js';
 import { NEON_BLUE, NEON_RED, selectNeonSources, addNeonSurfaceResponse, addNeonTubeProfile } from './neonLighting.js';
 
 function contactShadow() {
@@ -19,7 +21,7 @@ function contactShadow() {
 }
 
 function floorMaterial() {
-  const material=new THREE.MeshStandardMaterial({color:'#1d2229',roughness:.27,metalness:.22,envMapIntensity:.8});
+  const material=new THREE.MeshStandardMaterial({color:'#1d2229',roughness:.2,metalness:.22,envMapIntensity:.8});
   material.name='Garage floor | lightweight';
   material.onBeforeCompile=(shader)=>{
     shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vFloorWorld;').replace('#include <project_vertex>','#include <project_vertex>\nvFloorWorld=(modelMatrix*vec4(transformed,1.0)).xyz;');
@@ -30,12 +32,27 @@ function floorMaterial() {
       float seam=1.0-smoothstep(0.005,0.005+max(fwidth(slabUv.x),fwidth(slabUv.y)),min(edge.x,edge.y));
       float grain=fract(sin(dot(floor(slabUv),vec2(127.1,311.7)))*43758.5453);
       diffuseColor.rgb*=mix(0.82,1.13,grain)*(1.0-seam*0.48);`)
-      .replace('#include <lights_fragment_end>','#include <lights_fragment_end>\nreflectedLight.directSpecular*=0.65;');
+      .replace('#include <roughnessmap_fragment>',`#include <roughnessmap_fragment>
+      // Worn sealed concrete: polished lanes and duller patches break up the
+      // reflection of the room instead of one uniform mirror-like sheen.
+      vec2 wearUv=vFloorWorld.xz*.55;
+      vec2 wearCell=floor(wearUv),wearFract=fract(wearUv);wearFract=wearFract*wearFract*(3.0-2.0*wearFract);
+      float wearA=fract(sin(dot(wearCell,vec2(41.3,289.1)))*43758.5453),wearB=fract(sin(dot(wearCell+vec2(1.0,0.0),vec2(41.3,289.1)))*43758.5453);
+      float wearC=fract(sin(dot(wearCell+vec2(0.0,1.0),vec2(41.3,289.1)))*43758.5453),wearD=fract(sin(dot(wearCell+vec2(1.0,1.0),vec2(41.3,289.1)))*43758.5453);
+      float wear=mix(mix(wearA,wearB,wearFract.x),mix(wearC,wearD,wearFract.x),wearFract.y);
+      vec2 jointUv=vFloorWorld.xz*1.45;jointUv.x+=mod(floor(jointUv.y),2.0)*0.5;
+      vec2 jointEdge=min(fract(jointUv),1.0-fract(jointUv));
+      float joint=1.0-smoothstep(0.004,0.02,min(jointEdge.x,jointEdge.y));
+      roughnessFactor=clamp(roughnessFactor+(wear-.45)*.22+joint*.4,.07,1.0);`)
+      // The captured room supplies the floor's reflections; analytic light
+      // highlights on top of it read as white blobs.
+      .replace('#include <lights_fragment_end>','#include <lights_fragment_end>\nreflectedLight.directSpecular*=0.06;');
   };
-  material.customProgramCacheKey=()=> 'garage-floor-lightweight-v1';
+  material.customProgramCacheKey=()=> 'garage-floor-lightweight-v2';
   return material;
 }
 
+const CAR_REFLECTION=1.15,FLOOR_REFLECTION=1;
 const PRACTICALS=[
   {kind:'blue',test:/cobalt blue neon|truss LED strip.*blue/i,color:NEON_BLUE,strength:7},
   {kind:'red',test:/crimson neon/i,color:NEON_RED,strength:7.5},
@@ -64,7 +81,7 @@ export function createGarageLook({renderer,scene,camera,compact=false}) {
   renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;renderer.info.autoReset=false;
   scene.background=new THREE.Color('#080c13');scene.fog=null;
   const base=new THREE.Group();base.name='Garage look | bounded lighting';
-  const hemisphere=new THREE.HemisphereLight('#d8e5ff','#101522',.8);base.add(hemisphere);
+  const hemisphere=new THREE.HemisphereLight('#d8e5ff','#101522',.5);base.add(hemisphere);
   const dimmable=[];
   const addLight=(light)=>{dimmable.push({light,intensity:light.intensity});base.add(light);return light;};
   for(const x of compact?[0]:[-6,0,6]) {
@@ -72,15 +89,19 @@ export function createGarageLook({renderer,scene,camera,compact=false}) {
   }
   const key=addLight(new THREE.SpotLight('#e6eeff',145,20,.85,.8,1.6));
   key.position.set(.4,6.7,1.6);key.target.position.set(0,0,0);key.castShadow=!compact;
-  key.shadow.mapSize.set(1024,1024);key.shadow.bias=-.00015;key.shadow.normalBias=.03;base.add(key.target);
-  const fill=addLight(new THREE.PointLight('#7aa5ff',26,16,2));fill.position.set(-3.2,4.2,3.6);
+  key.shadow.mapSize.set(2048,2048);key.shadow.radius=3;key.shadow.bias=-.00015;key.shadow.normalBias=.03;base.add(key.target);
+  // Two soft front floods model the open workshop door side, so the flanks of
+  // the car are never left to ambient light alone.
+  const fill=addLight(new THREE.SpotLight('#dfe8ff',compact?120:80,22,.62,.9,1.5));fill.position.set(-5.4,4.6,7.2);fill.target.position.set(0,.6,0);base.add(fill.target);
+  if(!compact){const flood=addLight(new THREE.SpotLight('#dfe8ff',80,22,.62,.9,1.5));flood.position.set(5.6,4.6,6.8);flood.target.position.set(0,.6,0);base.add(flood.target);}
   if(!compact){const rim=addLight(new THREE.PointLight('#b3a3ff',20,16,2));rim.position.set(2,4,-5);}
   scene.add(base);
   const practicalLights=new THREE.Group();practicalLights.name='Garage look | practical lights';scene.add(practicalLights);
   const ceilingMaterials=[],state={level:1,from:1,since:0,instant:true};
   const neonLevel={value:1};
-  const carReflectionMaterials=new Set();
+  const carReflectionMaterials=new Set(),roomMaterials=new Set(),emitters=new Set();
   let probe=null,carProbe=null,disposed=false;
+  let reflection=null,reflectionLevel=1,attached=null,shadowPlane=null;
 
   async function loadProbe(url,signal) {
     const response=await fetch(url,{signal});
@@ -113,7 +134,23 @@ export function createGarageLook({renderer,scene,camera,compact=false}) {
     if(results[0].status==='rejected')throw results[0].reason;
     // The dedicated paint probe can fall back to the normal workshop probe.
     applyLevel(state.level);
+    refreshReflections();
   }
+
+  // One capture of the lit room, repeated only after the brightness slider settles.
+  function refreshReflections() {
+    if(!attached||disposed)return;
+    applyLevel(state.level);
+    try {
+      const next=captureGarageReflections({renderer,scene,size:compact?256:512,hidden:[attached.car,shadowPlane].filter(Boolean),emitters:[...emitters]});
+      reflection?.dispose();reflection=next;reflectionLevel=state.level;
+      for(const material of [...carReflectionMaterials,...roomMaterials]){material.envMap=reflection.texture;material.needsUpdate=true;}
+    } catch(error) {
+      console.warn('Workshop reflections fall back to the studio probe:',error);
+    }
+    applyLevel(state.level);
+  }
+  const reflectionGain=level=>THREE.MathUtils.lerp(.5,1,Math.min(level,1))+Math.max(0,level-1)*.55;
 
   function attach({car,garage}) {
     garage.updateMatrixWorld(true);
@@ -130,14 +167,14 @@ export function createGarageLook({renderer,scene,camera,compact=false}) {
       // Sign cores and halos have their own palette and never become extra lights.
       if(object.userData.neonCore||object.userData.neonHalo)return;
       for(const material of [object.material].flat().filter(Boolean)) {
-        if(object.userData.ceilingRow!==undefined){ceilingMaterials.push(material);continue;}
-        if(object.userData.surface==='floor'||/wet concrete/i.test(material.name)){object.material=floorMaterial();surfaces.set(object.material,true);material.dispose();continue;}
+        if(object.userData.ceilingRow!==undefined){ceilingMaterials.push(material);emitters.add(material);continue;}
+        if(object.userData.surface==='floor'||/wet concrete/i.test(material.name)){object.material=floorMaterial();surfaces.set(object.material,true);roomMaterials.add(object.material);material.dispose();continue;}
         if(/aged concrete block/i.test(material.name) && !seenMaterials.has(material)){masonry(material);surfaces.set(material,false);}
         seenMaterials.add(material);
         if(/midnight blue enamel/i.test(material.name)){material.color.setRGB(.018,.058,.21);material.metalness=.35;material.roughness=.38;}
         const practical=PRACTICALS.find(p=>p.test.test(material.name));
         if(!practical)continue;
-        material.color.setRGB(0,0,0);material.emissive.setRGB(...practical.color);material.emissiveIntensity=practical.strength;
+        material.color.setRGB(0,0,0);material.emissive.setRGB(...practical.color);material.emissiveIntensity=practical.strength;emitters.add(material);
         // The glass profile carries a narrow bright core; the coloured edges stay
         // saturated instead of tone-mapping the entire tube into lavender/white.
         if(practical.kind){
@@ -159,6 +196,8 @@ export function createGarageLook({renderer,scene,camera,compact=false}) {
     });
     const selected=selectNeonSources(sources,compact?12:20);
     surfaces.forEach((floor,material)=>addNeonSurfaceResponse(material,selected,neonLevel,{floor}));
+    const room=measureRoom(garage);
+    roomMaterials.forEach(material=>addBoxProjection(material,room));
     for(const source of selectNeonSources(sources,compact?4:8)) {
       const light=new THREE.PointLight(new THREE.Color(...source.color),source.sign?85:58,source.reach,2);
       light.position.copy(source.center);
@@ -168,19 +207,21 @@ export function createGarageLook({renderer,scene,camera,compact=false}) {
       light.name=source.sign?'Practical | Audi blue':'Practical | neon '+source.kind;
       practicalLights.add(light);dimmable.push({light,intensity:light.intensity,neon:true});
     }
-    scene.add(contactShadow());
+    shadowPlane=contactShadow();scene.add(shadowPlane);
+    finishCarMaterials(car);
     car.traverse(object=>{
       if(!object.isMesh)return;
       object.castShadow=!compact;object.receiveShadow=!compact;
       for(const material of [object.material].flat().filter(Boolean)) {
         if(!material.isMeshStandardMaterial)continue;
-        material.envMapIntensity=1.35;
-        if(/deep blue pearl|polished chrome|gloss black roof box|Imported Audi.*(?:paint|glass)/i.test(material.name)) {
-          carReflectionMaterials.add(material);
-          if(carProbe){material.envMap=carProbe.texture;material.needsUpdate=true;}
-        }
+        // Every finish mirrors the same captured room; the studio probe is only
+        // the fallback for devices that cannot render the capture.
+        carReflectionMaterials.add(material);
+        if(carProbe){material.envMap=carProbe.texture;material.needsUpdate=true;}
       }
     });
+    attached={car,garage};
+    refreshReflections();
     applyLevel(state.level);renderer.shadowMap.needsUpdate=true;
   }
   function applyLevel(level) {
@@ -188,12 +229,17 @@ export function createGarageLook({renderer,scene,camera,compact=false}) {
     // output remains steady, as with separate workshop and sign circuits.
     const normal=Math.min(level,1),boost=Math.max(0,level-1);
     neonLevel.value=THREE.MathUtils.lerp(.82,1,normal)+boost*.1;
-    hemisphere.intensity=THREE.MathUtils.lerp(.26,.8,normal)+boost*.65;
+    hemisphere.intensity=THREE.MathUtils.lerp(.18,.5,normal)+boost*.5;
     dimmable.forEach(({light,intensity,neon})=>{light.intensity=intensity*(neon?neonLevel.value:level);});
     ceilingMaterials.forEach(material=>{material.emissive.setRGB(.92,.96,1);material.emissiveIntensity=THREE.MathUtils.lerp(1.8,4,normal)+boost*4;});
     scene.environmentIntensity=THREE.MathUtils.lerp(.3,.65,normal)+boost*.45;
     // Explicit material probes do not inherit scene.environmentIntensity.
-    for(const material of carReflectionMaterials)material.envMapIntensity=carProbe?(THREE.MathUtils.lerp(.48,.94,normal)+boost*.48):1.35;
+    if(reflection) {
+      // Between captures the stored room is scaled to the requested brightness.
+      const gain=reflectionGain(level)/reflectionGain(reflectionLevel);
+      for(const material of carReflectionMaterials)material.envMapIntensity=CAR_REFLECTION*gain;
+      for(const material of roomMaterials)material.envMapIntensity=FLOOR_REFLECTION*gain;
+    } else for(const material of carReflectionMaterials)material.envMapIntensity=carProbe?(THREE.MathUtils.lerp(.48,.94,normal)+boost*.48):1.35;
   }
   function setLightLevel(value,instant=false) {
     state.from=state.level;state.level=THREE.MathUtils.clamp(value,.35,2);state.since=performance.now();state.instant=instant;
@@ -202,8 +248,9 @@ export function createGarageLook({renderer,scene,camera,compact=false}) {
   function render(now=performance.now()) {
     const t=state.instant?1:Math.min(1,(now-state.since)/180);
     applyLevel(THREE.MathUtils.lerp(state.from,state.level,t*t*(3-2*t)));
+    if(t>=1&&reflection&&Math.abs(reflectionLevel-state.level)>.01)refreshReflections();
     renderer.info.reset();renderer.render(scene,camera);return t<1;
   }
-  function dispose(){disposed=true;probe?.dispose();carProbe?.dispose();carReflectionMaterials.clear();base.traverse(object=>object.dispose?.());}
+  function dispose(){disposed=true;probe?.dispose();carProbe?.dispose();reflection?.dispose();carReflectionMaterials.clear();roomMaterials.clear();emitters.clear();base.traverse(object=>object.dispose?.());}
   return{attach,loadEnvironment,setSize(){},render,dispose,setLightLevel,get practicalLights(){return practicalLights;}};
 }

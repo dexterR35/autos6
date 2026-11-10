@@ -12,6 +12,10 @@ const EPSILON = 1e-7;
 const matrix = new THREE.Matrix4();
 const instance = new THREE.Matrix4();
 const vertex = new THREE.Vector3();
+function visibleInHierarchy(object) {
+  for (let parent = object; parent; parent = parent.parent) if (!parent.visible) return false;
+  return true;
+}
 
 /** Triangles of every mesh (instances expanded) in world space, plus their owner. */
 function* collect(roots) {
@@ -210,6 +214,9 @@ export class RayIndex {
         if (v < 0 || u + v > 1) continue;
         const t = (e2x * qx + e2y * qy + e2z * qz) * inverse;
         if (t > EPSILON && t < nearest) {
+          // Both tyre variants share one static index. Hidden alternatives must
+          // never receive clicks or occlude the active assembly's part marker.
+          if (!visibleInHierarchy(this.meshes[this.owners[order[i]]])) continue;
           nearest = t;
           hit = order[i];
           if (any) return { distance: t, object: this.meshes[this.owners[hit]] };

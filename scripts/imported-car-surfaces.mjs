@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { fairImportedCarPanels } from './imported-car-panels.mjs';
 
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const smoothstep = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
@@ -79,7 +80,12 @@ export async function prepareImportedCarSurfaces(document, sourceNode, options =
     if (roof && Math.max(r, g, blue) < 145) roofBoxTriangleMask[face] = 1;
     // Fill small grey highlight holes inside a blue patch, while retaining
     // chrome, white Audi lettering, red lamps and dark panel-gap texture.
-    neutralCandidates[face] = paintDomain(x, y, z) && blue > r * .92 && blue > g * .93 && Math.max(r, g, blue) < 185 && blue > 35 ? 1 : 0;
+    const az = Math.abs(z);
+    const panelInterior = (az > .73 && y < .91 && x > -2.12 && x < 2.05)
+      || (x > 1.03 && x < 2.21 && y > .76 && az < .73);
+    const lamp = x > 2.05 && y < .88 && az > .37;
+    neutralCandidates[face] = paintDomain(x, y, z) && panelInterior && !lamp
+      && blue > r * .88 && blue > g * .90 && blue > 32 ? 1 : 0;
     // Geometry cleanup must not inherit a binary material/colour boundary.
     // Pale photographed reflections on a panel belong to the same surface.
     geometryCandidates[face] = paintDomain(x, y, z) && blue > r * .79 && blue > g * .79 && Math.max(r, g, blue) > 24 ? 1 : 0;
@@ -104,13 +110,13 @@ export async function prepareImportedCarSurfaces(document, sourceNode, options =
     }
   }
   for (const edge of edgeMap.values()) if (edge.count !== 2) { pinned[edge.u] = 1; pinned[edge.v] = 1; }
-  // Two face-neighbour passes absorb isolated light texels without flooding
-  // through the trim into other materials on the one-piece source mesh.
-  for (let pass = 0; pass < 2; pass++) {
+  // Grow through neutral photographed highlights inside known body panels.
+  // Window surrounds, lamps and dark panel gaps cannot join the paint region.
+  for (let pass = 0; pass < 8; pass++) {
     const additions = [];
     for (let face = 0; face < faceCount; face++) if (!paintTriangleMask[face] && neutralCandidates[face]) {
       let neighbours = 0;for (const other of faceNeighbours[face]) neighbours += paintTriangleMask[other];
-      if (neighbours >= 2) additions.push(face);
+      if (neighbours >= (pass < 2 ? 2 : 1)) additions.push(face);
     }
     for (const face of additions) paintTriangleMask[face] = 1;
   }
@@ -166,6 +172,7 @@ export async function prepareImportedCarSurfaces(document, sourceNode, options =
     }
     current.set(next);
   }
+  const panelFairing = fairImportedCarPanels(current, initial, projectionNormals, weight, pinned, maxDisplacement);
   let movedVertices = 0, maxMoved = 0, sumMoved = 0, pinnedActive = 0;
   for (const id of active) {
     if (pinned[id]) pinnedActive++;
@@ -185,7 +192,7 @@ export async function prepareImportedCarSurfaces(document, sourceNode, options =
   }
   for (let id = 0; id < groupCount; id++) normalize(smoothNormals, id * 3);
   const filtered = new Float64Array(smoothNormals);
-  for (let pass = 0; pass < 4; pass++) {
+  for (let pass = 0; pass < 8; pass++) {
     filtered.set(smoothNormals);
     for (const id of active) {
       const offset = id * 3;let x = smoothNormals[offset] * 60, y = smoothNormals[offset + 1] * 60, z = smoothNormals[offset + 2] * 60;
@@ -198,6 +205,12 @@ export async function prepareImportedCarSurfaces(document, sourceNode, options =
     smoothNormals.set(filtered);
   }
   let normalsChanged = 0;
+  for (const id of active) {
+    const blend = panelFairing.normalWeights[id], offset = id * 3;
+    if (!blend) continue;
+    for (let axis = 0; axis < 3; axis++) smoothNormals[offset + axis] = smoothNormals[offset + axis] * (1 - blend) + panelFairing.normalTargets[offset + axis] * blend;
+    normalize(smoothNormals, offset);
+  }
   for (const id of active) for (const vertex of groups[id]) {
     const offset = vertex * 3, s = id * 3, dot = normals[offset] * smoothNormals[s] + normals[offset + 1] * smoothNormals[s + 1] + normals[offset + 2] * smoothNormals[s + 2];
     if (dot < .60) continue; // Retain a true corner's own side of its split normal.
@@ -214,10 +227,10 @@ export async function prepareImportedCarSurfaces(document, sourceNode, options =
   return { paintTriangleMask, roofBoxTriangleMask, denoiseTriangleMask, stats: {
     sourceTriangles: faceCount, sourceVertices: vertexCount, weldedVertices: groupCount,
     paintTriangles: paintTriangleMask.reduce((sum, v) => sum + v, 0), roofBoxTriangles: roofBoxTriangleMask.reduce((sum, v) => sum + v, 0),
-    denoiseTriangles: denoiseTriangleMask.reduce((sum, v) => sum + v, 0), geometryDilationRings: 4,
+    denoiseTriangles: denoiseTriangleMask.reduce((sum, v) => sum + v, 0), geometryDilationRings: 4, paintHighlightRings: 8,
     smoothingGroups: active.length, pinnedGroups: pinnedActive, movedGroups: movedVertices,
     maxMovementMetres: maxMoved, meanMovementMetres: sumMoved / (active.length || 1), normalsUpdated: normalsChanged,
-    iterations, maximumAllowedMovementMetres: maxDisplacement, originalDegenerateFaces: degenerate,
+    iterations, maximumAllowedMovementMetres: maxDisplacement, originalDegenerateFaces: degenerate, panelFairing: panelFairing.report,
     method: 'Four-ring paint-region growth, two-ring normal-direction denoising; welded UV seams; hard-edge/boundary pins; area-weighted filtered normals',
   } };
 }

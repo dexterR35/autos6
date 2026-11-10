@@ -21,6 +21,22 @@ function scene() {
 }
 
 describe('RayIndex', () => {
+  it('ignores a hidden tyre alternative and hidden parents without rebuilding the index', () => {
+    const root = new THREE.Group(), group = new THREE.Group();
+    const front = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    const back = new THREE.Mesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial());
+    front.position.z = 1; group.add(front); root.add(group, back);
+    const index = new RayIndex([root]);
+    const ray = new THREE.Ray(new THREE.Vector3(0, 0, 5), new THREE.Vector3(0, 0, -1));
+    expect(index.intersect(ray).object).toBe(front);
+    front.visible = false;
+    expect(index.intersect(ray).object).toBe(back);
+    expect(index.intersect(ray, 4, true)).toBeNull();
+    front.visible = true; group.visible = false;
+    expect(index.intersect(ray).object).toBe(back);
+    group.visible = true;
+    expect(index.intersect(ray).object).toBe(front);
+  });
   it('restores a worker-built index without losing mesh ownership or query results', () => {
     const root = scene();
     const index = new RayIndex([root]);

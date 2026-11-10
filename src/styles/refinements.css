@@ -207,3 +207,7 @@
   .header-actions .btn--donate { width: 42px; padding: 10px; }
   .header-actions .btn--donate span { display: none; }
 }
+@media (max-width:380px) {
+  .three-toolbar { gap: 0; max-width: calc(100% - 8px); }
+  .three-toolbar button, .three-toolbar button.three-toolbar__lights { width: 44px; min-width: 44px; height: 44px; padding: 0; }
+}

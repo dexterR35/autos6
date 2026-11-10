@@ -1,0 +1,15 @@
+{
+  "checks": [
+    "Bronze rims, yellow calipers and track tyres change the real WebGL image",
+    "Configuration survives a page reload",
+    "Reset restores road tyres and the original finishes",
+    "Mobile colour and tyre controls fit and respond",
+    "All seven controls fit a 320px phone with 44px touch targets"
+  ],
+  "runtimeErrors": [],
+  "screenshots": [
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\car-refinement\\imported-v3\\wheel-check\\desktop-customization.png",
+    "C:\\Users\\Dexter\\Desktop\\projects\\autos6\\output\\car-refinement\\imported-v3\\wheel-check\\mobile-customization.png"
+  ],
+  "passed": true
+}

@@ -1,0 +1,538 @@
+{
+  "release": "imported-v4",
+  "url": "/car-releases/imported-v4/s6-c5.glb",
+  "source": {
+    "file": "User-provided model.glb; full-detail normalized copy",
+    "sha256": "558a4f8e151a0db1a90324b3eb56e5befe799de4f6c4f0a4e90ec256e776b21a",
+    "colourAtlasSha256": "f183f6a261ef9b20cc1c81d8d4143ba91437547506ad5b54e6fb5781409399a4"
+  },
+  "coordinates": {
+    "unit": "metres",
+    "up": "+Y",
+    "vehicleNose": "+X",
+    "driverSide": "+Z",
+    "ground": 0
+  },
+  "car": {
+    "file": "/car-releases/imported-v4/s6-c5.glb",
+    "bytes": 8181636,
+    "sha256": "686dba1dfd930267defb8e7b189c87e006a33cf216c7ccd5af1afa547d459c4b",
+    "meshes": 37,
+    "drawCalls": 87,
+    "triangles": 530488,
+    "bounds": {
+      "min": [
+        -2.4556917206180993,
+        0,
+        -1.0360230366482335
+      ],
+      "max": [
+        2.456489564450793,
+        1.849983633150277,
+        1.0360230366482335
+      ]
+    },
+    "parts": [
+      "body",
+      "brake-kit",
+      "exhaust",
+      "front-bumper",
+      "hood",
+      "rear-bumper",
+      "roof-box",
+      "side-skirts",
+      "wheels"
+    ],
+    "compression": "Meshopt medium; 16-bit positions, 14-bit normals, 16-bit UVs"
+  },
+  "anchors": {
+    "roof-box": [
+      {
+        "position": [
+          -0.6014089433073204,
+          1.8406685590744019,
+          0.004324499277604951
+        ],
+        "normal": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "position": [
+          -0.49764203954911834,
+          1.5788445870081584,
+          0.36957222647137117
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "position": [
+          -0.46053769040903814,
+          1.6535920699437459,
+          -0.5495880370669896
+        ],
+        "normal": [
+          0,
+          0,
+          -1
+        ]
+      }
+    ],
+    "hood": [
+      {
+        "position": [
+          1.7396130979858084,
+          0.8306390444437662,
+          -0.0008895213467379411
+        ],
+        "normal": [
+          0,
+          1,
+          0
+        ]
+      }
+    ],
+    "front-bumper": [
+      {
+        "position": [
+          2.3974242293102868,
+          0.45257248481114704,
+          0.40529850562413533
+        ],
+        "normal": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "position": [
+          2.3998369145753893,
+          0.453765869140625,
+          -0.41184016784032185
+        ],
+        "normal": [
+          1,
+          0,
+          0
+        ]
+      }
+    ],
+    "wheels": [
+      {
+        "position": [
+          1.4,
+          0.323,
+          0.915
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "position": [
+          1.4,
+          0.323,
+          -0.915
+        ],
+        "normal": [
+          0,
+          0,
+          -1
+        ]
+      }
+    ],
+    "brake-kit": [
+      {
+        "position": [
+          -1.496,
+          0.338,
+          0.8765
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "position": [
+          -1.496,
+          0.338,
+          -0.8765
+        ],
+        "normal": [
+          0,
+          0,
+          -1
+        ]
+      }
+    ],
+    "side-skirts": [
+      {
+        "position": [
+          -0.006059258252281541,
+          0.264527161916097,
+          0.8865520371331109
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "position": [
+          -0.009585715602084155,
+          0.2666354676087697,
+          -0.9009284151924981
+        ],
+        "normal": [
+          0,
+          0,
+          -1
+        ]
+      }
+    ],
+    "rear-bumper": [
+      {
+        "position": [
+          -2.4295463202051173,
+          0.500530610481898,
+          0.38396860970391167
+        ],
+        "normal": [
+          -1,
+          0,
+          0
+        ]
+      },
+      {
+        "position": [
+          -2.4308911345348654,
+          0.492567777633667,
+          -0.3865588532553779
+        ],
+        "normal": [
+          -1,
+          0,
+          0
+        ]
+      }
+    ],
+    "exhaust": [
+      {
+        "position": [
+          -2.347834728930368,
+          0.25860129793485004,
+          0.5856326738993327
+        ],
+        "normal": [
+          -1,
+          0,
+          0
+        ]
+      },
+      {
+        "position": [
+          -2.3517704714459255,
+          0.2652379771073659,
+          -0.5896984974543253
+        ],
+        "normal": [
+          -1,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  "glazing": {
+    "panes": 8,
+    "triangles": 3164
+  },
+  "partition": {
+    "parts": {
+      "body": 534634,
+      "brake-kit": 244,
+      "exhaust": 9741,
+      "front-bumper": 66701,
+      "hood": 14644,
+      "rear-bumper": 39131,
+      "roof-box": 61569,
+      "side-skirts": 21398,
+      "wheels": 176380
+    },
+    "sourceTriangles": 924442,
+    "classification": "Spatial surface envelopes, with original red caliper texels restricted to wheel discs"
+  },
+  "surfaceCleanup": {
+    "sourceTriangles": 924442,
+    "sourceVertices": 504352,
+    "weldedVertices": 462000,
+    "paintTriangles": 180326,
+    "roofBoxTriangles": 61286,
+    "denoiseTriangles": 191807,
+    "geometryDilationRings": 4,
+    "paintHighlightRings": 8,
+    "smoothingGroups": 126005,
+    "pinnedGroups": 7480,
+    "movedGroups": 118483,
+    "maxMovementMetres": 0.01622922105423059,
+    "meanMovementMetres": 0.0027518438797435327,
+    "normalsUpdated": 134029,
+    "iterations": 26,
+    "maximumAllowedMovementMetres": 0.018,
+    "originalDegenerateFaces": 0,
+    "panelFairing": [
+      {
+        "panel": "bonnet crown",
+        "samples": 4514,
+        "moved": 4455,
+        "maximumProjectionMetres": 0.007843186182028616
+      },
+      {
+        "panel": "right door skin",
+        "samples": 3021,
+        "moved": 2902,
+        "maximumProjectionMetres": 0.014
+      },
+      {
+        "panel": "left door skin",
+        "samples": 3127,
+        "moved": 3016,
+        "maximumProjectionMetres": 0.013507018542510463
+      }
+    ],
+    "method": "Four-ring paint-region growth, two-ring normal-direction denoising; welded UV seams; hard-edge/boundary pins; area-weighted filtered normals"
+  },
+  "paint": {
+    "paintTrianglesBefore": 180326,
+    "paintTrianglesAfter": 721304,
+    "addedTriangles": 540978,
+    "trimTriangles": 694579,
+    "totalSourceTriangles": 874905,
+    "curvedEdges": 264010,
+    "linearEdges": 12882,
+    "maxEdgeDisplacement": 0.003,
+    "canonicalVertices": 437393,
+    "positionWeldTolerance": 0.00001,
+    "edgeCorrectionLimit": 0.003,
+    "partPaintTriangles": {
+      "body": 460540,
+      "exhaust": 2532,
+      "front-bumper": 48284,
+      "hood": 48340,
+      "rear-bumper": 67092,
+      "side-skirts": 53248,
+      "wheels": 41268
+    }
+  },
+  "roofbox": {
+    "meshes": 5,
+    "removedTriangles": 61569,
+    "triangles": 22912,
+    "shape": {
+      "centerX": -0.743,
+      "centerZ": 0,
+      "halfLength": 1.055,
+      "halfWidth": 0.54,
+      "seamY": 1.545,
+      "lidHeight": 0.305,
+      "baseDepth": 0.05,
+      "planExponent": 3,
+      "sectionExponent": 2.8,
+      "longitudeSegments": 128,
+      "latitudeSegments": 48
+    },
+    "finish": "Smooth untextured black PBR shell with clearcoat; separate lid seam, clamps, latches and chrome rings"
+  },
+  "materials": {
+    "paint": {
+      "color": [
+        0.01,
+        0.036,
+        0.155,
+        1
+      ],
+      "metalness": 0.74,
+      "roughness": 0.28,
+      "coatRoughness": 0.03
+    },
+    "componentTriangles": {
+      "trim": 318817,
+      "lens": 9217,
+      "rearGlass": 23654,
+      "chrome": 9950,
+      "cabin": 186688,
+      "brake": 244,
+      "alloy": 55159,
+      "rubber": 78818
+    },
+    "finishes": [
+      "pearl clearcoat paint",
+      "tyre rubber",
+      "graphite alloy",
+      "polished chrome",
+      "lamp lenses",
+      "caliper enamel",
+      "cabin polymer",
+      "privacy glass",
+      "gloss black roof box"
+    ]
+  },
+  "topology": {
+    "trianglesBefore": 1239986,
+    "trianglesAfter": 530488,
+    "duplicateFaces": 0,
+    "degenerateFaces": 0,
+    "simplifiedFaces": 796560,
+    "finalDegenerateFaces": 18,
+    "finalDuplicateFaces": 104,
+    "relativeErrorLimit": 0.00025,
+    "lockedBorders": true,
+    "groups": {
+      "Imported Audi | deep blue pearl paint": {
+        "before": 716355,
+        "after": 157747
+      },
+      "Imported Audi | detailed trim": {
+        "before": 298194,
+        "after": 173580
+      },
+      "Imported Audi | polished chrome trim": {
+        "before": 9950,
+        "after": 6086
+      },
+      "Imported Audi | cabin and black grille polymer": {
+        "before": 154602,
+        "after": 52560
+      },
+      "Imported Audi | tyre rubber": {
+        "before": 1938,
+        "after": 1124
+      },
+      "Imported Audi | gloss black roof box": {
+        "before": 12032,
+        "after": 5414
+      }
+    },
+    "importedBodyTriangles": 443304,
+    "modularTriangles": 87184
+  },
+  "modularWheels": {
+    "blend": "output\\car-refinement\\imported-v3\\audi_s6_modular.blend",
+    "partsGlb": "output\\car-refinement\\imported-v3\\modular-wheels.glb",
+    "corners": [
+      "FL",
+      "FR",
+      "RL",
+      "RR"
+    ],
+    "objects": 96,
+    "components": [
+      "backing-plate",
+      "brake-disc",
+      "brake-pad",
+      "caliper",
+      "centre-badge",
+      "centre-cap",
+      "pad-backing-plate",
+      "rim",
+      "rim-lip",
+      "rotor-hat",
+      "tyre",
+      "wheel-hardware"
+    ],
+    "tyreVariants": [
+      "road",
+      "track"
+    ],
+    "axles": {
+      "front": 1.4,
+      "rear": -1.359
+    },
+    "tyreRadius": 0.323,
+    "tyreWidth": 0.262,
+    "colourMaterials": {
+      "rim": "S6.Modular.RimPaint | change wheel colour",
+      "caliper": "S6.Modular.CaliperPaint | change brake colour"
+    },
+    "source": "Constructed in Blender from lathed profiles, bevelled solids and boolean-drilled rotors",
+    "removedImportedGeometry": {
+      "removedTriangles": 189941,
+      "parts": {
+        "body": 20623,
+        "brake-kit": 244,
+        "wheels": 169074
+      },
+      "cutRadiusMetres": 0.334
+    },
+    "batching": {
+      "separateBlenderObjects": 96,
+      "webComponentMeshes": 52
+    }
+  },
+  "calibration": {
+    "source": {
+      "length": 4.797,
+      "bodyWidth": 1.875,
+      "rearAxle": -1.376,
+      "frontAxle": 1.351,
+      "wheelCentreY": 0.323,
+      "wheelRadiusX": 0.385,
+      "wheelRadiusY": 0.323
+    },
+    "target": {
+      "length": 4.913,
+      "bodyWidth": 1.85,
+      "rearAxle": -1.359,
+      "frontAxle": 1.4,
+      "wheelbase": 2.759
+    },
+    "dimensionSource": "https://www.audiworld.com/model/s6/03/03s6avant.pdf",
+    "notes": [
+      "Length and wheelbase follow the 2003 Audi S6 Avant North American technical sheet.",
+      "Body-width measurement excludes the oversized mirrors of the generated source model.",
+      "Source tyre faces are approximately 0.77 m wide by 0.646 m high; local X correction restores circularity.",
+      "Roof-box height and tyre grounding are preserved; this remains a reference-guided visual reconstruction."
+    ],
+    "zScale": 0.9866666666666667,
+    "vertices": 914112,
+    "bounds": {
+      "min": [
+        -2.4556889803862165,
+        0,
+        -1.0359999529520671
+      ],
+      "max": [
+        2.4564999653727457,
+        1.850000023841858,
+        1.0359999529520671
+      ],
+      "size": [
+        4.912188945758962,
+        1.850000023841858,
+        2.0719999059041343
+      ]
+    }
+  },
+  "garageSha256": "6b6dc1426438c1428d99ff4d8d6d93358ce1ce9a95a4c493211173cdff028766",
+  "notes": [
+    "Uploaded car body retained; running gear reconstructed as editable Blender parts.",
+    "Original colour texture and source files preserved.",
+    "Geometry calibrated locally around wheels; no blanket horizontal stretch.",
+    "Untextured pearl paint with physical clearcoat; separate rubber, alloy, chrome, lamp and cabin finishes.",
+    "Built from the full-detail upload; duplicate and zero-area faces removed; one bounded simplification with locked borders.",
+    "Tailgate window released as opaque privacy glass; side panes sit 9 mm behind the aperture lips.",
+    "Separate road/track tyres, rims, drilled discs, calipers, pads and backing plates."
+  ]
+}

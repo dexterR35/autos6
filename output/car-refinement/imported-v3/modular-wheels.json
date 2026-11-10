@@ -1,0 +1,40 @@
+{
+  "blend": "output\\car-refinement\\imported-v3\\audi_s6_modular.blend",
+  "partsGlb": "output\\car-refinement\\imported-v3\\modular-wheels.glb",
+  "corners": [
+    "FL",
+    "FR",
+    "RL",
+    "RR"
+  ],
+  "objects": 96,
+  "components": [
+    "backing-plate",
+    "brake-disc",
+    "brake-pad",
+    "caliper",
+    "centre-badge",
+    "centre-cap",
+    "pad-backing-plate",
+    "rim",
+    "rim-lip",
+    "rotor-hat",
+    "tyre",
+    "wheel-hardware"
+  ],
+  "tyreVariants": [
+    "road",
+    "track"
+  ],
+  "axles": {
+    "front": 1.4,
+    "rear": -1.359
+  },
+  "tyreRadius": 0.323,
+  "tyreWidth": 0.262,
+  "colourMaterials": {
+    "rim": "S6.Modular.RimPaint | change wheel colour",
+    "caliper": "S6.Modular.CaliperPaint | change brake colour"
+  },
+  "source": "Constructed in Blender from lathed profiles, bevelled solids and boolean-drilled rotors"
+}

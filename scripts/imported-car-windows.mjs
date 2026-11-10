@@ -43,8 +43,8 @@ export const IMPORTED_GLASS_PANES = [
     centerBow: [-.018, .006, 0],
   },
   ...side.flatMap((pane) => [
-    { ...pane, name: `left ${pane.name}`, crown: .009, normal: [0, .43, .90], columns: 16, rows: 10 },
-    { ...pane, name: `right ${pane.name}`, corners: pane.corners.map(mirror), crown: .009, normal: [0, .43, -.90], columns: 16, rows: 10 },
+    { ...pane, name: `left ${pane.name}`, crown: .009, inset: .009, normal: [0, .43, .90], columns: 16, rows: 10 },
+    { ...pane, name: `right ${pane.name}`, corners: pane.corners.map(mirror), crown: .009, inset: .009, normal: [0, .43, -.90], columns: 16, rows: 10 },
   ]),
 ];
 
@@ -60,6 +60,9 @@ function paneGeometry(pane) {
     if (pane.centerBow) p = add(p, scale(pane.centerBow, Math.sin(Math.PI * u)));
     return p;
   }
+  // Sit just behind the aperture lips so pillars and seals overlap the pane
+  // edge; a pane level with the body skin shows through thin frame geometry.
+  const inset = scale(outward, -(pane.inset ?? 0));
   const positions = [], normals = [], indices = [];
   for (let row = 0; row <= rows; row++) for (let column = 0; column <= columns; column++) {
     const u = column / columns, v = row / rows;
@@ -67,7 +70,7 @@ function paneGeometry(pane) {
     const pv = subtract(point(u, Math.min(1, v + 1e-4)), point(u, Math.max(0, v - 1e-4)));
     let normal = normalize(cross(pu, pv));
     if (dot(normal, outward) < 0) normal = scale(normal, -1);
-    positions.push(...point(u, v));
+    positions.push(...add(point(u, v), inset));
     normals.push(...normal);
   }
   for (let row = 0; row < rows; row++) for (let column = 0; column < columns; column++) {

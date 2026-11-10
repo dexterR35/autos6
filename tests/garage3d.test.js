@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { CAR_TARGET, cameraPreset, findMeshPart, partAnchors3D } from '../src/lib/garage3d.js';
 import { availableViews } from '../src/data/views.js';
 import { demoParts } from '../src/data/demoProject.js';
-import carRelease from '../public/car-releases/imported-v3/manifest.json';
+import carRelease from '../public/car-releases/imported-v4/manifest.json';
 
 const distance = ({ position, target }) => Math.hypot(...position.map((value, index) => value - target[index]));
 
