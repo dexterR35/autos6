@@ -14,6 +14,8 @@ import { createGarageSupportersBoard, SUPPORTER_WALL, supporterWallCamera } from
 import GarageSupportersDialog from './GarageSupportersDialog.jsx';
 import WheelSetupPanel from './WheelSetupPanel.jsx';
 import { applyWheelSetup, readWheelSetup, saveWheelSetup } from '../lib/wheelSetup.js';
+import { createInstalledParts, installedKey, installedPartList } from '../lib/installedParts.js';
+import { safeMediaUrl } from '../lib/safeMedia.js';
 
 const ANCHORS = partAnchors3D();
 const MODEL_URLS = [modelUrl('s6-c5.glb'), modelUrl('garage.glb')];
@@ -123,6 +125,8 @@ export default function ThreeCarViewer({
     let lastFrameTime = 0;
     const occluders = [];
     let rayIndex = null;
+    let installed = null;
+    let installedSync = Promise.resolve();
     const cleanups = [];
     const abortController = new AbortController();
     const bootStarted = performance.now();
@@ -475,6 +479,20 @@ export default function ThreeCarViewer({
           requestFrame();
         },
         setLightLevel: (level) => { look.setLightLevel(level / 100, reducedMotion); requestFrame(); },
+        // Swap installed parts' models onto the car, then rebuild picking for the new meshes.
+        syncInstalled: (list) => {
+          installedSync = installedSync.then(async () => {
+            if (disposed || !installed) return;
+            const changed = await installed.sync(list.filter((p) => safeMediaUrl(p.url)), abortController.signal);
+            if (!changed || disposed) return;
+            renderer.shadowMap.needsUpdate = true;
+            scene.updateMatrixWorld(true);
+            requestFrame();
+            try { rayIndex = await RayIndex.create(occluders, { signal: abortController.signal }); } catch { /* keep the old index */ }
+            requestFrame();
+          }).catch(() => {});
+          return installedSync;
+        },
         setWheelSetup: (setup) => {
           applyWheelSetup(car, setup);
           renderer.shadowMap.needsUpdate = true;
@@ -530,6 +548,12 @@ export default function ThreeCarViewer({
       rayIndex = preparedIndex;
       if (disposed || failed) return;
       sceneReady = true;
+      installed = createInstalledParts({
+        car,
+        load: (url) => loadGlb(url, loader, abortController.signal, () => {}),
+        dispose: disposeObject,
+      });
+      runtimeRef.current?.syncInstalled(installedPartList(propsRef.current.partsById));
       stage.dataset.readyMs = String(Math.round(performance.now() - bootStarted));
       setStatus({ state: 'ready', progress: 100 });
       propsRef.current.onViewError?.(null);
@@ -550,6 +574,7 @@ export default function ThreeCarViewer({
       cleanups.forEach((cleanup) => cleanup());
       controls?.dispose();
       disposeObject(scene);
+      installed?.dispose();
       look?.dispose();
       renderer?.dispose();
       renderer?.domElement.remove();
@@ -561,6 +586,10 @@ export default function ThreeCarViewer({
   useEffect(() => { runtimeRef.current?.setLightLevel(lightLevel); }, [lightLevel, attempt]);
   useEffect(() => { runtimeRef.current?.updateSupporters(supporters); }, [supporters]);
   useEffect(() => { runtimeRef.current?.setWheelSetup(wheelSetup); saveWheelSetup(wheelSetup); }, [wheelSetup]);
+  const installedParts = installedPartList(partsById);
+  const installedSignature = installedKey(installedParts);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { runtimeRef.current?.syncInstalled?.(installedParts); }, [installedSignature, status.state]);
   useEffect(() => { runtimeRef.current?.invalidate(); }, [selectedPartId, visiblePartIds, hoveredPartId, status.state, reservedRefs, overlayRefs, lightingOpen, wheelSetupOpen]);
 
   useEffect(() => {

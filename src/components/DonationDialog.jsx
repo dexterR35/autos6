@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Lock } from 'lucide-react';
+import { Lock, Repeat } from 'lucide-react';
 import Modal from './Modal.jsx';
 import DemoBadge from './DemoBadge.jsx';
-import { DONATION_PRESETS_CENTS, formatCents, parseDollarsToCents, validateAmountCents } from '../lib/money.js';
+import { DONATION_PRESETS_CENTS, formatCents, minimumCentsFor, parseDollarsToCents, validateAmountCents } from '../lib/money.js';
 import { createCheckout, newAttemptId } from '../lib/donations.js';
 import { track, trackBeginCheckout } from '../lib/analytics.js';
 import { useGarageState } from '../hooks/useGarageState.jsx';
@@ -11,6 +11,7 @@ import { Link } from 'react-router-dom';
 import AmountPicker from './AmountPicker.jsx';
 import FundMeter from './FundMeter.jsx';
 import { POLICY_VERSION } from '../lib/policies.js';
+import { isOpen, remainingCents } from '../lib/parts.js';
 
 const NAME_MAX = 40;
 // 1500 → "15", 1550 → "15.50": the text a visitor would type into the custom field.
@@ -18,22 +19,32 @@ const centsToInput = (cents) => (cents % 100 ? (cents / 100).toFixed(2) : String
 
 export default function DonationDialog() {
   const { donationOpen, closeDonation, draft, setDraft } = useGarageState();
-  const { project, parts, isDemo, status } = useProjectData();
+  const { project, parts, isDemo, status, refreshSummary } = useProjectData();
   const currency = project.currency ?? 'usd';
   const [custom, setCustom] = useState(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [demoDone, setDemoDone] = useState(false);
+  const [notify, setNotify] = useState(false);
+  const monthly = draft.monthly === true;
   const attemptId = useRef(null);
   const submittedPayload = useRef(null);
 
   const isPreset = DONATION_PRESETS_CENTS.includes(draft.amountCents);
   const customCents = custom !== null ? parseDollarsToCents(custom) : null;
   const amountCents = custom !== null ? customCents : draft.amountCents;
-  const amountError = custom !== null && customCents === null ? 'Enter an amount like 15 or 15.50.' : validateAmountCents(amountCents);
-  const part = parts.find((p) => p.id === draft.partId) ?? null;
-  const fundable = useMemo(() => parts.filter((p) => p.status !== 'bought' || p.id === draft.partId), [parts, draft.partId]);
+  const selected = parts.find((p) => p.id === draft.partId) ?? null;
+  // Only parts still open for funding can be chosen; a closed part falls back to the general fund.
+  const part = selected && isOpen(selected) ? selected : null;
+  const closedPart = selected && !part ? selected : null;
+  const fundable = useMemo(() => parts.filter(isOpen), [parts]);
+  const left = part ? remainingCents(part) : null;
+  // A part never takes more than what is left of its goal (at least $1, to finish it off).
+  // Monthly support has no cap: once the part is funded, later months go to the general fund.
+  const partCap = left != null && !monthly ? Math.max(left, minimumCentsFor(currency)) : null;
+  const baseError = custom !== null && customCents === null ? 'Enter an amount like 15 or 15.50.' : validateAmountCents(amountCents, { currency });
+  const amountError = baseError ?? (partCap != null && amountCents > partCap ? `Only ${formatCents(left, currency, { compact: false })} is left on ${part.name}.` : null);
 
   useEffect(() => {
     if (!donationOpen) return;
@@ -41,6 +52,7 @@ export default function DonationDialog() {
     attemptId.current = newAttemptId();
     submittedPayload.current = null;
     setTermsAccepted(false);
+    setNotify(false);
     setError(null);
     setSubmitting(false);
     setDemoDone(false);
@@ -61,7 +73,7 @@ export default function DonationDialog() {
     setDraft({ amountCents, customAmount: custom !== null });
     if (isDemo) {
       // Not a real checkout: keep it out of GA4 ecommerce reports.
-      track('donation_demo_preview', { value: amountCents / 100, currency: currency.toUpperCase(), part_id: part?.id ?? null });
+      track('donation_demo_preview', { value: amountCents / 100, currency: currency.toUpperCase(), part_id: part?.id ?? null, monthly });
       setDemoDone(true);
       return;
     }
@@ -69,23 +81,29 @@ export default function DonationDialog() {
     setSubmitting(true);
     setError(null);
     try {
-      const fingerprint = JSON.stringify([draft.partId, amountCents, draft.displayName.trim(), draft.isPublic]);
+      const fingerprint = JSON.stringify([part?.id ?? null, amountCents, draft.displayName.trim(), draft.isPublic, monthly, notify]);
       if (submittedPayload.current && submittedPayload.current !== fingerprint) attemptId.current = newAttemptId();
       submittedPayload.current = fingerprint;
       const { url } = await createCheckout({
         projectSlug: project.slug,
-        partId: draft.partId,
+        partId: part?.id ?? null,
         amountCents,
         displayName: draft.displayName.trim(),
         isPublic: draft.isPublic,
         attemptId: attemptId.current,
         termsAccepted,
         termsVersion: POLICY_VERSION,
+        recurring: monthly,
+        notifyUpdates: notify,
       });
       window.location.assign(url);
     } catch (err) {
-      setError(err.message);
+      setError(err.code === 'amount_exceeds_remaining' && err.remainingCents != null
+        ? `Only ${formatCents(err.remainingCents, currency, { compact: false })} is left on this part. Lower the amount, or give the rest to the general fund.`
+        : err.message);
       setSubmitting(false);
+      // The part filled up (or closed) while the dialog was open: show the new numbers.
+      if (err.code === 'part_closed' || err.code === 'amount_exceeds_remaining') refreshSummary?.();
     }
   };
 
@@ -99,7 +117,7 @@ export default function DonationDialog() {
           <DemoBadge>Demo mode</DemoBadge>
           <h3>No payment was taken</h3>
           <p className="muted">
-            Live checkout would open Stripe for <strong>{formatCents(amountCents, currency)}</strong>
+            Live checkout would open Stripe for <strong>{formatCents(amountCents, currency)}{monthly ? ' every month' : ''}</strong>
             {part ? <> toward <strong>{part.name}</strong></> : <> to the general fund</>}.
           </p>
           <div className="dialog-actions">
@@ -112,20 +130,33 @@ export default function DonationDialog() {
           {isDemo && <p className="form-note">Demo mode: no payment is taken.</p>}
           {liveUnavailable && <p className="form-note form-note--warn" role="alert">{!legalReady ? 'Donations open soon.' : 'Donations are unavailable right now.'}</p>}
 
+          <div className="freq-toggle" role="group" aria-label="How often">
+            <button type="button" aria-pressed={!monthly} onClick={() => setDraft({ monthly: false })}>One time</button>
+            <button type="button" aria-pressed={monthly} onClick={() => setDraft({ monthly: true })}><Repeat aria-hidden="true" /> Monthly</button>
+          </div>
+
           <fieldset>
-            <legend className="form-label">Amount</legend>
+            <legend className="form-label">Amount{monthly ? ' per month' : ''}</legend>
             <AmountPicker amountCents={draft.amountCents} currency={currency} custom={custom} onCustom={(value) => { setCustom(value); setError(null); }} onChange={(value) => { setCustom(null); setDraft({ amountCents: value, customAmount: false }); setError(null); }} />
             {custom !== null && amountError && <p id="amount-help" className="fine is-error">{amountError}</p>}
+            {custom === null && amountError && partCap != null && <p className="fine is-error">{amountError}</p>}
+            {!monthly && part && left > 0 && amountCents !== left && left >= minimumCentsFor(currency) && (
+              <button type="button" className="btn btn--ghost btn--sm fund-rest" onClick={() => { setCustom(centsToInput(left)); setError(null); }}>
+                Complete this part: {formatCents(left, currency, { compact: false })}
+              </button>
+            )}
           </fieldset>
 
           <label className="field">
             <span>For</span>
-            <select value={draft.partId ?? ''} onChange={(e) => setDraft({ partId: e.target.value || null })}>
+            <select value={part?.id ?? ''} onChange={(e) => setDraft({ partId: e.target.value || null })}>
               <option value="">General fund</option>
               {fundable.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
           </label>
           {part && <FundMeter label={part.name} raisedCents={part.raisedCents} goalCents={part.estimateCents} currency={currency} />}
+          {monthly && <p className="fine">{part ? `Charged monthly toward ${part.name}; once it is fully funded, later months go to the general fund.` : 'Charged monthly to the general fund.'} Cancel any time from the link on your confirmation page or in your Stripe receipt.</p>}
+          {closedPart && <p className="form-note" role="status">{closedPart.name} is already fully funded, so this contribution goes to the general fund.</p>}
 
           <label className="field">
             <span>Display name (optional)</span>
@@ -134,6 +165,10 @@ export default function DonationDialog() {
           <label className="check">
             <input type="checkbox" checked={draft.isPublic} onChange={(e) => setDraft({ isPublic: e.target.checked })} />
             <span>Show me on the supporter wall</span>
+          </label>
+          <label className="check">
+            <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
+            <span>Email me when {part ? `the ${part.name} is bought and fitted` : 'there are build updates'} (unsubscribe any time)</span>
           </label>
           <label className="check consent-check">
             <input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} />
@@ -148,7 +183,7 @@ export default function DonationDialog() {
               {!isDemo && <Lock aria-hidden="true" />}
               {submitting
                 ? 'Opening checkout…'
-                : `${isDemo ? 'Preview' : 'Donate'}${amountCents && !amountError ? ` ${formatCents(amountCents, currency)}` : ''}`}
+                : `${isDemo ? 'Preview' : monthly ? 'Give' : 'Donate'}${amountCents && !amountError ? ` ${formatCents(amountCents, currency)}${monthly ? '/month' : ''}` : ''}`}
             </button>
           </div>
           <p className="form-footnote">Secure Stripe checkout · A contribution, not a parts purchase · Not tax-deductible</p>

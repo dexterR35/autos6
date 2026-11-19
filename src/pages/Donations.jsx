@@ -1,3 +1,4 @@
+import { STRIPE_PORTAL_LOGIN_URL } from '../lib/config.js';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CircleCheck, Heart, Lock, Wrench } from 'lucide-react';
@@ -37,6 +38,9 @@ export default function Donations() {
           <button type="button" className="btn btn--donate btn--lg" onClick={() => openDonation()}>
             <Heart aria-hidden="true" fill="currentColor" /> Donate now
           </button>
+          {STRIPE_PORTAL_LOGIN_URL && (
+            <a className="btn btn--ghost" href={STRIPE_PORTAL_LOGIN_URL} rel="noopener noreferrer">Manage monthly support</a>
+          )}
         </div>
       </header>
 

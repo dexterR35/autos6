@@ -1,7 +1,7 @@
-import { CircleCheck, Shield, ShoppingCart } from 'lucide-react';
+import { BadgeCheck, CircleCheck, PackageCheck, Shield, ShoppingCart, Truck, Wrench } from 'lucide-react';
 import { STATUS_LABELS } from '../lib/parts.js';
 
-const ICONS = { needed: ShoppingCart, upgrade: Shield, bought: CircleCheck };
+const ICONS = { needed: ShoppingCart, upgrade: Shield, funded: BadgeCheck, ordered: Truck, bought: PackageCheck, installed: Wrench, done: CircleCheck };
 
 /** Status is conveyed by icon + text, not only colour. `label` overrides the text (e.g. condition). */
 export default function StatusChip({ status, label, size = 'md' }) {

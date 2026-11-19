@@ -1,4 +1,6 @@
-import carRelease from '../../public/car-releases/imported-v4/manifest.json' with { type: 'json' };
+// Served from public/car-releases/<release>/manifest.json by vite/carReleasePlugin.js.
+import carRelease from 'virtual:car-release';
+import { anchorsFromRelease } from './carAnchors.js';
 
 // The GLB uses Y-up, nose +X. Anchors come from actual imported triangle
 // surfaces and receive the same calibration as the car and its glazing.
@@ -29,9 +31,7 @@ export function cameraPreset(viewId, compact = false) {
 
 /** Multiple candidates let a part's marker follow the visible side of the real car. */
 export function partAnchors3D() {
-  return Object.fromEntries(Object.entries(carRelease.anchors).map(([part,candidates])=>[
-    part,candidates.map(({position,normal})=>({position:[...position],normal:[...normal]})),
-  ]));
+  return anchorsFromRelease(carRelease);
 }
 
 export function findMeshPart(object) {

@@ -4,9 +4,11 @@
 const DRAFT_KEY = 'project-s6:donation-draft';
 
 export class ApiError extends Error {
-  constructor(message, status) {
+  constructor(message, status, details = {}) {
     super(message);
     this.status = status;
+    this.code = details.code ?? null;
+    this.remainingCents = Number.isSafeInteger(details.remainingCents) ? details.remainingCents : null;
   }
 }
 
@@ -16,6 +18,21 @@ async function readJson(res) {
   } catch {
     return {};
   }
+}
+
+/** Opens Stripe's billing page (change card / cancel) for the monthly support behind a checkout. */
+export async function openRecurringPortal(sessionId) {
+  let res;
+  try {
+    res = await fetch('/api/recurring/manage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) });
+  } catch {
+    throw new ApiError('Could not reach the server. Check your connection and try again.', 0);
+  }
+  const body = await readJson(res);
+  if (!res.ok || !body.url) throw new ApiError(body.error || 'Could not open the billing page.', res.status, body);
+  const url = new URL(body.url);
+  if (url.protocol !== 'https:' || url.hostname !== 'billing.stripe.com') throw new ApiError('Unexpected billing address.', 502);
+  return body.url;
 }
 
 export function newAttemptId() {
@@ -28,19 +45,19 @@ export function newAttemptId() {
 }
 
 /** @returns {Promise<{url: string}>} */
-export async function createCheckout({ projectSlug, partId, amountCents, displayName, isPublic, attemptId, termsAccepted, termsVersion }) {
+export async function createCheckout({ projectSlug, partId, amountCents, displayName, isPublic, attemptId, termsAccepted, termsVersion, recurring = false, notifyUpdates = false }) {
   let res;
   try {
     res = await fetch('/api/donations/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectSlug, partId: partId || null, amountCents, displayName: displayName || null, isPublic: Boolean(isPublic), attemptId, termsAccepted, termsVersion }),
+      body: JSON.stringify({ projectSlug, partId: partId || null, amountCents, displayName: displayName || null, isPublic: Boolean(isPublic), attemptId, termsAccepted, termsVersion, recurring: Boolean(recurring), notifyUpdates: Boolean(notifyUpdates) }),
     });
   } catch {
     throw new ApiError('Could not reach the payment server. Check your connection and try again.', 0);
   }
   const body = await readJson(res);
-  if (!res.ok || !body.url) throw new ApiError(body.error || 'Checkout could not be started.', res.status);
+  if (!res.ok || !body.url) throw new ApiError(body.error || 'Checkout could not be started.', res.status, body);
   const checkoutUrl = new URL(body.url);
   if (checkoutUrl.protocol !== 'https:' || checkoutUrl.hostname !== 'checkout.stripe.com') throw new ApiError('Unexpected checkout address. Please try again.', 502);
   return body;
@@ -56,7 +73,7 @@ export async function fetchDonationStatus(sessionId) {
 
 export function saveDraft(draft) {
   try {
-    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ amountCents: draft.amountCents, partId: draft.partId, customAmount: draft.customAmount }));
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ amountCents: draft.amountCents, partId: draft.partId, customAmount: draft.customAmount, monthly: draft.monthly === true }));
   } catch {
     /* storage unavailable — draft simply isn't restored */
   }
@@ -67,7 +84,7 @@ export function loadDraft() {
     const raw = sessionStorage.getItem(DRAFT_KEY);
     if (!raw) return null;
     const draft = JSON.parse(raw);
-    return { amountCents: Number.isSafeInteger(draft.amountCents) ? draft.amountCents : 2500, partId: typeof draft.partId === 'string' && /^[a-z0-9-]{1,60}$/.test(draft.partId) ? draft.partId : null, customAmount: draft.customAmount === true };
+    return { amountCents: Number.isSafeInteger(draft.amountCents) ? draft.amountCents : 2500, partId: typeof draft.partId === 'string' && /^[a-z0-9-]{1,60}$/.test(draft.partId) ? draft.partId : null, customAmount: draft.customAmount === true, monthly: draft.monthly === true };
   } catch {
     return null;
   }

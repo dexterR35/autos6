@@ -200,7 +200,8 @@ describe('donation dialog (demo mode)', () => {
 describe('parts page (demo mode)', () => {
   it('shows every part’s funding and funds a part in one tap', async () => {
     renderApp('/parts');
-    expect(screen.getAllByRole('progressbar')).toHaveLength(11); // the total plus one per part
+    expect(screen.getAllByRole('progressbar')).toHaveLength(13); // the total, one per part, and the two "next up" parts
+    expect(screen.getByRole('progressbar', { name: 'Front Bumper (next up) funding' })).toBeInTheDocument();
     expect(screen.getByRole('progressbar', { name: 'Hood funding' })).toHaveAttribute('aria-valuetext', '$210 of $650');
     const bought = screen.getAllByRole('listitem').filter((item) => item.classList.contains('is-bought'));
     expect(bought).toHaveLength(1);

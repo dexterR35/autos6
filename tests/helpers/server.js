@@ -24,7 +24,9 @@ export function createStripeDouble() {
   const refunds = [];
   const list = vi.fn((params) => ({ autoPagingToArray: async () => refunds.filter((r) => r.payment_intent === params.payment_intent) }));
   const setRefunds = (rows) => { refunds.splice(0, refunds.length, ...rows); };
-  return { webhooks: real.webhooks, checkout: { sessions: { create } }, refunds: { list }, setRefunds };
+  const portal = vi.fn(async ({ customer }) => ({ url: `https://billing.stripe.test/p/session/${customer}` }));
+  const invoicePayments = { list: vi.fn(async ({ invoice }) => ({ data: [{ status: 'paid', payment: { type: 'payment_intent', payment_intent: `pi_for_${invoice}` } }] })) };
+  return { webhooks: real.webhooks, checkout: { sessions: { create } }, refunds: { list }, setRefunds, billingPortal: { sessions: { create: portal } }, invoicePayments };
 }
 
 export async function createTestServer(overrides = {}) {
@@ -60,4 +62,10 @@ export function chargeRefundedEvent(charge) {
 export function refundEvent(type, refund) {
   evt += 1;
   return { id: `evt_test_${evt}_${type.replace('.', '_')}`, object: 'event', type, livemode: false, data: { object: { object: 'refund', ...refund } } };
+}
+
+/** Any Stripe event with an arbitrary data.object (invoices, subscriptions). */
+export function stripeEvent(type, object) {
+  evt += 1;
+  return { id: `evt_test_${evt}_${Math.random().toString(36).slice(2, 8)}`, object: 'event', type, livemode: false, data: { object } };
 }

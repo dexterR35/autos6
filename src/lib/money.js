@@ -29,10 +29,15 @@ export function parseDollarsToCents(input) {
   return Number(whole) * 100 + Number(frac.padEnd(2, '0'));
 }
 
-export function validateAmountCents(cents, { min = DEFAULT_MIN_CENTS, max = DEFAULT_MAX_CENTS } = {}) {
+// Stripe's minimum charge is higher than the site's 1.00 for some currencies (RON: 2.00 lei).
+const STRIPE_MINIMUM_CENTS = { ron: 200 };
+export const minimumCentsFor = (currency = 'usd', min = DEFAULT_MIN_CENTS) => Math.max(min, STRIPE_MINIMUM_CENTS[String(currency).toLowerCase()] ?? 0);
+
+export function validateAmountCents(cents, { min: siteMin = DEFAULT_MIN_CENTS, max = DEFAULT_MAX_CENTS, currency = 'usd' } = {}) {
+  const min = minimumCentsFor(currency, siteMin);
   if (!Number.isInteger(cents)) return 'Enter a valid amount.';
-  if (cents < min) return `The minimum contribution is ${formatCents(min)}.`;
-  if (cents > max) return `The maximum contribution is ${formatCents(max)}.`;
+  if (cents < min) return `The minimum contribution is ${formatCents(min, currency)}.`;
+  if (cents > max) return `The maximum contribution is ${formatCents(max, currency)}.`;
   return null;
 }
 

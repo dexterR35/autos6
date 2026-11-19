@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CircleCheck, CircleX, Clock, LoaderCircle } from 'lucide-react';
-import { fetchDonationStatus } from '../lib/donations.js';
+import { fetchDonationStatus, openRecurringPortal } from '../lib/donations.js';
 import { formatCents, parseDollarsToCents } from '../lib/money.js';
 import { track, trackPurchaseOnce } from '../lib/analytics.js';
 import { useGarageState } from '../hooks/useGarageState.jsx';
 import { useProjectData } from '../hooks/useProjectData.jsx';
 import { readScrubbed } from '../lib/urlScrub.js';
+import { STRIPE_PORTAL_LOGIN_URL } from '../lib/config.js';
 
 const POLL_MS = 2500;
 const MAX_WAIT_MS = 60_000;
@@ -80,7 +81,14 @@ export function DonationSuccess() {
   };
 
   const d = state.data;
-  const amount = d ? formatCents(d.amountCents, d.currency) : null;
+  const monthly = Boolean(d?.monthly);
+  const amount = d ? `${formatCents(d.amountCents, d.currency)}${monthly ? ' a month' : ''}` : null;
+  const [portal, setPortal] = useState({ busy: false, error: null });
+  const manage = async () => {
+    setPortal({ busy: true, error: null });
+    try { window.location.assign(await openRecurringPortal(sessionId)); }
+    catch (err) { setPortal({ busy: false, error: err.message }); }
+  };
 
   return (
     <div className="page page--narrow">
@@ -107,9 +115,16 @@ export function DonationSuccess() {
             <CircleCheck className="return-card__icon is-good" aria-hidden="true" />
             <h1>Thank you!</h1>
             <p>
-              Your contribution of <strong>{amount}</strong>
+              {monthly ? 'Your monthly support of ' : 'Your contribution of '}<strong>{amount}</strong>
               {d.partName ? <> toward the <strong>{d.partName}</strong></> : ' to the restoration fund'} is confirmed.
             </p>
+            {monthly && (
+              <>
+                <p className="fine">Stripe emails a receipt each month. To change your card or cancel later, use “Manage monthly support” on the Donations page{STRIPE_PORTAL_LOGIN_URL ? ' (sign in with your email)' : ' or contact the project owner'}.</p>
+                <button type="button" className="btn btn--ghost" onClick={manage} disabled={portal.busy}>{portal.busy ? 'Opening…' : 'Manage monthly support now'}</button>
+                {portal.error && <p className="form-error" role="alert">{portal.error}{STRIPE_PORTAL_LOGIN_URL && <> <a href={STRIPE_PORTAL_LOGIN_URL} rel="noopener noreferrer">Sign in to Stripe’s billing page</a>.</>}</p>}
+              </>
+            )}
           </>
         ) : state.phase === 'failed' ? (
           <>
@@ -157,6 +172,7 @@ export function DonationCancel() {
     const patch = {};
     if (part) patch.partId = part.id;
     if (amountCents) patch.amountCents = amountCents;
+    if (params.get('monthly') === '1') patch.monthly = true;
     if (Object.keys(patch).length) setDraft(patch);
     track('donation_cancel', { part_id: part?.id ?? null });
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -15,9 +15,13 @@
     "screenshots": "node scripts/screenshots.js",
     "verify:orbit": "node scripts/verify-orbit.mjs",
     "upload:models": "node scripts/upload-models.mjs",
-    "generate:lighting": "node scripts/make-garage-environment.mjs"
+    "generate:lighting": "node scripts/make-garage-environment.mjs",
+    "db:backup": "node scripts/db-backup.mjs"
   },
   "dependencies": {
+    "@resvg/resvg-js": "2.6.2",
+    "@sentry/node": "11.14.0",
+    "@sentry/react": "11.14.0",
     "@supabase/supabase-js": "2.117.2",
     "dotenv": "18.0.5",
     "express": "5.2.1",

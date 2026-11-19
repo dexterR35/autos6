@@ -80,6 +80,15 @@ export const ROUTES = [
     priority: 0.7,
   },
   {
+    path: '/spending',
+    title: 'Where the Money Went',
+    description: 'Every contribution to the Audi S6 C5 Avant restoration: what each part raised, what it actually cost, receipts, and what is left in the general fund.',
+    h1: 'Where the money went',
+    breadcrumb: 'Spending',
+    changefreq: 'weekly',
+    priority: 0.6,
+  },
+  {
     path: '/about',
     title: 'About the Project',
     description: 'The story behind Project S6, the restoration plan for the Audi S6 C5 Avant, and how funding and part contributions work.',

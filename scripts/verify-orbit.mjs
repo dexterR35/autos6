@@ -2,11 +2,15 @@
 // Uses real WebGL, GLB requests and browser input; no renderer or controls mocks.
 // The unrelated supporter feed is an explicitly empty transport fixture.
 import assert from 'node:assert/strict';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { chromium } from 'playwright';
 import * as THREE from 'three';
-import { partAnchors3D } from '../src/lib/garage3d.js';
+import { anchorsFromRelease } from '../src/lib/carAnchors.js';
+import { CAR_RELEASE } from '../src/lib/modelAssets.js';
+
+// Plain Node can't load Vite's virtual:car-release module, so read the manifest directly.
+const partAnchors3D = () => anchorsFromRelease(JSON.parse(readFileSync(new URL(`../public/car-releases/${CAR_RELEASE}/manifest.json`, import.meta.url), 'utf8')));
 
 const base = (process.argv[2] || 'http://127.0.0.1:5173').replace(/\/$/, '');
 const output = resolve(process.argv[3] || 'output/orbit-verification');

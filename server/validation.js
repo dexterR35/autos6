@@ -8,7 +8,7 @@ export const SESSION_ID_RE = /^cs_(test|live)_[A-Za-z0-9]{10,200}$/;
 /** Validate and normalise POST /api/donations/checkout input. */
 export function validateCheckoutBody(body, { minCents, maxCents }) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return { error: 'Invalid request body.' };
-  const { projectSlug, partId = null, amountCents, displayName = null, isPublic = false, attemptId } = body;
+  const { projectSlug, partId = null, amountCents, displayName = null, isPublic = false, attemptId, recurring = false, notifyUpdates = false } = body;
 
   if (typeof projectSlug !== 'string' || !SLUG_RE.test(projectSlug)) return { error: 'Unknown project.' };
   if (partId !== null && (typeof partId !== 'string' || !SLUG_RE.test(partId))) return { error: 'Unknown part.' };
@@ -17,6 +17,8 @@ export function validateCheckoutBody(body, { minCents, maxCents }) {
   if (amountError) return { error: amountError };
   if (typeof attemptId !== 'string' || !UUID_RE.test(attemptId)) return { error: 'Invalid checkout attempt.' };
   if (typeof isPublic !== 'boolean') return { error: 'Invalid recognition preference.' };
+  if (typeof recurring !== 'boolean') return { error: 'Invalid frequency.' };
+  if (typeof notifyUpdates !== 'boolean') return { error: 'Invalid email preference.' };
   if (body.termsAccepted !== true || body.termsVersion !== POLICY_VERSION) return { error: 'Please accept the current donation terms and privacy notice.' };
 
   let name = null;
@@ -29,6 +31,6 @@ export function validateCheckoutBody(body, { minCents, maxCents }) {
   }
 
   return {
-    value: { projectSlug, partSlug: partId, amountCents, displayName: name, isPublic, attemptId: attemptId.toLowerCase(), termsVersion: POLICY_VERSION },
+    value: { projectSlug, partSlug: partId, amountCents, displayName: name, isPublic, attemptId: attemptId.toLowerCase(), termsVersion: POLICY_VERSION, recurring, notifyUpdates },
   };
 }

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { APP_ORIGIN, createTestServer } from './helpers/server.js';
 
 const attempt = () => crypto.randomUUID();
-const body = (over = {}) => ({ projectSlug: 'project-s6', partId: null, amountCents: 2500, displayName: 'Alex', isPublic: true, attemptId: attempt(), termsAccepted: true, termsVersion: '2026-10-21', ...over });
+const body = (over = {}) => ({ projectSlug: 'project-s6', partId: null, amountCents: 2500, displayName: 'Alex', isPublic: true, attemptId: attempt(), termsAccepted: true, termsVersion: '2026-11-19', ...over });
 
 let t;
 beforeEach(async () => {
@@ -117,7 +117,7 @@ describe('POST /api/donations/checkout', () => {
     await post(body());
     const [params] = t.stripe.checkout.sessions.create.mock.calls[0];
     expect(params.consent_collection).toEqual({ terms_of_service: 'required' });
-    expect(params.metadata.terms_version).toBe('2026-10-21');
+    expect(params.metadata.terms_version).toBe('2026-11-19');
     expect((await t.pg.query('select terms_accepted_at from donations')).rows[0].terms_accepted_at).toBeTruthy();
   });
 });

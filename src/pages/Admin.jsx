@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { LogOut, Plus, Save, Trash2, Upload } from 'lucide-react';
+import PartsAdmin from '../components/admin/PartsAdmin.jsx';
+import PollsAdmin from '../components/admin/PollsAdmin.jsx';
+import { formatCents } from '../lib/money.js';
 import { supabase } from '../lib/supabase.js';
 import { useProjectData } from '../hooks/useProjectData.jsx';
-import { formatCents, parseDollarsToCents } from '../lib/money.js';
+import { parseDollarsToCents } from '../lib/money.js';
 import { authCallbackError } from '../lib/authErrors.js';
 
 // Owner controls. The UI hides itself for non-owners, but the real enforcement is
@@ -97,82 +100,42 @@ function CampaignEditor({ project, onSaved }) {
         <label className="field"><span>Title</span><input value={form.title} onChange={set('title')} required /></label>
         <label className="field"><span>Tagline</span><input value={form.tagline} onChange={set('tagline')} /></label>
         <label className="field"><span>Vehicle display name</span><input value={form.vehicle_display_name} onChange={set('vehicle_display_name')} /></label>
-        <label className="field"><span>Campaign goal (USD)</span><input value="10,000.00" readOnly /><small>Fixed campaign goal. Part targets are independent.</small></label>
+        <label className="field"><span>Campaign goal ({(project.currency ?? 'usd').toUpperCase()})</span><input value="10,000.00" readOnly /><small>Fixed campaign goal. Part targets are independent.</small></label>
       </div>
+      <CurrencySetting project={project} onSaved={onSaved} />
       <label className="field"><span>Description</span><textarea rows={3} value={form.description} onChange={set('description')} /></label>
       <div className="dialog-actions"><span className="fine" role="status">{msg}</span><button className="btn btn--primary"><Save aria-hidden="true" /> Save</button></div>
     </form>
   );
 }
 
-function PartRow({ part, onSaved }) {
-  const [p, setP] = useState({ ...part, estimate: (part.estimateCents / 100).toFixed(2) });
+const CURRENCIES = [['usd', 'US dollar ($)'], ['eur', 'Euro (€)'], ['ron', 'Romanian leu (lei)'], ['gbp', 'British pound (£)']];
+function CurrencySetting({ project, onSaved }) {
+  const [value, setValue] = useState(project.currency ?? 'usd');
   const [msg, setMsg] = useState(null);
+  useEffect(() => { setValue(project.currency ?? 'usd'); }, [project.currency]);
   const save = async () => {
-    const estimate_cents = parseDollarsToCents(p.estimate);
-    if (estimate_cents == null || estimate_cents <= 0) return setMsg('Enter a positive target.');
-    const { error } = await supabase
-      .from('parts')
-      .update({ name: p.name, estimate_cents, status: p.status, priority: p.priority ?? 'standard', condition: p.condition, description: p.description, sort_order: Number(p.sortOrder) || 0 })
-      .eq('id', part.dbId);
-    setMsg(error ? error.message : 'Saved');
+    if (value === project.currency) return;
+    if (!window.confirm(`Switch the whole project to ${value.toUpperCase()}? Goals keep their numbers (e.g. 450 becomes ${value.toUpperCase()} 450).`)) return;
+    const { error } = await supabase.rpc('set_project_currency', { p_project_id: project.id, p_currency: value });
+    setMsg(error ? (error.message.includes('currency_locked') ? 'Payments already exist in the current currency, so it can no longer change.' : error.message) : 'Currency updated.');
     if (!error) onSaved();
   };
-  const set = (k) => (e) => setP((x) => ({ ...x, [k]: e.target.value }));
   return (
-    <tr>
-      <td><input aria-label="Name" value={p.name} onChange={set('name')} /></td>
-      <td><input aria-label="Estimate (USD)" inputMode="decimal" value={p.estimate} onChange={set('estimate')} size={8} /></td>
-      <td>
-        <select aria-label="Status" value={p.status} onChange={set('status')}>
-          <option value="needed">Needed</option>
-          <option value="upgrade">Upgrade</option>
-          <option value="bought">Bought</option>
-        </select>
-      </td>
-      <td><input aria-label="Condition" value={p.condition ?? ''} onChange={set('condition')} /></td>
-      <td><select aria-label="Priority" value={p.priority ?? 'standard'} onChange={set('priority')}><option value="standard">Standard</option><option value="important">Important</option></select></td>
-      <td><textarea aria-label="Part description" rows={2} maxLength={2000} value={p.description ?? ''} onChange={set('description')} /></td>
-      <td><input aria-label="Sort order" value={p.sortOrder} onChange={set('sortOrder')} size={3} /></td>
-      <td><button type="button" className="btn btn--ghost btn--sm" onClick={save}><Save aria-hidden="true" /> Save</button> <span className="fine" role="status">{msg}</span></td>
-    </tr>
+    <div className="currency-setting">
+      <label className="field"><span>Currency for all goals and payments</span>
+        <select value={value} onChange={(e) => setValue(e.target.value)}>{CURRENCIES.map(([c, l]) => <option key={c} value={c}>{l}</option>)}</select>
+      </label>
+      <button type="button" className="btn btn--ghost btn--sm" disabled={value === project.currency} onClick={save}>Change currency</button>
+      <p className="fine">Can only change before the first payment. Stripe also shows Apple Pay, Google Pay and local methods automatically when enabled in your Stripe dashboard.</p>
+      {msg && <p className="fine" role="status">{msg}</p>}
+    </div>
   );
 }
 
-function NewPart({ projectId, onSaved }) {
-  const blank = { slug: '', name: '', estimate: '', status: 'needed', condition: '', priority: 'standard', description: '' };
-  const [p, setP] = useState(blank);
-  const [msg, setMsg] = useState(null);
-  const add = async (e) => {
-    e.preventDefault();
-    const estimate_cents = parseDollarsToCents(p.estimate);
-    if (estimate_cents == null || estimate_cents <= 0) return setMsg('Enter a positive funding target.');
-    const { error } = await supabase.from('parts').insert({ project_id: projectId, slug: p.slug, name: p.name, estimate_cents, status: p.status, condition: p.condition, priority: p.priority, description: p.description, sort_order: 100 });
-    setMsg(error ? error.message : 'Added.');
-    if (!error) {
-      setP(blank);
-      onSaved();
-    }
-  };
-  const set = (k) => (e) => setP((x) => ({ ...x, [k]: e.target.value }));
-  return (
-    <form className="form-grid form-grid--inline" onSubmit={add}>
-      <label className="field"><span>Slug (matches hotspot partId)</span><input value={p.slug} onChange={set('slug')} pattern="[a-z0-9-]+" required /></label>
-      <label className="field"><span>Name</span><input value={p.name} onChange={set('name')} required /></label>
-      <label className="field"><span>Estimate (USD)</span><input inputMode="decimal" value={p.estimate} onChange={set('estimate')} required /></label>
-      <label className="field"><span>Status</span><select value={p.status} onChange={set('status')}><option value="needed">Needed</option><option value="upgrade">Upgrade</option><option value="bought">Bought</option></select></label>
-      <label className="field"><span>Condition</span><input value={p.condition} onChange={set('condition')} /></label>
-      <label className="field"><span>Priority</span><select value={p.priority} onChange={set('priority')}><option value="standard">Standard</option><option value="important">Important</option></select></label>
-      <label className="field"><span>Description</span><textarea rows={2} maxLength={2000} value={p.description} onChange={set('description')} /></label>
-      <button className="btn btn--ghost"><Plus aria-hidden="true" /> Add part</button>
-      <span className="fine" role="status">{msg}</span>
-    </form>
-  );
-}
-
-function UpdatesEditor({ projectId, userId }) {
+function UpdatesEditor({ projectId, userId, parts = [], onSaved }) {
   const [rows, setRows] = useState([]);
-  const [form, setForm] = useState({ title: '', body: '', cost: '', publish: true });
+  const [form, setForm] = useState({ title: '', body: '', cost: '', publish: true, partId: '' });
   const [files, setFiles] = useState([]);
   const [msg, setMsg] = useState(null);
   const load = async () => {
@@ -201,13 +164,15 @@ function UpdatesEditor({ projectId, userId }) {
     }
     const { error } = await supabase.from('restoration_updates').insert({
       project_id: projectId, title: form.title, body: form.body, image_urls, cost_cents, created_by: userId,
+      part_id: parts.find((p) => p.id === form.partId)?.dbId ?? null,
       published_at: form.publish ? new Date().toISOString() : null,
     });
     setMsg(error ? error.message : 'Update saved.');
     if (!error) {
-      setForm({ title: '', body: '', cost: '', publish: true });
+      setForm({ title: '', body: '', cost: '', publish: true, partId: '' });
       setFiles([]);
       load();
+      onSaved?.();
     }
   };
   const togglePublish = async (u) => {
@@ -228,6 +193,12 @@ function UpdatesEditor({ projectId, userId }) {
         <label className="field"><span>Title</span><input value={form.title} onChange={set('title')} required /></label>
         <label className="field"><span>Body</span><textarea rows={3} value={form.body} onChange={set('body')} required /></label>
         <div className="form-grid">
+          <label className="field"><span>About part (optional)</span>
+            <select value={form.partId} onChange={set('partId')}>
+              <option value="">Whole project</option>
+              {parts.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </label>
           <label className="field"><span>Cost (USD, optional)</span><input inputMode="decimal" value={form.cost} onChange={set('cost')} /></label>
           <label className="field"><span><Upload aria-hidden="true" /> Photos (JPG, PNG, WebP · max 5 MB)</span><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={(e) => setFiles([...e.target.files])} /></label>
         </div>
@@ -250,7 +221,7 @@ function UpdatesEditor({ projectId, userId }) {
 }
 
 export default function Admin() {
-  const { project, parts, isDemo, reload, status } = useProjectData();
+  const { project, parts, isDemo, reload, status, summary } = useProjectData();
   const session = useSession();
   const [isOwner, setIsOwner] = useState(null);
 
@@ -299,20 +270,12 @@ export default function Admin() {
       ) : (
         <>
           <CampaignEditor project={project} onSaved={reload} />
-          <section className="panel admin-section">
-            <h2>Parts &amp; purchase status</h2>
-            <p className="fine">Mark a part “Bought” only after you’ve actually bought it. Donations never change status automatically.</p>
-            <div className="table-wrap">
-              <table className="admin-table">
-                <thead><tr><th>Name</th><th>Target</th><th>Status</th><th>Condition</th><th>Priority</th><th>Description</th><th>Order</th><th /></tr></thead>
-                <tbody>{parts.map((p) => <PartRow key={p.dbId} part={p} onSaved={reload} />)}</tbody>
-              </table>
-            </div>
-            <h3>Add part</h3>
-            <NewPart projectId={project.id} onSaved={reload} />
-            <p className="fine">Totals: {formatCents(parts.reduce((s, p) => s + p.estimateCents, 0))} estimated across {parts.length} parts.</p>
-          </section>
-          <UpdatesEditor projectId={project.id} userId={session.user.id} />
+          {summary?.monthly && (
+            <p className="panel admin-section fine">Monthly supporters: <strong>{summary.monthly.activeCount}</strong> active · {formatCents(summary.monthly.monthlyCents, project.currency ?? 'usd')} a month.</p>
+          )}
+          <PartsAdmin project={project} parts={parts} onSaved={reload} />
+          <PollsAdmin project={project} onPartsChanged={reload} />
+          <UpdatesEditor projectId={project.id} userId={session.user.id} parts={parts} onSaved={reload} />
           <CommunityModeration projectId={project.id} />
         </>
       )}

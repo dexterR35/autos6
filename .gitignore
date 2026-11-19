@@ -9,3 +9,4 @@ supabase/.temp/
 .DS_Store
 test-results
 __pycache__/
+backups/

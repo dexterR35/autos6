@@ -14,7 +14,7 @@ const origin = 'http://localhost:5173';
 const config = readConfig({ APP_ORIGIN: origin, RESEND_API_KEY: 'test-key', EMAIL_FROM: 'Project S6 <updates@example.com>', SUBSCRIPTION_SIGNING_SECRET: 'a'.repeat(64) });
 let pg, db, app, projectId;
 const logger = { warn: vi.fn(), error: vi.fn() };
-const subscribe = (body) => request(app).post('/api/subscriptions').set('Origin', origin).send({ projectSlug: 'project-s6', email: 'member@example.com', consent: '2026-10-21', ...body });
+const subscribe = (body) => request(app).post('/api/subscriptions').set('Origin', origin).send({ projectSlug: 'project-s6', email: 'member@example.com', consent: '2026-11-19', ...body });
 const denied = (p) => expect(p).rejects.toThrow(/permission denied|row-level security/i);
 
 beforeEach(async () => {
@@ -34,16 +34,18 @@ describe('part funding and immutable accounting', () => {
     expect(Number(campaign.raised_cents)).toBe(1195000);
     expect(Number(part.raised_cents)).toBe(1190000);
     expect(displayedRaised(Number(campaign.raised_cents))).toBe(1000000);
-    expect((await pg.query("select status from parts where slug='hood'")).rows[0].status).toBe('needed');
+    // Reaching the goal marks the part funded (never bought); losing the money reopens it.
+    expect((await pg.query("select status from parts where slug='hood'")).rows[0].status).toBe('funded');
     await pg.query("update donations set needs_review=true where part_id is not null");
     expect(Number((await asRole(pg,'anon',"select * from get_part_funding('project-s6') where part_slug='hood'"))[0].raised_cents)).toBe(0);
+    expect((await pg.query("select status from parts where slug='hood'")).rows[0].status).toBe('needed');
   });
   it('records consent atomically and rejects altered recognition preferences on retry', async () => {
-    const input = { attemptId: crypto.randomUUID(), projectSlug: 'project-s6', partSlug: 'hood', amountCents: 2500, displayName: 'Member', isPublic: false, termsVersion: '2026-10-21' };
+    const input = { attemptId: crypto.randomUUID(), projectSlug: 'project-s6', partSlug: 'hood', amountCents: 2500, displayName: 'Member', isPublic: false, termsVersion: '2026-11-19' };
     await db.createPendingDonation(input);
     await expect(db.createPendingDonation({ ...input, isPublic: true })).rejects.toMatchObject({ code: 'attempt_mismatch' });
     const [record] = (await pg.query('select terms_version,terms_accepted_at,is_public from donations')).rows;
-    expect(record.terms_version).toBe('2026-10-21'); expect(record.terms_accepted_at).toBeTruthy(); expect(record.is_public).toBe(false);
+    expect(record.terms_version).toBe('2026-11-19'); expect(record.terms_accepted_at).toBeTruthy(); expect(record.is_public).toBe(false);
   });
 });
 
@@ -62,7 +64,7 @@ describe('email consent and delivery', () => {
   });
   it('confirms once, sends only followed-part and published updates, and cancels queued emails on unsubscribe', async () => {
     const token = 'b'.repeat(64);
-    await db.requestSubscription({slug:'project-s6',email:'member@example.com',partSlug:'hood',hash:hashToken(token),url:`${origin}/subscription/confirm#token=${token}`,consent:'2026-10-21'});
+    await db.requestSubscription({slug:'project-s6',email:'member@example.com',partSlug:'hood',hash:hashToken(token),url:`${origin}/subscription/confirm#token=${token}`,consent:'2026-11-19'});
     expect(await db.confirmSubscription(hashToken(token))).toBe(true);
     expect(await db.confirmSubscription(hashToken(token))).toBe(false);
     await pg.query("update parts set estimate_cents=estimate_cents+100 where slug='hood'");
@@ -89,7 +91,7 @@ describe('email consent and delivery', () => {
   });
   const activeSubscriber = async (partSlug = null) => {
     const token = 'c'.repeat(64);
-    await db.requestSubscription({slug:'project-s6',email:'member@example.com',partSlug,hash:hashToken(token),url:`${origin}/subscription/confirm#token=${token}`,consent:'2026-10-21'});
+    await db.requestSubscription({slug:'project-s6',email:'member@example.com',partSlug,hash:hashToken(token),url:`${origin}/subscription/confirm#token=${token}`,consent:'2026-11-19'});
     expect(await db.confirmSubscription(hashToken(token))).toBe(true);
   };
   const updateJobs = async () => (await pg.query("select id,state,payload,available_at>now()+interval '9 minutes' as delayed from email_jobs where kind='update' order by created_at,id")).rows;
@@ -101,7 +103,7 @@ describe('email consent and delivery', () => {
     await pg.query("update parts set status='bought' where slug='hood'");
     const [job, ...others] = await updateJobs();
     expect(others).toHaveLength(0);
-    expect(job).toMatchObject({ state: 'pending', delayed: true, payload: { title: 'Part update: Hood', path: '/parts', source: expect.stringMatching(/^part:/) } });
+    expect(job).toMatchObject({ state: 'pending', delayed: true, payload: { title: 'Hood is bought', path: '/parts/hood', source: expect.stringMatching(/^part:/) } });
     expect(job.payload.body).toContain('bought');
     expect(job.payload.body).toContain('Fresh paint booked');
     expect(await db.claimEmailJobs()).toEqual([]); // still inside the batching window
@@ -154,7 +156,7 @@ describe('email consent and delivery', () => {
 });
 
 describe('community authorization and moderation', () => {
-  const sql = "select create_community_post('project-s6',null,'Helpful member','help','Suspension question','Can anyone help source this part?','2026-10-21') as id";
+  const sql = "select create_community_post('project-s6',null,'Helpful member','help','Suspension question','Can anyone help source this part?','2026-11-19') as id";
   it('publishes only after owner review and enforces rate limits and column protection', async () => {
     await createUser(pg,OWNER,'owner@example.com'); await createUser(pg,MEMBER,'member@example.com'); await createUser(pg,OTHER,'other@example.com'); await makeOwner(pg,OWNER);
     const [post] = await asRole(pg,'authenticated',sql,[],MEMBER);

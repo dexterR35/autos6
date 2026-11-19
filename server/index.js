@@ -9,6 +9,8 @@ import { readConfig } from './config.js';
 import { createSupabaseDb } from './db.js';
 import { createLogger } from './logger.js';
 import { startEmailWorker } from './emailWorker.js';
+import { startDigestWorker } from './digest.js';
+import { initMonitoring } from './monitoring.js';
 
 dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), '.env'), quiet: true });
 
@@ -26,7 +28,9 @@ if (!stripe) logger.warn('STRIPE_SECRET_KEY not set: checkout endpoints return 5
 if (!db) logger.warn('SUPABASE_URL / SUPABASE_SECRET_KEY not set: donation endpoints return 503.');
 if (stripe && !config.stripeWebhookSecret) logger.warn('STRIPE_WEBHOOK_SECRET not set: webhooks are rejected, so payments will never confirm.');
 startEmailWorker({ db, config, logger });
+startDigestWorker({ db, config, logger });
+const monitor = await initMonitoring(config, logger);
 
-createApp({ stripe, db, config, logger }).listen(config.port, () => {
+createApp({ stripe, db, config, logger, monitor }).listen(config.port, () => {
   logger.info(`Project S6 API listening on http://localhost:${config.port} (app origin ${config.appOrigin})`);
 });

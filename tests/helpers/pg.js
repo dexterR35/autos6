@@ -82,11 +82,47 @@ export function createPgliteServerDb(db) {
   return {
     async createPendingDonation(v) {
       const { mapPending } = await import('../../server/db.js');
-      const rows = await call('select * from public.create_consented_donation($1, $2, $3, $4, $5, $6, $7)', [
-        v.attemptId, v.projectSlug, v.partSlug, v.amountCents, v.displayName, v.isPublic, v.termsVersion,
+      const rows = await call('select * from public.create_checkout_donation($1, $2, $3, $4, $5, $6, $7, $8)', [
+        v.attemptId, v.projectSlug, v.partSlug, v.amountCents, v.displayName, v.isPublic, v.termsVersion, Boolean(v.notifyUpdates),
       ]);
       return mapPending(rows[0]);
     },
+    async createRecurring(v) {
+      const { mapRecurring } = await import('../../server/db.js');
+      const rows = await call('select * from public.create_recurring_support($1,$2,$3,$4,$5,$6,$7,$8)', [
+        v.attemptId, v.projectSlug, v.partSlug, v.amountCents, v.displayName, v.isPublic, v.termsVersion, Boolean(v.notifyUpdates),
+      ]);
+      return mapRecurring(rows[0]);
+    },
+    async attachRecurringSession(id, sessionId) {
+      return (await call('select public.attach_recurring_session($1,$2) as ok', [id, sessionId]))[0].ok;
+    },
+    async processRecurringEvent(e) {
+      const { recurringArgs } = await import('../../server/db.js');
+      const a = Object.values(recurringArgs(e));
+      return (await call('select public.process_recurring_event($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) as result', a))[0].result;
+    },
+    async getRecurringBySession(sessionId) {
+      const [r] = await call('select * from public.get_recurring_by_session($1)', [sessionId]);
+      return r ? { status: r.status, amountCents: Number(r.amount_cents), currency: r.currency, partName: r.part_name, customerId: r.stripe_customer_id } : null;
+    },
+    async getPartCard(projectSlug, partSlug) {
+      const { mapPartCard } = await import('../../server/db.js');
+      const [project] = await call('select id,title,currency from projects where slug=$1 and is_published', [projectSlug]);
+      if (!project) return null;
+      const [part] = await call('select slug,name,status,estimate_cents,thumbnail_url,image_urls from parts where project_id=$1 and slug=$2', [project.id, partSlug]);
+      if (!part) return null;
+      const [funding] = await call('select * from public.get_part_funding($1) where part_slug=$2', [projectSlug, partSlug]);
+      return mapPartCard(part, funding, project);
+    },
+    async processDisputeEvent(e) {
+      return (await call('select public.process_dispute_event($1,$2,$3,$4,$5) as result', [e.eventId, e.type, e.livemode, e.paymentIntentId, e.disputeStatus]))[0].result;
+    },
+    async getRecurringPortalCustomer(sessionId) {
+      return (await call('select public.get_recurring_portal_customer($1) as id', [sessionId]))[0].id;
+    },
+    claimOwnerDigests: (date) => call('select * from public.claim_owner_digests($1)', [date]),
+    finishOwnerDigest: (projectId, date, provider) => call('select public.finish_owner_digest($1,$2,$3)', [projectId, date, provider]),
     async attachCheckoutSession(donationId, sessionId) {
       const rows = await call('select public.attach_checkout_session($1, $2) as ok', [donationId, sessionId]);
       return rows[0].ok;
@@ -104,6 +140,9 @@ export function createPgliteServerDb(db) {
       const { mapStatus } = await import('../../server/db.js');
       const rows = await call('select * from public.get_donation_status($1)', [sessionId]);
       return mapStatus(rows[0]) ?? null;
+    },
+    async listPartSlugs(projectSlug) {
+      return (await call('select part_slug from public.get_part_funding($1)', [projectSlug])).map((r) => r.part_slug);
     },
     requestSubscription: (v) => call('select public.request_subscription($1,$2,$3,$4,$5,$6)', [v.slug,v.email,v.partSlug,v.hash,v.url,v.consent]),
     async confirmSubscription(hash) { return (await call('select public.confirm_subscription($1) as ok', [hash]))[0].ok; },

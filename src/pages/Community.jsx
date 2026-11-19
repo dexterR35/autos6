@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageCircle, Plus } from 'lucide-react';
+import PollsSection from '../components/PollsSection.jsx';
 import Modal from '../components/Modal.jsx';
 import SubscribeButton from '../components/SubscribeButton.jsx';
 import DemoBadge from '../components/DemoBadge.jsx';
@@ -111,6 +112,8 @@ export default function Community() {
       </div>
     </header>
 
+    <PollsSection session={session} onNeedSignIn={() => { setAuthOpen(true); setAuthStatus('idle'); setError(''); }} />
+
     <div className="studio-filters">
       <div className="studio-segment" role="group" aria-label="Topic">
         {Object.entries(CATEGORIES).map(([id, name]) => <button key={id} type="button" aria-pressed={category === id} onClick={() => { setCategory(id); setPage(0); }}>{name}</button>)}
@@ -132,7 +135,7 @@ export default function Community() {
     </li>)}</ul>
     {(page > 0 || hasMore) && <div className="pagination"><button className="btn btn--ghost" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>Previous</button><span>Page {page + 1}</span><button className="btn btn--ghost" disabled={!hasMore} onClick={() => setPage((p) => p + 1)}>Next</button></div>}
 
-    <Modal open={authOpen} onClose={() => setAuthOpen(false)} title="Sign in to post" labelledBy="community-auth-title">
+    <Modal open={authOpen} onClose={() => setAuthOpen(false)} title="Sign in" labelledBy="community-auth-title">
       {authStatus === 'sent'
         ? <p className="form-note" role="status">Check your email for the sign-in link.</p>
         : <form onSubmit={signIn}>

@@ -77,6 +77,11 @@ cp server/.env.example server/.env   # server secrets
 
 **Live mode without credentials** (`VITE_DEMO_MODE=false` but no Supabase) shows a clear "live data unavailable" banner. Totals read "unavailable" and donating is disabled. The app never falls back to demo money.
 
+## Parts, goals and supporter features
+
+- [docs/PART-FUNDING.md](docs/PART-FUNDING.md) — part cards, per-part goals, photos and 3D models, automatic "Funded", recording purchases.
+- [docs/SUPPORTER-FEATURES.md](docs/SUPPORTER-FEATURES.md) — installed parts on the 3D car, `/spending`, share cards, Next up, monthly support (Stripe subscriptions), EUR/RON/GBP, votes, "Funded by", donor update emails, reorder/duplicate/CSV import, daily owner digest, Sentry, backups (`npm run db:backup`).
+
 ## Supabase setup
 
 1. Create a project. Then either:

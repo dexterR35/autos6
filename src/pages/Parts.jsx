@@ -1,12 +1,17 @@
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Car, CircleCheck, Flag, HandHeart, Search, SearchX } from 'lucide-react';
+import { Box, Car, CircleCheck, Flag, HandHeart, Search, SearchX, Sparkles } from 'lucide-react';
 import PartThumb from '../components/PartThumb.jsx';
 import StatusChip from '../components/StatusChip.jsx';
 import FundMeter from '../components/FundMeter.jsx';
 import PartDetailsDrawer from '../components/PartDetailsDrawer.jsx';
 import Modal from '../components/Modal.jsx';
-import { countByStatus, filterParts } from '../lib/parts.js';
+import { countByStatus, filterParts, isAcquired, isOpen, partKind, remainingCents, STATUS_LABELS } from '../lib/parts.js';
+import PartStages from '../components/PartStages.jsx';
+import NextUpStrip from '../components/NextUpStrip.jsx';
+import { partImages } from '../components/PartMedia.jsx';
+import { formatCents } from '../lib/money.js';
+import { safeMediaUrl } from '../lib/safeMedia.js';
 import { useGarageState } from '../hooks/useGarageState.jsx';
 import { useProjectData } from '../hooks/useProjectData.jsx';
 import { viewsContainingPart } from '../data/views.js';
@@ -17,6 +22,7 @@ const TABS = [
   { id: 'all', label: 'All' },
   { id: 'needed', label: 'Needed' },
   { id: 'upgrade', label: 'Upgrade' },
+  { id: 'funded', label: 'Funded' },
   { id: 'bought', label: 'Bought' },
 ];
 
@@ -37,7 +43,8 @@ export default function Parts() {
   useEffect(() => { if (open) trackViewPart(open); }, [open?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const totalEstimate = parts.reduce((s, p) => s + p.estimateCents, 0);
   const totalFunded = parts.reduce((s, p) => s + fundedCents(p), 0);
-  const bought = parts.filter((p) => p.status === 'bought').length;
+  const bought = parts.filter(isAcquired).length;
+  const funded = parts.filter((p) => !isOpen(p)).length;
   const clearFilters = () => { g.setSearch(''); g.setStatusFilter('all'); setPriority('all'); };
 
   if (openId && status === 'ready' && !open) return <NotFound />;
@@ -47,7 +54,7 @@ export default function Parts() {
       <header className="studio-head">
         <div>
           <h1>Parts</h1>
-          {parts.length > 0 && <p className="studio-head__stat">{bought} of {parts.length} bought</p>}
+          {parts.length > 0 && <p className="studio-head__stat">{bought} of {parts.length} bought · {funded} fully funded</p>}
         </div>
         <label className="search studio-search">
           <Search aria-hidden="true" />
@@ -80,30 +87,46 @@ export default function Parts() {
       {status === 'loading' && <p className="muted">Loading parts…</p>}
       {status === 'unconfigured' && <p className="muted">Parts are unavailable right now.</p>}
 
-      <ul className="part-list">
-        {rows.map((p) => (
-          <li key={p.id} className={`part-line panel ${p.status === 'bought' ? 'is-bought' : ''}`}>
-            <button type="button" className="part-line__open" onClick={() => setOpenId(p.id)} aria-label={`${p.name} details`}>
-              <PartThumb part={p} size="sm" />
-              <span className="part-line__text">
-                <span className="part-line__name">{p.name}</span>
-                <span className="part-line__meta">
-                  <StatusChip status={p.status} size="sm" />
-                  {p.priority === 'important' && <span className="part-line__flag"><Flag aria-hidden="true" /> Important</span>}
-                  {p.condition && <span className="part-line__cond">{p.condition}</span>}
+      {status === 'ready' && g.statusFilter === 'all' && !g.search.trim() && priority === 'all' && <NextUpStrip parts={parts} currency={currency} onOpen={setOpenId} onFund={(id) => g.openDonation({ partId: id })} />}
+      <ul className="part-grid">
+        {rows.map((p) => {
+          const cover = partImages(p)[0];
+          const left = remainingCents(p);
+          const open = isOpen(p);
+          return (
+            <li key={p.id} className={`part-card panel ${isAcquired(p) ? 'is-bought' : ''} ${!open ? 'is-closed' : ''}`}>
+              <button type="button" className="part-card__open" onClick={() => setOpenId(p.id)} aria-label={`${p.name} details`}>
+                <span className="part-card__media">
+                  {cover ? <img src={cover} alt="" loading="lazy" decoding="async" /> : <PartThumb part={p} size="lg" />}
+                  {safeMediaUrl(p.modelUrl) && <span className="part-card__badge"><Box aria-hidden="true" /> 3D</span>}
+                  {partKind(p) === 'upgrade' && <span className="part-card__badge part-card__badge--kind"><Sparkles aria-hidden="true" /> Upgrade</span>}
                 </span>
-              </span>
-            </button>
-            <FundMeter label={p.name} raisedCents={p.raisedCents} goalCents={p.estimateCents} currency={currency} />
-            {p.status === 'bought' ? (
-              <span className="part-line__done"><CircleCheck aria-hidden="true" /> Bought</span>
-            ) : (
-              <button type="button" className="btn btn--donate part-line__fund" aria-label={`Fund ${p.name}`} onClick={() => g.openDonation({ partId: p.id })}>
-                <HandHeart aria-hidden="true" /> Fund
+                <span className="part-card__text">
+                  <span className="part-line__name">{p.name}</span>
+                  <span className="part-line__meta">
+                    <StatusChip status={p.status} size="sm" />
+                    {p.priority === 'important' && <span className="part-line__flag"><Flag aria-hidden="true" /> Important</span>}
+                    {p.condition && <span className="part-line__cond">{p.condition}</span>}
+                  </span>
+                </span>
               </button>
-            )}
-          </li>
-        ))}
+              <FundMeter label={p.name} raisedCents={p.raisedCents} goalCents={p.estimateCents} currency={currency} />
+              <PartStages part={p} compact />
+              <div className="part-card__foot">
+                {open ? (
+                  <>
+                    <span className="part-card__left">{left != null && left > 0 ? <><strong>{formatCents(left, currency)}</strong> to go</> : 'Goal reached'}</span>
+                    <button type="button" className="btn btn--donate part-line__fund" aria-label={`Fund ${p.name}`} onClick={() => g.openDonation({ partId: p.id })}>
+                      <HandHeart aria-hidden="true" /> Fund
+                    </button>
+                  </>
+                ) : (
+                  <span className="part-line__done"><CircleCheck aria-hidden="true" /> {p.status === 'funded' ? 'Fully funded' : STATUS_LABELS[p.status]}</span>
+                )}
+              </div>
+            </li>
+          );
+        })}
       </ul>
       {status === 'ready' && rows.length === 0 && (
         <div className="empty panel">

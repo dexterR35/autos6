@@ -14,6 +14,7 @@ export function readConfig(env = process.env) {
   return {
     port: int(env.PORT, 3001),
     appOrigin,
+    projectSlug: env.PROJECT_SLUG || env.VITE_PROJECT_SLUG || 'project-s6',
     supabaseUrl: env.SUPABASE_URL || '',
     // Newer projects use a secret key (sb_secret_...); the legacy service_role JWT also works.
     supabaseSecretKey: env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY || '',
@@ -29,6 +30,12 @@ export function readConfig(env = process.env) {
     trustProxy: env.TRUST_PROXY ? int(env.TRUST_PROXY, 1) : false,
     serveStatic: env.SERVE_STATIC === 'true',
     distDir: env.DIST_DIR || '',
+    // Daily owner digest (needs email). Hour is UTC; 6 = 08:00 in Bucharest (winter).
+    ownerDigest: env.OWNER_DIGEST !== 'false',
+    digestHourUtc: Math.min(23, Math.max(0, int(env.DIGEST_HOUR_UTC, 6))),
+    digestWhenQuiet: env.DIGEST_WHEN_QUIET === 'true',
+    sentryDsn: env.SENTRY_DSN || '',
+    publicSentryDsn: env.VITE_SENTRY_DSN || '',
     rateLimit: { checkoutPerMinute: int(env.RATE_CHECKOUT_PER_MIN, 10), statusPerMinute: int(env.RATE_STATUS_PER_MIN, 60) },
     // Which ad pixels the served site may load (same public variables as the frontend build).
     pixels: {

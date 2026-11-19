@@ -9,7 +9,7 @@ async function startCheckout(amountCents = 5000, partId = 'hood') {
   const res = await request(t.app)
     .post('/api/donations/checkout')
     .set('Origin', APP_ORIGIN)
-    .send({ projectSlug: 'project-s6', partId, amountCents, displayName: 'Robin', isPublic: true, attemptId: crypto.randomUUID(), termsAccepted: true, termsVersion: '2026-10-21' });
+    .send({ projectSlug: 'project-s6', partId, amountCents, displayName: 'Robin', isPublic: true, attemptId: crypto.randomUUID(), termsAccepted: true, termsVersion: '2026-11-19' });
   expect(res.status).toBe(200);
   const call = t.stripe.checkout.sessions.create.mock.calls.at(-1);
   return { id: call[0].metadata.donation_id, sessionId: (await t.pg.query('select stripe_checkout_session_id as s from donations where id = $1', [call[0].metadata.donation_id])).rows[0].s };

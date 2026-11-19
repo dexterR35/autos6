@@ -13,6 +13,8 @@ export function contentSecurityPolicy(config, dist) {
       }
     } catch { /* API-only process has no inline scripts. */ }
   }
+  let sentryOrigin = null;
+  try { if (config.publicSentryDsn) sentryOrigin = new URL(config.publicSentryDsn).origin; } catch { /* not set */ }
   let supabaseOrigin = null;
   let modelOrigin = null;
   try { if (config.supabaseUrl) supabaseOrigin = new URL(config.supabaseUrl).origin; } catch { /* config not set */ }
@@ -32,7 +34,7 @@ export function contentSecurityPolicy(config, dist) {
     defaultSrc: ["'self'"], scriptSrc: ["'self'", "'wasm-unsafe-eval'", ...hashes, 'https://www.googletagmanager.com', ...pixelScripts],
     scriptSrcAttr: ["'none'"], styleSrc: ["'self'", "'unsafe-inline'"],
     imgSrc: ["'self'", 'data:', 'blob:', ...(supabaseOrigin ? [supabaseOrigin] : []), 'https://www.google-analytics.com', 'https://www.googletagmanager.com', ...pixelBeacons],
-    connectSrc: ["'self'", 'blob:', ...(modelOrigin ? [modelOrigin] : []), ...(supabaseOrigin ? [supabaseOrigin, supabaseOrigin.replace(/^https:/, 'wss:')] : []), 'https://www.google-analytics.com', 'https://region1.google-analytics.com', 'https://www.googletagmanager.com', ...pixelBeacons],
+    connectSrc: ["'self'", 'blob:', ...(modelOrigin ? [modelOrigin] : []), ...(supabaseOrigin ? [supabaseOrigin, supabaseOrigin.replace(/^https:/, 'wss:')] : []), 'https://www.google-analytics.com', 'https://region1.google-analytics.com', 'https://www.googletagmanager.com', ...pixelBeacons, ...(sentryOrigin ? [sentryOrigin] : [])],
     workerSrc: ["'self'"],
     frameSrc: ['https://www.googletagmanager.com', ...(ads ? ['https://td.doubleclick.net'] : [])], objectSrc: ["'none'"], baseUri: ["'self'"],
     frameAncestors: ["'none'"], formAction: ["'self'"], upgradeInsecureRequests: config.appOrigin.startsWith('https:') ? [] : null,

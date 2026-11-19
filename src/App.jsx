@@ -8,6 +8,7 @@ import Garage from './pages/Garage.jsx';
 import Parts from './pages/Parts.jsx';
 import Donations from './pages/Donations.jsx';
 import Progress from './pages/Progress.jsx';
+import Spending from './pages/Spending.jsx';
 import About from './pages/About.jsx';
 import { DonationCancel, DonationSuccess } from './pages/DonationReturn.jsx';
 import NotFound from './pages/NotFound.jsx';
@@ -50,6 +51,7 @@ export default function App() {
             <Route path="/parts/:partId" element={<Parts />} />
             <Route path="/donations" element={<Donations />} />
             <Route path="/progress" element={<Progress />} />
+            <Route path="/spending" element={<Spending />} />
             <Route path="/about" element={<About />} />
             <Route path="/community" element={<Suspense fallback={<p className="page muted">Loading community…</p>}><Community /></Suspense>} />
             <Route path="/terms" element={<Legal />} />

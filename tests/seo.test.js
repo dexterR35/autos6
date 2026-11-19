@@ -4,7 +4,7 @@ import {
 } from '../src/seo/config.js';
 
 const SITE = 'https://projects6.example';
-const nav = ['/', '/parts', ...PART_ROUTES.map((r) => r.path), '/donations', '/progress', '/about', '/community', '/terms', '/privacy'];
+const nav = ['/', '/parts', ...PART_ROUTES.map((r) => r.path), '/donations', '/progress', '/spending', '/about', '/community', '/terms', '/privacy'];
 
 describe('route metadata', () => {
   it('every public page has a unique title (≤ 60 chars) and description (70–160 chars)', () => {
@@ -91,7 +91,7 @@ describe('rendering', () => {
 
   it('sitemap lists only indexable pages with absolute URLs; robots points at it', () => {
     const xml = renderSitemap(SITE, '2026-10-04');
-    expect(xml.match(/<loc>/g)).toHaveLength(18);
+    expect(xml.match(/<loc>/g)).toHaveLength(19);
     expect(xml).toContain(`<loc>${SITE}/parts/hood</loc>`);
     expect(xml).toContain(`<image:loc>${SITE}/og/parts/hood.jpg</image:loc>`);
     expect(xml).toContain('xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"');

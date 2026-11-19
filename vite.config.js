@@ -3,12 +3,13 @@ import react from '@vitejs/plugin-react';
 import seoPlugin from './vite/seoPlugin.js';
 import { validatePublicEnv } from './vite/validatePublicEnv.js';
 import modelAssetsPlugin from './vite/modelAssetsPlugin.js';
+import carReleasePlugin from './vite/carReleasePlugin.js';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), 'VITE_');
   validatePublicEnv(env);
   return {
-    plugins: [react(), seoPlugin(env), modelAssetsPlugin(env)],
+    plugins: [react(), carReleasePlugin(), seoPlugin(env), modelAssetsPlugin(env)],
     server: {
       port: 5173,
       proxy: {
