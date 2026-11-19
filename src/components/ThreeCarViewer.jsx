@@ -7,7 +7,7 @@ import { RotateCcw, Plus, Minus, Warehouse, Lightbulb, Users, Settings2 } from '
 import HotspotButton from './HotspotButton.jsx';
 import { cameraPreset, GARAGE_TARGET, findMeshPart, partAnchors3D } from '../lib/garage3d.js';
 import { createGarageLook } from '../lib/garageLighting.js';
-import { modelUrl } from '../lib/modelAssets.js';
+import { modelUrls, loadFirst } from '../lib/modelAssets.js';
 import { extendGarage } from '../lib/garageExtension.js';
 import { RayIndex } from '../lib/rayIndex.js';
 import { createGarageSupportersBoard, SUPPORTER_WALL, supporterWallCamera } from '../lib/garageSupporters.js';
@@ -18,7 +18,7 @@ import { createInstalledParts, installedKey, installedPartList } from '../lib/in
 import { safeMediaUrl } from '../lib/safeMedia.js';
 
 const ANCHORS = partAnchors3D();
-const MODEL_URLS = [modelUrl('s6-c5.glb'), modelUrl('garage.glb')];
+const MODEL_URLS = [modelUrls('s6-c5.glb'), modelUrls('garage.glb')];
 const EMPTY_SUPPORTERS = { rows: [], state: 'ready', scope: 'all', isDemo: true };
 
 function disposeObject(root) {
@@ -509,11 +509,11 @@ export default function ThreeCarViewer({
 
       const progress = [0, 0];
       const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-      await Promise.all([environment, ...MODEL_URLS.map(async (url, index) => {
-        const model = await loadGlb(url, loader, abortController.signal, (fraction) => {
+      await Promise.all([environment, ...MODEL_URLS.map(async (urls, index) => {
+        const model = await loadFirst(urls, (url) => loadGlb(url, loader, abortController.signal, (fraction) => {
           progress[index] = fraction;
           if (!disposed && !failed) setStatus({ state: 'loading', progress: Math.floor((progress[0] + progress[1]) / 2 * 95) });
-        });
+        }), abortController.signal);
         if (disposed || failed) { disposeObject(model); return; }
         // Close the open front of the exported workshop so a full orbit shows a room.
         if (index === 1) {

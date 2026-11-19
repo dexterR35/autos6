@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
 import { meshComponents } from './meshComponents.js';
-import { lightingUrl, carLightingUrl } from './modelAssets.js';
+import { lightingUrls, carLightingUrl, loadFirst } from './modelAssets.js';
 import { finishCarMaterials } from './carLook.js';
 import { captureGarageReflections, addBoxProjection, measureRoom } from './garageReflections.js';
 import { NEON_BLUE, NEON_RED, selectNeonSources, addNeonSurfaceResponse, addNeonTubeProfile } from './neonLighting.js';
@@ -117,7 +117,7 @@ export function createGarageLook({renderer,scene,camera,compact=false}) {
 
   async function loadEnvironment(signal) {
     const results=await Promise.allSettled([
-      loadProbe(lightingUrl(),signal),
+      loadFirst(lightingUrls(),url=>loadProbe(url,signal),signal),
       loadProbe(carLightingUrl(),signal),
     ]);
     if(disposed||signal?.aborted) {

@@ -12,4 +12,23 @@ const base=assetBaseUrl(configured);
 export const CAR_RELEASE='imported-v4';
 export const modelUrl=(filename)=>filename==='s6-c5.glb'?`/car-releases/${CAR_RELEASE}/${filename}`:base?`${base}/${filename}`:`/models/${filename}`;
 export const lightingUrl=()=>base?`${base}/garage-lighting.hdr`:'/textures/garage-lighting.hdr';
+// The copies bundled under public/ stay as a fallback, so a paused storage
+// project or a missing upload never leaves the garage blank.
+const unique=(list)=>[...new Set(list)];
+export const modelUrls=(filename)=>unique([modelUrl(filename),filename==='s6-c5.glb'?modelUrl(filename):`/models/${filename}`]);
+export const lightingUrls=()=>unique([lightingUrl(),'/textures/garage-lighting.hdr']);
+
+/** Try each URL in turn; never retries after the caller cancels. */
+export async function loadFirst(urls,load,signal) {
+  let lastError;
+  for(const url of urls) {
+    try{return await load(url);}
+    catch(error) {
+      if(signal?.aborted||error?.name==='AbortError')throw error;
+      lastError=error;
+      if(url!==urls[urls.length-1])console.warn(`[3d] ${url} failed, trying the bundled copy.`,error);
+    }
+  }
+  throw lastError;
+}
 export const carLightingUrl=()=>`/car-releases/${CAR_RELEASE}/paint-studio.hdr`;
