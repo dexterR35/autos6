@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { RotateCcw, Plus, Minus, Warehouse, Lightbulb, Users, Settings2 } from 'lucide-react';
+import { RotateCcw, Plus, Minus, Warehouse, Lightbulb, Users, Settings2, DoorOpen } from 'lucide-react';
 import HotspotButton from './HotspotButton.jsx';
 import { cameraPreset, GARAGE_TARGET, findMeshPart, partAnchors3D } from '../lib/garage3d.js';
 import { createGarageLook } from '../lib/garageLighting.js';
@@ -13,6 +13,8 @@ import { RayIndex } from '../lib/rayIndex.js';
 import { createGarageSupportersBoard, SUPPORTER_WALL, supporterWallCamera } from '../lib/garageSupporters.js';
 import GarageSupportersDialog from './GarageSupportersDialog.jsx';
 import WheelSetupPanel from './WheelSetupPanel.jsx';
+import CarRigPanel from './CarRigPanel.jsx';
+import { createCarRig, DEFAULT_CAR_POSE } from '../lib/carRig.js';
 import { applyWheelSetup, readWheelSetup, saveWheelSetup } from '../lib/wheelSetup.js';
 import { createInstalledParts, installedKey, installedPartList } from '../lib/installedParts.js';
 import { safeMediaUrl } from '../lib/safeMedia.js';
@@ -88,6 +90,7 @@ export default function ThreeCarViewer({
   const hintRef = useRef(null);
   const lightingRef = useRef(null);
   const wheelPanelRef = useRef(null);
+  const rigPanelRef = useRef(null);
   const markersRef = useRef(new Map());
   const runtimeRef = useRef(null);
   const propsRef = useRef(null);
@@ -99,9 +102,12 @@ export default function ThreeCarViewer({
   const [wheelSetup, setWheelSetup] = useState(readWheelSetup);
   const [wheelSetupOpen, setWheelSetupOpen] = useState(false);
   const closeWheelSetup = useCallback(() => setWheelSetupOpen(false), []);
+  const [carPose, setCarPose] = useState(() => ({ ...DEFAULT_CAR_POSE }));
+  const [rigOpen, setRigOpen] = useState(false);
+  const closeRig = useCallback(() => setRigOpen(false), []);
   const [supportersOpen, setSupportersOpen] = useState(false);
   const [supporterView, setSupporterView] = useState(false);
-  propsRef.current = { viewId, compact, partsById, visiblePartIds, selectedPartId, onPartSelect, onPartHover, reservedRefs, overlayRefs, onViewError, supporters, lightLevel, wheelSetup };
+  propsRef.current = { viewId, compact, partsById, visiblePartIds, selectedPartId, onPartSelect, onPartHover, reservedRefs, overlayRefs, onViewError, supporters, lightLevel, wheelSetup, carPose };
 
   useEffect(() => {
     const host = mountRef.current;
@@ -114,8 +120,11 @@ export default function ThreeCarViewer({
     let resizeObserver;
     let look;
     let car;
+    let carRig;
     let supporterBoard;
     let inspectingSupporters = false;
+    let inspectingInterior = false;
+    let inspectingEngine = false;
     let tween;
     let width = 1;
     let height = 1;
@@ -159,11 +168,17 @@ export default function ThreeCarViewer({
       if (!disposed && !failed && !document.hidden && !frameId) frameId = requestAnimationFrame(renderFrame);
     }
 
+    function intersectScene(ray, far, any = false) {
+      const fixed = rayIndex?.intersect(ray, far, any);
+      if (any && fixed) return fixed;
+      return carRig?.intersect(ray, fixed?.distance ?? far) ?? fixed;
+    }
+
     function projectMarkers() {
       if (!car || !sceneReady) return;
       const current = propsRef.current;
       const bounds = stage.getBoundingClientRect();
-      const covered = [...current.reservedRefs, ...current.overlayRefs, toolbarRef, hintRef, lightingRef, wheelPanelRef]
+      const covered = [...current.reservedRefs, ...current.overlayRefs, toolbarRef, hintRef, lightingRef, wheelPanelRef, rigPanelRef]
         .map((ref) => ref?.current?.getBoundingClientRect()).filter((rect) => rect?.width && rect?.height);
       const occupied = [];
       const entries = [...markersRef.current.entries()].sort(([a], [b]) => Number(b === current.selectedPartId) - Number(a === current.selectedPartId));
@@ -188,7 +203,7 @@ export default function ThreeCarViewer({
           toCamera.copy(point).sub(camera.position);
           const distance = toCamera.length();
           occlusionRay.set(camera.position, toCamera.normalize());
-          if (rayIndex?.intersect(occlusionRay.ray, Math.max(0, distance - 0.14), true)) continue;
+          if (intersectScene(occlusionRay.ray, Math.max(0, distance - 0.14), true)) continue;
           screenPoint = { x, y };
           break;
         }
@@ -249,6 +264,9 @@ export default function ThreeCarViewer({
       trackMotion(time);
       const delta = lastFrameTime ? Math.min((time - lastFrameTime) / 1000, 0.05) : 1 / 60;
       lastFrameTime = time;
+      const rigFrame = carRig?.update(delta, reducedMotion);
+      if (rigFrame?.changed) renderer.shadowMap.needsUpdate = true;
+      if (carRig) stage.dataset.carRig = JSON.stringify(carRig.snapshot());
       controls.dampingFactor = 1 - Math.pow(1 - 0.09, delta * 60);
       if (tween) {
         const t = Math.min(1, (time - tween.started) / tween.duration);
@@ -267,15 +285,15 @@ export default function ThreeCarViewer({
       // Keep the inspection target in the workshop and the camera below its ceiling.
       // The azimuth stays unrestricted, so the complete horizontal orbit remains free.
       previousTarget.copy(controls.target);
-      controls.target.x = THREE.MathUtils.clamp(controls.target.x, inspectingSupporters ? SUPPORTER_WALL.position[0] : -8, 8);
-      controls.target.y = THREE.MathUtils.clamp(controls.target.y, 0.2, inspectingSupporters ? 5 : 3.5);
-      controls.target.z = THREE.MathUtils.clamp(controls.target.z, -10, 8);
+      controls.target.x = THREE.MathUtils.clamp(controls.target.x, inspectingInterior ? -1.65 : inspectingSupporters ? SUPPORTER_WALL.position[0] : -8, inspectingInterior ? .75 : 8);
+      controls.target.y = THREE.MathUtils.clamp(controls.target.y, inspectingInterior ? .45 : .2, inspectingInterior ? 1.3 : inspectingSupporters ? 5 : 3.5);
+      controls.target.z = THREE.MathUtils.clamp(controls.target.z, inspectingInterior ? -.6 : -10, inspectingInterior ? .6 : 8);
       camera.position.add(previousTarget.sub(controls.target).negate());
       const distance = camera.position.distanceTo(controls.target);
       // A full orbit stays inside all four walls, including after a pan.
-      controls.maxDistance = inspectingSupporters ? 12.5
+      controls.maxDistance = inspectingInterior ? 1.9 : inspectingEngine ? 5 : inspectingSupporters ? 12.5
         : Math.min(12.5, 13.2 - Math.abs(controls.target.x), 14.1 + controls.target.z, 13.1 - controls.target.z);
-      controls.minPolarAngle = Math.max(0.12, Math.acos(THREE.MathUtils.clamp((6.4 - controls.target.y) / Math.max(0.1, distance), -1, 1)));
+      controls.minPolarAngle = inspectingInterior ? .04 : Math.max(0.12, Math.acos(THREE.MathUtils.clamp((6.4 - controls.target.y) / Math.max(0.1, distance), -1, 1)));
       const changed = controls.update();
       if (inspectingSupporters) {
         camera.position.x = THREE.MathUtils.clamp(camera.position.x, -13.65, 13.2);
@@ -290,12 +308,13 @@ export default function ThreeCarViewer({
       stage.dataset.cameraPosition = camera.position.toArray().map((n) => n.toFixed(3)).join(',');
       stage.dataset.cameraTarget = controls.target.toArray().map((n) => n.toFixed(3)).join(',');
       stage.dataset.cameraFov = camera.fov.toFixed(2);
+      stage.dataset.cameraMode = inspectingInterior ? 'interior' : inspectingEngine ? 'engine' : 'exterior';
       stage.dataset.renderScale = motion.applied.toFixed(2);
       stage.dataset.renderCalls = String(renderer.info.render.calls);
       stage.dataset.triangles = String(renderer.info.render.triangles);
       stage.dataset.pixelRatio = renderer.getPixelRatio().toFixed(2);
       projectMarkers();
-      if (tween || changed || lightsChanging) requestFrame();
+      if (tween || changed || lightsChanging || rigFrame?.moving) requestFrame();
       else settle();
     }
 
@@ -330,12 +349,23 @@ export default function ThreeCarViewer({
       requestFrame();
     }
 
+    function setCameraMode(interior, engine = false) {
+      inspectingInterior = Boolean(interior);
+      inspectingEngine = Boolean(engine);
+      controls.minDistance = inspectingInterior ? .25 : inspectingEngine ? .85 : 3.3;
+      controls.maxDistance = inspectingInterior ? 1.9 : inspectingEngine ? 5 : 12.5;
+      controls.maxPolarAngle = inspectingInterior ? Math.PI - .04 : Math.PI / 2 - .025;
+      camera.near = inspectingInterior ? .018 : inspectingEngine ? .025 : .08;
+      camera.updateProjectionMatrix();
+    }
+
     function reset() {
       inspectingSupporters = false;
       const preset = cameraPreset(propsRef.current.viewId, propsRef.current.compact);
+      setCameraMode(preset.interior, preset.engine);
       setGarageView(false);
       setSupporterView(false);
-      flyTo(preset.position, preset.target);
+      flyTo(preset.position, preset.target, false, preset.fov ?? 36);
     }
 
     function zoom(direction) {
@@ -352,7 +382,7 @@ export default function ThreeCarViewer({
       pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
       raycaster.setFromCamera(pointer, camera);
       // Test the nearest surface only: never select a hidden part through the body.
-      const hit = rayIndex?.intersect(raycaster.ray, raycaster.far);
+      const hit = intersectScene(raycaster.ray, raycaster.far);
       const id = hit ? findMeshPart(hit.object) : null;
       const current = propsRef.current;
       return id && current.partsById[id] && (!current.visiblePartIds || current.visiblePartIds.has(id)) ? id : null;
@@ -372,7 +402,7 @@ export default function ThreeCarViewer({
       canvas.className = 'three-canvas';
       canvas.tabIndex = 0;
       canvas.setAttribute('role', 'img');
-      canvas.setAttribute('aria-label', 'Interactive 3D Audi S6 and garage. Click or tap a car component to see details. Drag to orbit, scroll or pinch to zoom. Arrow keys orbit, plus and minus zoom, Home resets.');
+      canvas.setAttribute('aria-label', 'Interactive 3D Audi A6 C5 and garage. Click or tap a car component to see details. Drag to orbit, scroll or pinch to zoom. Arrow keys orbit, plus and minus zoom, Home resets.');
       host.appendChild(canvas);
 
       controls = new OrbitControls(camera, canvas);
@@ -387,6 +417,9 @@ export default function ThreeCarViewer({
       controls.maxPolarAngle = Math.PI / 2 - 0.025;
       controls.screenSpacePanning = true;
       const initial = cameraPreset(propsRef.current.viewId, propsRef.current.compact);
+      setCameraMode(initial.interior, initial.engine);
+      camera.fov = initial.fov ?? 36;
+      camera.updateProjectionMatrix();
       camera.position.fromArray(initial.position);
       controls.target.fromArray(initial.target);
       controls.update();
@@ -467,6 +500,7 @@ export default function ThreeCarViewer({
           requestFrame();
         },
         showSupporters: () => {
+          setCameraMode(false);
           inspectingSupporters = true;
           setGarageView(false);
           setSupporterView(true);
@@ -498,11 +532,12 @@ export default function ThreeCarViewer({
           renderer.shadowMap.needsUpdate = true;
           requestFrame();
         },
+        setCarPose: (pose) => { carRig?.setPose(pose); requestFrame(); },
         showGarage: (enabled) => {
           inspectingSupporters = false;
           setSupporterView(false);
           setGarageView(enabled);
-          if (enabled) flyTo([6.5, 4.4, 8.1], GARAGE_TARGET, false, 50);
+          if (enabled) { setCameraMode(false); flyTo([6.5, 4.4, 8.1], GARAGE_TARGET, false, 50); }
           else reset();
         },
       };
@@ -529,7 +564,13 @@ export default function ThreeCarViewer({
         });
         scene.add(model);
         occluders.push(model);
-        if (index === 0) { car = model; applyWheelSetup(car, propsRef.current.wheelSetup); }
+        if (index === 0) {
+          car = model;
+          applyWheelSetup(car, propsRef.current.wheelSetup);
+          carRig = createCarRig(car);
+          carRig.setPose(propsRef.current.carPose);
+          carRig.update(0, true);
+        }
         requestFrame();
       })]);
       if (disposed || failed) return;
@@ -586,11 +627,16 @@ export default function ThreeCarViewer({
   useEffect(() => { runtimeRef.current?.setLightLevel(lightLevel); }, [lightLevel, attempt]);
   useEffect(() => { runtimeRef.current?.updateSupporters(supporters); }, [supporters]);
   useEffect(() => { runtimeRef.current?.setWheelSetup(wheelSetup); saveWheelSetup(wheelSetup); }, [wheelSetup]);
+  useEffect(() => { runtimeRef.current?.setCarPose(carPose); }, [carPose]);
+  useEffect(() => {
+    if (viewId !== 'engine') return;
+    setCarPose(pose => pose.openPanels.includes('hood') ? pose : { ...pose, openPanels: [...pose.openPanels, 'hood'] });
+  }, [viewId]);
   const installedParts = installedPartList(partsById);
   const installedSignature = installedKey(installedParts);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { runtimeRef.current?.syncInstalled?.(installedParts); }, [installedSignature, status.state]);
-  useEffect(() => { runtimeRef.current?.invalidate(); }, [selectedPartId, visiblePartIds, hoveredPartId, status.state, reservedRefs, overlayRefs, lightingOpen, wheelSetupOpen]);
+  useEffect(() => { runtimeRef.current?.invalidate(); }, [selectedPartId, visiblePartIds, hoveredPartId, status.state, reservedRefs, overlayRefs, lightingOpen, wheelSetupOpen, rigOpen]);
 
   useEffect(() => {
     if (!lightingOpen) return undefined;
@@ -646,8 +692,9 @@ export default function ThreeCarViewer({
               <button type="button" onClick={() => runtimeRef.current?.zoom(-1)} aria-label="Zoom out" title="Zoom out"><Minus aria-hidden="true" /></button>
               <button type="button" onClick={() => runtimeRef.current?.zoom(1)} aria-label="Zoom in" title="Zoom in"><Plus aria-hidden="true" /></button>
             </div>
-            <button type="button" className="three-toolbar__wheels" aria-expanded={wheelSetupOpen} aria-controls="wheel-setup" aria-label="Customize wheels and brakes" onClick={() => { setWheelSetupOpen(open => !open); setLightingOpen(false); }} title="Customize wheels and brakes"><Settings2 aria-hidden="true" /></button>
-            <button type="button" className="three-toolbar__lights" aria-expanded={lightingOpen} aria-controls="garage-lighting" aria-label="Adjust garage lighting" onClick={() => { setLightingOpen((open) => !open); setWheelSetupOpen(false); }} title="Adjust garage lighting"><Lightbulb aria-hidden="true" /></button>
+            <button type="button" className="three-toolbar__panels" aria-expanded={rigOpen} aria-controls="car-rig" aria-label="Open doors and car controls" onClick={() => { setRigOpen(open => !open); setLightingOpen(false); setWheelSetupOpen(false); }} title="Doors, panels and steering"><DoorOpen aria-hidden="true" /></button>
+            <button type="button" className="three-toolbar__wheels" aria-expanded={wheelSetupOpen} aria-controls="wheel-setup" aria-label="Customize wheels and brakes" onClick={() => { setWheelSetupOpen(open => !open); setLightingOpen(false); setRigOpen(false); }} title="Customize wheels and brakes"><Settings2 aria-hidden="true" /></button>
+            <button type="button" className="three-toolbar__lights" aria-expanded={lightingOpen} aria-controls="garage-lighting" aria-label="Adjust garage lighting" onClick={() => { setLightingOpen((open) => !open); setWheelSetupOpen(false); setRigOpen(false); }} title="Adjust garage lighting"><Lightbulb aria-hidden="true" /></button>
           </div>
           {lightingOpen && (
             <div ref={lightingRef} id="garage-lighting" className="three-lighting" role="group" aria-label="Garage lighting">
@@ -657,11 +704,12 @@ export default function ThreeCarViewer({
             </div>
           )}
           {wheelSetupOpen && <WheelSetupPanel setup={wheelSetup} onChange={setWheelSetup} onClose={closeWheelSetup} panelRef={wheelPanelRef} />}
+          {rigOpen && <CarRigPanel pose={carPose} onChange={setCarPose} onClose={closeRig} panelRef={rigPanelRef} />}
           {supporterView && <div className="three-supporters-actions">
             <button type="button" onClick={() => setSupportersOpen(true)}>Read supporter table</button>
             {supporters.rows.length > 10 && <button type="button" onClick={() => runtimeRef.current?.turnBoardPage()}>Next board page</button>}
           </div>}
-          <p ref={hintRef} className={`three-hint ${lightingOpen || wheelSetupOpen || supporterView ? 'is-hidden' : ''}`}>{compact ? 'Drag to explore · Tap a car part for details' : 'Drag to orbit · Scroll to zoom · Click a car part for details'}</p>
+          <p ref={hintRef} className={`three-hint ${lightingOpen || wheelSetupOpen || rigOpen || supporterView ? 'is-hidden' : ''}`}>{compact ? 'Drag to explore · Tap a car part for details' : 'Drag to orbit · Scroll to zoom · Click a car part for details'}</p>
         </>
       )}
       <GarageSupportersDialog open={supportersOpen} onClose={() => setSupportersOpen(false)} supporters={supporters} />

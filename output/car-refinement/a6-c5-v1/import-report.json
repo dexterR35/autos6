@@ -1,0 +1,418 @@
+{
+  "source": "1998+Audi+A6+Avant.obj",
+  "sha256": "d839ff6591909934637ba6b08a68a4df07e95a1cfdee08483e304c4ce18eaa9d",
+  "blend": "output/car-refinement/a6-c5-v1/audi_a6_c5_rigged.blend",
+  "panels": [
+    "door-fl",
+    "door-fr",
+    "door-rl",
+    "door-rr",
+    "hood",
+    "tailgate"
+  ],
+  "wheelCorners": [
+    "FL",
+    "FR",
+    "RL",
+    "RR"
+  ],
+  "objects": 546,
+  "partition": {
+    "_G-Object.047_(Loose_Mesh)": {
+      "body": 26
+    },
+    "_G-Object.088_(Loose_Mesh)": {
+      "front-bumper": 1055,
+      "rear-bumper": 558,
+      "side-skirts": 260
+    },
+    "C-Cos8": {
+      "body": 319
+    },
+    "C-KloszLicznik": {
+      "body": 35
+    },
+    "G-Object.037": {
+      "body": 323
+    },
+    "G-Object.038": {
+      "door-fr": 100,
+      "door-fl": 116,
+      "door-rl": 43,
+      "door-rr": 43,
+      "body": 1088
+    },
+    "G-Object.039": {
+      "body": 114
+    },
+    "G-Object.041": {
+      "body": 4362
+    },
+    "G-Object.042": {
+      "body": 656
+    },
+    "G-Object.043": {
+      "body": 640
+    },
+    "G-Object.045": {
+      "body": 2270
+    },
+    "G-Object.046": {
+      "body": 433
+    },
+    "G-Object.048": {
+      "door-rr": 56,
+      "door-fl": 126,
+      "body": 136,
+      "door-fr": 128,
+      "door-rl": 56
+    },
+    "G-Object.049": {
+      "body": 2335
+    },
+    "G-Object.050": {
+      "door-rr": 393,
+      "door-rl": 393,
+      "door-fr": 354,
+      "door-fl": 763,
+      "body": 202
+    },
+    "G-Object.051": {
+      "body": 1143
+    },
+    "G-Object.052": {
+      "body": 6148,
+      "door-rr": 54,
+      "door-fr": 36,
+      "door-rl": 54
+    },
+    "G-Object.053": {
+      "body": 530,
+      "door-rr": 47,
+      "door-rl": 47,
+      "door-fr": 90,
+      "door-fl": 94
+    },
+    "G-Object.055": {
+      "body": 2896
+    },
+    "G-Object.056": {
+      "body": 1251
+    },
+    "G-Object.058": {
+      "exhaust": 1208
+    },
+    "G-Object.060": {
+      "front-bumper": 634
+    },
+    "G-Object.061": {
+      "hood": 364
+    },
+    "G-Object.062": {
+      "body": 786
+    },
+    "G-Object.063": {
+      "body": 1242
+    },
+    "G-Object.064": {
+      "door-fr": 184,
+      "door-rr": 152,
+      "door-rl": 152,
+      "door-fl": 184
+    },
+    "G-Object.065": {
+      "tailgate": 324
+    },
+    "G-Object.066": {
+      "door-fr": 20,
+      "door-rr": 16,
+      "door-rl": 16,
+      "door-fl": 20
+    },
+    "G-Object.067": {
+      "rear-bumper": 298
+    },
+    "G-Object.068": {
+      "door-fr": 346,
+      "door-fl": 346
+    },
+    "G-Object.069": {
+      "door-fr": 128,
+      "door-fl": 128
+    },
+    "G-Object.070": {
+      "door-rr": 65,
+      "door-rl": 65
+    },
+    "G-Object.072": {
+      "front-bumper": 392
+    },
+    "G-Object.073": {
+      "hood": 26
+    },
+    "G-Object.074": {
+      "hood": 452
+    },
+    "G-Object.075": {
+      "front-bumper": 41,
+      "hood": 22
+    },
+    "G-Object.076": {
+      "side-skirts": 657
+    },
+    "G-Object.077": {
+      "hood": 214
+    },
+    "G-Object.079": {
+      "hood": 1260
+    },
+    "G-Object.080": {
+      "body": 70
+    },
+    "G-Object.081": {
+      "door-fr": 11,
+      "body": 26,
+      "door-rr": 16,
+      "door-rl": 16,
+      "door-fl": 11
+    },
+    "G-Object.082": {
+      "body": 700
+    },
+    "G-Object.083": {
+      "body": 1272
+    },
+    "G-Object.084": {
+      "body": 132
+    },
+    "G-Object.085": {
+      "door-fr": 29,
+      "door-rr": 20,
+      "body": 6,
+      "door-rl": 20,
+      "door-fl": 29
+    },
+    "G-Object.086": {
+      "door-fr": 43,
+      "door-fl": 43,
+      "door-rr": 21,
+      "door-rl": 21
+    },
+    "G-Object.087": {
+      "tailgate": 242,
+      "body": 358
+    },
+    "G-Object.089": {
+      "side-skirts": 27
+    },
+    "G-Object.090": {
+      "side-skirts": 27
+    },
+    "G-Object.091": {
+      "tailgate": 76
+    },
+    "G-Object.092": {
+      "door-rl": 72,
+      "door-rr": 72,
+      "door-fr": 391,
+      "door-fl": 391
+    },
+    "G-Object.094": {
+      "tailgate": 214
+    },
+    "G-Object.095": {
+      "body": 250
+    },
+    "G-Object.097": {
+      "front-bumper": 110
+    },
+    "G-Object.098": {
+      "hood": 1119
+    },
+    "G-Object.099": {
+      "hood": 152
+    },
+    "G-Object.100": {
+      "body": 852
+    },
+    "G-Object.101": {
+      "body": 12810
+    },
+    "G-Object.102": {
+      "tailgate": 38
+    },
+    "G-Object.103": {
+      "door-fr": 20,
+      "door-fl": 20
+    },
+    "G-Object.104": {
+      "body": 292
+    },
+    "G-Object.105": {
+      "tailgate": 3052
+    },
+    "G-Object.106": {
+      "tailgate": 206
+    },
+    "G-Object.107": {
+      "body": 192
+    },
+    "G-Object.108": {
+      "body": 164,
+      "door-rr": 12,
+      "door-fr": 25,
+      "door-rl": 12,
+      "door-fl": 25
+    },
+    "G-Object.109": {
+      "front-bumper": 30
+    },
+    "G-Object.110": {
+      "body": 1060
+    },
+    "G-Object.111": {
+      "body": 270
+    },
+    "G-Object.112": {
+      "door-rr": 8,
+      "door-fl": 13,
+      "door-fr": 13,
+      "door-rl": 8
+    },
+    "G-Object.113": {
+      "tailgate": 1244
+    },
+    "G-Object.115": {
+      "front-bumper": 280
+    },
+    "G-Object.116": {
+      "tailgate": 386
+    },
+    "G-Object.117": {
+      "body": 382
+    },
+    "G-Object.118": {
+      "body": 382
+    },
+    "G-Object.119": {
+      "body": 120
+    },
+    "G-Object.120": {
+      "body": 108
+    },
+    "G-Object.121": {
+      "body": 382
+    },
+    "G-Object.122": {
+      "body": 382
+    },
+    "G-Object.123": {
+      "body": 180
+    },
+    "G-Object.125": {
+      "front-bumper": 140
+    },
+    "G-Object.126": {
+      "body": 20
+    },
+    "G-Object.127": {
+      "body": 148
+    },
+    "G-Object.128": {
+      "body": 222
+    },
+    "G-Object.129": {
+      "tailgate": 40
+    },
+    "G-Object.130": {
+      "body": 244
+    },
+    "G-Object.131": {
+      "body": 166
+    },
+    "G-Object.133": {
+      "body-right": 22,
+      "body-left": 22
+    },
+    "G-Object.134": {
+      "body-centre": 72
+    },
+    "G-Object.135": {
+      "tailgate-centre": 104
+    },
+    "G-Object.136": {
+      "door-fl-left": 34,
+      "door-fr-right": 34
+    },
+    "G-Object.137": {
+      "door-rr-right": 29,
+      "door-rl-left": 29
+    }
+  },
+  "paint": {
+    "color": [
+      0.01,
+      0.036,
+      0.155,
+      1
+    ],
+    "metalness": 0.74,
+    "roughness": 0.28,
+    "coatRoughness": 0.03
+  },
+  "interior": {
+    "style": "Blue Recaro-style sport interior",
+    "frontSeats": "Reference-inspired sport seats with matching dark blue inserts and bolsters, adjustable headrests and RECARO embroidery",
+    "upholstery": "Matching dark blue front seats, rear bench and door cards; black Alcantara headlining",
+    "repairs": [
+      "Fixed dashboard end caps and footwell liners on both sides",
+      "Moving door-card shells and inner sills below the original window frames",
+      "Clear cargo opening with horizontal floor, quarter linings and tailgate-mounted inner trim"
+    ]
+  },
+  "engine": {
+    "name": "Reference-built Audi 2.7 V6 biturbo",
+    "referenceUrl": "https://audi.oempartsonline.com/v-2004-audi-a6-quattro--base--2-7l-v6-gas/engine--engine-parts",
+    "appearance": "Supplied installed-engine and standalone-engine photos: silver Y intake, black vent panels, V6/BITURBO badges, orange dipstick, blue couplers and rose cone filter",
+    "components": [
+      "bay",
+      "bay-panels",
+      "long-block",
+      "cover",
+      "induction",
+      "turbos",
+      "accessories",
+      "cooling",
+      "wiring"
+    ],
+    "bayRepairs": {
+      "construction": "Source-fitted lamp housings and radiator support; smooth stamped suspension aprons with recessed gutters, swages, lap seams, spot welds and wing fixings",
+      "innerWings": "Blue satin stamped aprons, formed suspension turrets, gutter channels, flange bolts and clipped harnesses",
+      "headlightHousings": [
+        "left",
+        "right"
+      ],
+      "grilleRig": "Upper grille, rings and surround follow the bonnet; lights and radiator support stay fixed"
+    },
+    "bonnetUnderside": {
+      "innerFrame": "Painted pressing, rolled hem and shallow reinforcement channels",
+      "insulation": "Contoured charcoal felt with packed fibre normal, bound edge and ten retaining buttons",
+      "hardware": "Frame access recesses, hinge bolts, safety catch and telescoping gas support"
+    },
+    "clearance": {
+      "samples": 9296,
+      "minimumMetres": 0.014897465705871582,
+      "method": "Engine vertices versus the closed bonnet, painted inner pressing, reinforcement channels, felt pad and retaining clips",
+      "minimumWitness": {
+        "component": "V6 | gas support polished piston",
+        "bonnetSurface": "Bonnet | painted underside pressing",
+        "point": [
+          1.6797810792922974,
+          0.6382357478141785,
+          0.8216818571090698
+        ]
+      }
+    },
+    "construction": "Editable separate meshes; reference-based visualization, not measured OEM CAD"
+  }
+}

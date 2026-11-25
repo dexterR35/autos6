@@ -52,7 +52,7 @@ async function settled(page) {
 async function ready(page, path = '/') {
   await page.goto(`${base}${path}`, { waitUntil: 'networkidle' });
   await page.locator(`${viewerSelector}[data-loaded="true"]`).waitFor({ timeout: 120000 });
-  const canvas = page.locator('canvas[aria-label^="Interactive 3D Audi S6 and garage"]');
+  const canvas = page.locator('canvas[aria-label^="Interactive 3D Audi A6 C5 and garage"]');
   assert.equal(await canvas.count(), 1, 'A real accessible 3D canvas is present');
   assert.equal(await page.locator('.viewer__img').count(), 0, 'Default viewer does not render an image substitute');
   return canvas;

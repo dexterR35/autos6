@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { CAR_TARGET, cameraPreset, findMeshPart, partAnchors3D } from '../src/lib/garage3d.js';
 import { availableViews } from '../src/data/views.js';
 import { demoParts } from '../src/data/demoProject.js';
-import carRelease from '../public/car-releases/imported-v4/manifest.json';
+import { readFileSync } from 'node:fs';
+import { CAR_RELEASE } from '../src/lib/modelAssets.js';
+const carRelease = JSON.parse(readFileSync(`public/car-releases/${CAR_RELEASE}/manifest.json`, 'utf8'));
 
 const distance = ({ position, target }) => Math.hypot(...position.map((value, index) => value - target[index]));
 
@@ -16,9 +18,22 @@ describe('3D garage coordinates', () => {
       const desktop = cameraPreset(view.id);
       const mobile = cameraPreset(view.id, true);
       expect(desktop.position.every(Number.isFinite), view.id).toBe(true);
-      expect(desktop.target).toEqual(CAR_TARGET);
-      expect(distance(desktop), view.id).toBeGreaterThan(3.3);
-      expect(distance(mobile), view.id).toBeGreaterThan(distance(desktop));
+      if (view.id === 'interior') {
+        expect(desktop.interior).toBe(true);
+        expect(distance(desktop)).toBeLessThan(1.9);
+        expect(desktop.position[1]).toBeLessThan(1.4);
+        expect(mobile.fov).toBeGreaterThan(desktop.fov);
+      } else if (view.id === 'engine') {
+        expect(desktop.engine).toBe(true);
+        expect(desktop.target[0]).toBeGreaterThan(1);
+        expect(distance(desktop)).toBeLessThan(5);
+        expect(distance(desktop)).toBeGreaterThan(.85);
+        expect(mobile.fov).toBeGreaterThan(desktop.fov);
+      } else {
+        expect(desktop.target).toEqual(CAR_TARGET);
+        expect(distance(desktop), view.id).toBeGreaterThan(3.3);
+        expect(distance(mobile), view.id).toBeGreaterThan(distance(desktop));
+      }
     }
   });
 

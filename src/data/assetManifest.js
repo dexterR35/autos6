@@ -1,4 +1,4 @@
-import s6Renders from './s6RenderManifest.json';
+import carRenders from './a6RenderManifest.json';
 
 // Part thumbnail manifest. To swap in real part photos later, drop an image in
 // public/assets/car/parts/ and change the entry to { type: 'image', src, alt }.
@@ -17,12 +17,13 @@ const sourceThumbnails = {
   interior: { type: 'icon', icon: 'seat' },
 };
 
-// The Blender publisher produces matching crops for each supported visible part.
-// Keep the original images available until its source view has been published.
+// Current-model crops only. Unseen parts use an icon rather than an old-car crop.
 export const partThumbnails = Object.fromEntries(Object.entries(sourceThumbnails).map(([id, thumbnail]) => [
   id,
-  thumbnail.type === 'crop' && s6Renders[thumbnail.sourceView]
-    ? { ...thumbnail, src: `/assets/car/s6/parts/${id}.webp` }
+  thumbnail.type === 'crop'
+    ? carRenders[thumbnail.sourceView]?.partThumbnails?.[id]
+      ? { ...thumbnail, src: carRenders[thumbnail.sourceView].partThumbnails[id] }
+      : { type: 'icon', icon: 'wrench' }
     : thumbnail,
 ]));
 

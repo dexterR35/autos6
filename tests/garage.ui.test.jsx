@@ -76,14 +76,17 @@ describe('garage image fallback dashboard (demo mode)', () => {
     expect(screen.getByRole('progressbar', { name: 'Campaign funding' })).toHaveAttribute('aria-valuenow', '27');
     expect(screen.getAllByText(/Demo data/i).length).toBeGreaterThan(0);
     expect(layer().dataset.view).toBe('exterior-a');
-    expect(dotParts()).toEqual(['brake-kit', 'front-bumper', 'hood', 'roof-box', 'side-skirts', 'wheels']);
+    // The brake marker shares the wheel projection and is suppressed to avoid overlap.
+    expect(dotParts()).toEqual(['front-bumper', 'hood', 'side-skirts', 'wheels']);
     expect(document.querySelectorAll('.callout').length).toBeGreaterThan(0);
   });
 
   it('never renders missing angles as buttons', () => {
     renderApp();
     const strip = screen.getByRole('group', { name: 'Camera angles' });
-    expect(within(strip).queryByRole('button', { name: /Interior|Engine|Top View/ })).toBeNull();
+    expect(within(strip).getByRole('button', { name: 'Interior' })).toBeInTheDocument();
+    expect(within(strip).getByRole('button', { name: 'Engine' })).toBeInTheDocument();
+    expect(within(strip).queryByRole('button', { name: 'Top View' })).toBeNull();
   });
 
   it('switching to Front swaps the image and the hotspot map together', async () => {
@@ -91,10 +94,10 @@ describe('garage image fallback dashboard (demo mode)', () => {
     await switchView('Front');
     await waitFor(() => expect(layer().dataset.view).toBe('front'));
     expect(document.querySelector('.viewer__img:not(.is-leaving)').getAttribute('src')).toContain('/front.webp');
-    expect(dotParts()).toEqual(['front-bumper', 'hood', 'roof-box']);
+    expect(dotParts()).toEqual(['front-bumper', 'hood']);
     await switchView('Rear');
     await waitFor(() => expect(layer().dataset.view).toBe('rear'));
-    expect(dotParts()).toEqual(['exhaust', 'rear-bumper', 'roof-box']);
+    expect(dotParts()).toEqual(['rear-bumper']);
     expect(document.querySelectorAll('.hotspot-layer')).toHaveLength(1); // no stale dots from the previous view
   });
 
@@ -149,7 +152,8 @@ describe('garage image fallback dashboard (demo mode)', () => {
     renderApp();
     fireEvent.click(screen.getByRole('button', { name: 'Bought (1)' }));
     expect([...document.querySelectorAll('.part-row')].map((r) => r.dataset.partRow)).toEqual(['roof-box']);
-    expect(dotParts()).toEqual(['roof-box']);
+    // The purchased roof box is in the catalogue, but absent from the supplied A6.
+    expect(dotParts()).toEqual([]);
   });
 });
 

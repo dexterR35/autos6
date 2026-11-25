@@ -1,0 +1,413 @@
+{
+  "release": "a6-c5-v1",
+  "url": "/car-releases/a6-c5-v1/s6-c5.glb",
+  "source": {
+    "file": "1998+Audi+A6+Avant.obj",
+    "sha256": "d839ff6591909934637ba6b08a68a4df07e95a1cfdee08483e304c4ce18eaa9d",
+    "model": "Audi A6 Avant C5 1997–2006",
+    "editable": "output/car-refinement/a6-c5-v1/audi_a6_c5_rigged.blend"
+  },
+  "coordinates": {
+    "unit": "metres",
+    "up": "+Y",
+    "vehicleNose": "+X",
+    "driverSide": "+Z",
+    "ground": 0
+  },
+  "car": {
+    "file": "/car-releases/a6-c5-v1/s6-c5.glb",
+    "bytes": 3347368,
+    "sha256": "b3fcba73636368834dd9f39c264b0c0be10f5dfc326a913c0034c84e5b2bf0e4",
+    "meshes": 167,
+    "drawCalls": 171,
+    "triangles": 208138,
+    "bounds": {
+      "min": [
+        -2.4001982612920485,
+        -0.0000023012682666134765,
+        -1.0000466418378349
+      ],
+      "max": [
+        2.400011603934366,
+        1.4789701239332804,
+        0.9999916267507073
+      ]
+    },
+    "parts": [
+      "body",
+      "brake-kit",
+      "exhaust",
+      "front-bumper",
+      "hood",
+      "rear-bumper",
+      "side-skirts",
+      "wheels"
+    ],
+    "compression": "Meshopt medium; 16-bit positions, 14-bit normals, 16-bit UVs"
+  },
+  "anchors": {
+    "hood": [
+      {
+        "position": [
+          1.75,
+          0.8735315811108209,
+          0
+        ],
+        "normal": [
+          0,
+          1,
+          0
+        ]
+      }
+    ],
+    "front-bumper": [
+      {
+        "position": [
+          2.31,
+          0.43,
+          0.43
+        ],
+        "normal": [
+          1,
+          0,
+          0
+        ]
+      },
+      {
+        "position": [
+          2.31,
+          0.43,
+          -0.43
+        ],
+        "normal": [
+          1,
+          0,
+          0
+        ]
+      }
+    ],
+    "wheels": [
+      {
+        "position": [
+          1.4325,
+          0.317,
+          0.884
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "position": [
+          1.4325,
+          0.317,
+          -0.884
+        ],
+        "normal": [
+          0,
+          0,
+          -1
+        ]
+      }
+    ],
+    "brake-kit": [
+      {
+        "position": [
+          1.4325,
+          0.33,
+          0.8
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "position": [
+          1.4325,
+          0.33,
+          -0.8
+        ],
+        "normal": [
+          0,
+          0,
+          -1
+        ]
+      }
+    ],
+    "side-skirts": [
+      {
+        "position": [
+          -0.02,
+          0.25,
+          0.85
+        ],
+        "normal": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "position": [
+          -0.02,
+          0.25,
+          -0.85
+        ],
+        "normal": [
+          0,
+          0,
+          -1
+        ]
+      }
+    ],
+    "rear-bumper": [
+      {
+        "position": [
+          -2.34,
+          0.54,
+          0.42
+        ],
+        "normal": [
+          -1,
+          0,
+          0
+        ]
+      },
+      {
+        "position": [
+          -2.34,
+          0.54,
+          -0.42
+        ],
+        "normal": [
+          -1,
+          0,
+          0
+        ]
+      }
+    ],
+    "exhaust": [
+      {
+        "position": [
+          -1.9,
+          0.25,
+          -0.18
+        ],
+        "normal": [
+          -1,
+          0,
+          0
+        ]
+      }
+    ]
+  },
+  "materials": {
+    "paint": {
+      "color": [
+        0.01,
+        0.036,
+        0.155,
+        1
+      ],
+      "metalness": 0.74,
+      "roughness": 0.28,
+      "coatRoughness": 0.03
+    }
+  },
+  "interior": {
+    "style": "Blue Recaro-style sport interior",
+    "frontSeats": "Reference-inspired sport seats with matching dark blue inserts and bolsters, adjustable headrests and RECARO embroidery",
+    "upholstery": "Matching dark blue front seats, rear bench and door cards; black Alcantara headlining",
+    "repairs": [
+      "Fixed dashboard end caps and footwell liners on both sides",
+      "Complete moving door-card shells and fixed sill/jamb seals",
+      "Clear cargo opening with horizontal floor, quarter linings and tailgate-mounted inner trim"
+    ]
+  },
+  "engine": {
+    "name": "Reference-built Audi 2.7 V6 biturbo",
+    "referenceUrl": "https://audi.oempartsonline.com/v-2004-audi-a6-quattro--base--2-7l-v6-gas/engine--engine-parts",
+    "appearance": "Supplied installed-engine and standalone-engine photos: silver Y intake, black vent panels, V6/BITURBO badges, orange dipstick, blue couplers and rose cone filter",
+    "components": [
+      "bay",
+      "long-block",
+      "cover",
+      "induction",
+      "turbos",
+      "accessories",
+      "cooling",
+      "wiring"
+    ],
+    "clearance": {
+      "samples": 6980,
+      "minimumMetres": 0.02269577980041504,
+      "method": "Engine vertices versus the imported closed bonnet and fitted insulation skin",
+      "minimumWitness": {
+        "component": "V6 | lock carrier warning label",
+        "bonnetSurface": "V6 | fitted bonnet insulation",
+        "point": [
+          2.2524161338806152,
+          -0.2103039175271988,
+          0.6921961307525635
+        ]
+      }
+    },
+    "construction": "Editable separate meshes; reference-based visualization, not measured OEM CAD"
+  },
+  "articulation": {
+    "panels": [
+      "door-fl",
+      "door-fr",
+      "door-rl",
+      "door-rr",
+      "hood",
+      "tailgate"
+    ],
+    "wheelCorners": [
+      "FL",
+      "FR",
+      "RL",
+      "RR"
+    ],
+    "clips": [
+      "A6 | door-fl",
+      "A6 | door-fr",
+      "A6 | door-rl",
+      "A6 | door-rr",
+      "A6 | hood",
+      "A6 | tailgate",
+      "A6 | steer-FL",
+      "A6 | wheel-spin-FL",
+      "A6 | steer-FR",
+      "A6 | wheel-spin-FR",
+      "A6 | wheel-spin-RL",
+      "A6 | wheel-spin-RR"
+    ],
+    "joints": [
+      {
+        "name": "A6.Hinge.door-fl",
+        "articulationId": "door-fl",
+        "label": "Front left door",
+        "hingeAxis": [
+          0,
+          1,
+          0
+        ],
+        "openAngle": 1.1868238913561442,
+        "partId": "body",
+        "category": "car"
+      },
+      {
+        "name": "A6.Hinge.door-fr",
+        "articulationId": "door-fr",
+        "label": "Front right door",
+        "hingeAxis": [
+          0,
+          -1,
+          0
+        ],
+        "openAngle": 1.1868238913561442,
+        "partId": "body",
+        "category": "car"
+      },
+      {
+        "name": "A6.Hinge.door-rl",
+        "articulationId": "door-rl",
+        "label": "Rear left door",
+        "hingeAxis": [
+          0,
+          1,
+          0
+        ],
+        "openAngle": 1.1519173063162575,
+        "partId": "body",
+        "category": "car"
+      },
+      {
+        "name": "A6.Hinge.door-rr",
+        "articulationId": "door-rr",
+        "label": "Rear right door",
+        "hingeAxis": [
+          0,
+          -1,
+          0
+        ],
+        "openAngle": 1.1519173063162575,
+        "partId": "body",
+        "category": "car"
+      },
+      {
+        "name": "A6.Hinge.hood",
+        "articulationId": "hood",
+        "label": "Bonnet",
+        "hingeAxis": [
+          0,
+          0,
+          1
+        ],
+        "openAngle": 1.0821041362364843,
+        "partId": "hood",
+        "category": "car"
+      },
+      {
+        "name": "A6.Hinge.tailgate",
+        "articulationId": "tailgate",
+        "label": "Tailgate",
+        "hingeAxis": [
+          0,
+          0,
+          -1
+        ],
+        "openAngle": 1.4311699866353502,
+        "partId": "body",
+        "category": "car"
+      }
+    ]
+  },
+  "modularWheels": {
+    "corners": [
+      "FL",
+      "FR",
+      "RL",
+      "RR"
+    ],
+    "components": [
+      "rim",
+      "tyre",
+      "brake-disc",
+      "rotor-hat",
+      "caliper",
+      "backing-plate",
+      "centre-badge",
+      "wheel-hardware"
+    ],
+    "tyreVariants": [
+      "road",
+      "track"
+    ],
+    "axles": {
+      "front": 1.4325,
+      "rear": -1.3275
+    },
+    "tyreRadius": 0.317,
+    "tyreWidth": 0.23,
+    "source": "Original supplied Audi wheels, split into axle-centred steering and rolling groups; separate track tyre alternative"
+  },
+  "garageSha256": "6b6dc1426438c1428d99ff4d8d6d93358ce1ce9a95a4c493211173cdff028766",
+  "notes": [
+    "Supplied A6 OBJ geometry replaces the old generated car.",
+    "Original body scale, UVs and badges preserved; source colour-chart plane excluded.",
+    "Matching dark blue Recaro-style inserts and bolsters, rear bench and door cards; black Alcantara headlining.",
+    "Fixed dashboard end caps and footwell closures; complete moving door-card shells and fixed aperture seals.",
+    "Clear boot opening with horizontal load floor and quarter linings; the hatch liner moves with the tailgate.",
+    "Existing deep blue paint values retained.",
+    "Four independent hinged doors with their glass, mirrors, handles and door cards; separate bonnet and tailgate.",
+    "Four axle-centred wheel assemblies; rotating discs/rims/tyres and stationary calipers; front steering joints.",
+    "Reference-built 2.7 V6 biturbo fitted in the engine bay; silver Y intake, twin turbos, drive belt, filter, cooling and service reservoirs are separate authored meshes.",
+    "The original bonnet underside and edge linings follow the hood hinge; closed-bonnet clearance is measured against the imported geometry."
+  ]
+}

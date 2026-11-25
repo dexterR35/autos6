@@ -40,16 +40,17 @@ export function finishPaint(material) {
 
 /** Tinted glazing: reflections stay opaque, the pane itself stays transparent. */
 export function finishGlass(material) {
-  const privacy = /privacy/i.test(material.name);
-  material.color.setRGB(privacy ? .012 : .020, privacy ? .016 : .030, privacy ? .018 : .028);
-  material.opacity = privacy ? .80 : .30;
-  material.metalness = 0; material.roughness = .025; material.clearcoat = 0;
-  material.ior = 1.52; material.specularIntensity = 1;
   material.transparent = true; material.depthWrite = false; material.side = THREE.DoubleSide;
+  material.forceSinglePass = true;
   material.userData.carFinish = 'glass';
-  chain(material, 'glass-reflection-v1', shader => {
+  chain(material, 'a6-window-glass-v2', shader => {
     shader.fragmentShader = shader.fragmentShader.replace('#include <opaque_fragment>', `
-      diffuseColor.a=clamp(diffuseColor.a+dot(totalSpecular,vec3(.2126,.7152,.0722))*1.6,0.0,1.0);
+      float grazing = pow(1.0 - clamp(abs(dot(normalize(vViewPosition), normal)), 0.0, 1.0), 5.0);
+      diffuseColor.a = mix(diffuseColor.a, 0.90, grazing);
+      // The source tint darkens the view through the glass. Workshop
+      // reflections follow the viewing angle and the existing room probe.
+      outgoingLight = diffuseColor.rgb * 0.075 + reflectedLight.indirectSpecular
+                    + min(reflectedLight.directSpecular, vec3(0.10));
       #include <opaque_fragment>`);
   });
 }

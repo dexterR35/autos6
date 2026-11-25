@@ -12,6 +12,7 @@ import { cameraPreset, GARAGE_TARGET } from '../src/lib/garage3d.js';
 import { createGarageSupportersBoard, supporterWallCamera } from '../src/lib/garageSupporters.js';
 import { modelUrl } from '../src/lib/modelAssets.js';
 import { applyWheelSetup, DEFAULT_WHEEL_SETUP } from '../src/lib/wheelSetup.js';
+import { createCarRig } from '../src/lib/carRig.js';
 
 const params = new URLSearchParams(location.search);
 const comparing=params.get('compare')==='1';
@@ -22,6 +23,8 @@ const shots = {
   reference: { position: [1.15, 2.45, 7.5], target: [0, 0.1, -14.5], fov: 32.28, carYaw: -31 },
   s6: { position: [1.15, 1.78, 7.5], target: [0, 0.7, 0], fov: 30.6, carYaw: -31 },
   exterior: { ...cameraPreset('exterior-a'), fov: 36 },
+  interior: { ...cameraPreset('interior'), near: .018 },
+  engine: { ...cameraPreset('engine'), near: .025 },
   front: { ...cameraPreset('front'), fov: 36 },
   rear: { ...cameraPreset('rear'), fov: 36 },
   side: { ...cameraPreset('side-a'), fov: 36 },
@@ -88,6 +91,9 @@ const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 const carUrl=params.get('candidate')==='staging'?'/output/car-refinement/imported-v4/s6-c5.glb':params.get('candidate')==='web'?'/output/car-refinement/imported/model-web.glb':params.get('candidate')==='1'?'/output/car-refinement/imported/model.glb':params.get('original')==='1'?'/models/s6-c5.glb':modelUrl('s6-c5.glb');
 const [car, garage] = await Promise.all([carUrl, '/models/garage.glb'].map(async (url) => (await loader.loadAsync(url)).scene));
 applyWheelSetup(car, { ...DEFAULT_WHEEL_SETUP, tyre: params.get('tyre') || 'road', rimColor: params.get('rim') || DEFAULT_WHEEL_SETUP.rimColor, caliperColor: params.get('caliper') || DEFAULT_WHEEL_SETUP.caliperColor });
+const rig = createCarRig(car);
+rig.setPose({ openPanels: (params.get('open') || (params.get('shot') === 'engine' ? 'hood' : '')).split(',') });
+rig.update(0, true);
 // Inspect geometry independently of the imported photographic trim atlas.
 if (params.get('surface') === 'paint') {
   car.traverse(object => {
@@ -161,4 +167,4 @@ frame();
 await look.loadEnvironment();
 await new Promise((resolve) => requestAnimationFrame(resolve));
 frame();
-window.__lab = { ready: true, scene, look, camera, renderer };
+window.__lab = { ready: true, scene, look, camera, renderer, car, rig };

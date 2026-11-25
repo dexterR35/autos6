@@ -1,0 +1,23 @@
+{
+  "checks": [
+    "Interior preset enters the cabin, supports orbit/zoom and restores exterior camera limits on exit",
+    "Mobile interior preset uses a wider lens and fits the seats",
+    "Explicit image fallback has a matching real interior render",
+    "Rendered both open door sides, clear cargo opening and black Alcantara headlining"
+  ],
+  "runtimeErrors": [],
+  "screenshots": [
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\car-refinement\\a6-c5-v1\\interior-check\\desktop-interior-camera.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\car-refinement\\a6-c5-v1\\interior-check\\mobile-interior-camera.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\car-refinement\\a6-c5-v1\\interior-check\\left-open-door.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\car-refinement\\a6-c5-v1\\interior-check\\right-open-door.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\car-refinement\\a6-c5-v1\\interior-check\\open-boot.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\car-refinement\\a6-c5-v1\\interior-check\\black-alcantara-ceiling.png"
+  ],
+  "geometry": {
+    "cargoOpening": {
+      "x": -1.22250340450351,
+      "object": "A6Cargo_|_lined_rear_quarter_|_left"
+    }
+  }
+}

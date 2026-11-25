@@ -4,6 +4,41 @@ The original files in the repository root are **never modified**. They were copi
 
 ## Interactive 3D garage
 
+The active car is the supplied Audi A6 C5 Avant, release `a6-c5-v5-original-glass`, loaded from
+`public/car-releases/a6-c5-v5-original-glass/s6-c5.glb`. Its packed editable source is
+`output/car-refinement/a6-c5-v1/audi_a6_c5_rigged.blend`. The previous blue paint
+is preserved. Four doors, bonnet, tailgate and four wheel assemblies have
+independent pivots; glass, handles, mirrors and interior cards follow their doors.
+See [the current rig workflow](docs/MODULAR-AUDI-PARTS.md). Previous generated car
+releases remain authoring references and are excluded from production packaging.
+`scripts/publish-a6-previews.mjs` captures matching camera thumbnails and fallback
+images from the actual car and garage into `public/assets/car/a6-c5/` and
+`src/data/a6RenderManifest.json`. Parts absent from this model use icons instead
+of a crop of the old car.
+
+The camera strip also includes a real **Interior** view, captured from inside
+the windscreen. The front seats, side bolsters, rear bench and door cards use
+matching dark blue upholstery, with black Alcantara headlining. Both dashboard
+ends and the door apertures have closed inner surfaces; the boot opening has
+its own floor/quarter linings and the hatch trim follows the tailgate.
+
+The **Engine** camera opens the bonnet over a reference-built 2.7 V6 biturbo.
+`scripts/a6_engine.py` creates its separate engine and bay components from the
+supplied engine photos and catalogue reference. The original flat under-bonnet
+placeholder is replaced with fitted bonnet insulation. The build records
+clearance against the closed bonnet/liner in the release manifest. Engine
+thumbnails and fallback imagery come from the same model as the live viewer.
+
+`scripts/a6_engine_bay.py` fits sealed headlight housings to the source lamp
+edges, joins them with a formed radiator support, and builds folded blue wing
+gutters and arched wheel liners. The complete upper grille, chrome surround
+and rings follow the bonnet; the headlights, lower grille and carrier stay fixed.
+The inner wings have smooth stamped aprons, formed turret shoulders, recessed
+gutters, lap seams, spot welds and flange bolts in satin blue paint. The underside
+in `scripts/a6_bonnet.py` has a painted pressed frame, contoured charcoal felt
+with an embedded fibre normal map, retaining buttons, hinge and catch hardware.
+Its gas support uses Blender constraints and a matching telescoping web rig.
+
 The default viewer loads real car and garage geometry with Three.js and OrbitControls. Drag to orbit freely through 360 degrees, scroll or pinch to zoom, and right-drag or use two fingers to pan. Camera thumbnails move the camera to presets in the same scene.
 
 `scripts/export_s6_web.py` exports the editable scene to `public/models/s6-c5.glb` and `public/models/garage.glb`. It converts curves and modifiers, simplifies dense details, and combines static surfaces by material. Car groups retain part identifiers for picking. The car is centered at the origin with its nose along +X and +Y up. The garage is offset to match that origin. Browser lighting recreates the polished paint and neon workshop without an external environment download.

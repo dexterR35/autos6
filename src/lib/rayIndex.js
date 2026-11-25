@@ -22,7 +22,7 @@ function* collect(roots) {
   const meshes = [];
   for (const root of roots) {
     root.updateMatrixWorld(true);
-    root.traverse((object) => { if (object.isMesh && object.geometry?.attributes.position) meshes.push(object); });
+    root.traverse((object) => { if (object.isMesh && !object.userData.rigDynamic && object.geometry?.attributes.position) meshes.push(object); });
   }
   let count = 0;
   for (const mesh of meshes) {

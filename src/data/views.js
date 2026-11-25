@@ -1,4 +1,4 @@
-import s6Renders from './s6RenderManifest.json';
+import carRenders from './a6RenderManifest.json';
 
 // Camera views for the 2D image viewer. Blender exports override the source imagery
 // and anchor coordinates while retaining the catalogue's existing callout layout.
@@ -19,7 +19,7 @@ export const IMAGE_WIDTH = 1672;
 export const IMAGE_HEIGHT = 941;
 
 const view = (id, label, alt, focus, hotspots, extra = {}) => {
-  const render = s6Renders[id];
+  const render = carRenders[id];
   const anchors = hotspots.map(([partId, x, y, side, dx, dy, featured = true]) => ({
     id: `${id}--${partId}`,
     partId,
@@ -52,8 +52,8 @@ const view = (id, label, alt, focus, hotspots, extra = {}) => {
       width: render.width,
       height: render.height,
       focus: render.focus,
-      alt: `Blender render of a glossy 2003 Audi S6 C5 Avant, ${label.toLowerCase()} view`,
-      renderNote: '2003 S6 C5 Avant · Blender render',
+      alt: render.alt,
+      renderNote: render.renderNote,
       // An old anchor must never survive on a new image without a matching projection.
       hotspots: anchors.filter((anchor) => renderedAnchors.has(anchor.partId)).map((anchor) => {
         const projected = renderedAnchors.get(anchor.partId);
@@ -128,8 +128,8 @@ export const views = [
   ]),
   // Reference strip slots with no genuine photo yet. Kept in config so the strip can
   // grow when real assets exist; never rendered as clickable broken buttons.
-  { id: 'interior', label: 'Interior', available: false, hotspots: [] },
-  { id: 'engine', label: 'Engine', available: false, hotspots: [] },
+  view('interior', 'Interior', 'Dark blue Recaro seats and black Alcantara headlining inside the Audi A6 C5', [0, 0, 1, 1], []),
+  view('engine', 'Engine', 'Reference-built Audi 2.7 V6 biturbo engine fitted under the open bonnet', [0, 0, 1, 1], []),
   { id: 'top-view', label: 'Top View', available: false, hotspots: [] },
 ];
 

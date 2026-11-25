@@ -20,6 +20,14 @@ export const CAMERA_PRESETS = {
 };
 
 export function cameraPreset(viewId, compact = false) {
+  if (viewId === 'engine') return {
+    position: [3.30, 2.45, .95], target: [1.62, .63, 0], fov: compact ? 55 : 38,
+    engine: true,
+  };
+  if (viewId === 'interior') return {
+    position: [.40, 1.24, 0], target: [-.54, .84, 0], fov: compact ? 92 : 82,
+    interior: true,
+  };
   const position = [...(CAMERA_PRESETS[viewId] ?? CAMERA_PRESETS['exterior-a'])];
   // Keep the complete wagon in a narrower viewport without changing its proportions.
   if (compact) {

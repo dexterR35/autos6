@@ -211,3 +211,8 @@
   .three-toolbar { gap: 0; max-width: calc(100% - 8px); }
   .three-toolbar button, .three-toolbar button.three-toolbar__lights { width: 44px; min-width: 44px; height: 44px; padding: 0; }
 }
+@media (max-width:480px) {
+  .three-toolbar { width: 264px; gap: 0; flex-wrap: wrap; justify-content: center; }
+  .car-rig, .wheel-setup { bottom: 143px; max-height: calc(100% - 154px); }
+  .three-lighting { bottom: 143px; }
+}

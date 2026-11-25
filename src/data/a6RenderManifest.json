@@ -1,0 +1,331 @@
+{
+  "exterior-a": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0.2772199813685187,
+      "y0": 0.35960701377081017,
+      "x1": 0.7525348478821751,
+      "y1": 0.7284572748432891
+    },
+    "hotspots": [
+      {
+        "partId": "hood",
+        "x": 0.6287693817073223,
+        "y": 0.5070894714557096
+      },
+      {
+        "partId": "front-bumper",
+        "x": 0.6555665087407919,
+        "y": 0.597979539454671
+      },
+      {
+        "partId": "wheels",
+        "x": 0.5560615758593521,
+        "y": 0.6125260388283207
+      },
+      {
+        "partId": "brake-kit",
+        "x": 0.5608095296552014,
+        "y": 0.6084430422860039
+      },
+      {
+        "partId": "side-skirts",
+        "x": 0.4511238055141697,
+        "y": 0.5992685787580734
+      }
+    ],
+    "src": "/assets/car/a6-c5/exterior-a.webp",
+    "original": "/assets/car/a6-c5/exterior-a.webp",
+    "thumb": "/assets/car/a6-c5/exterior-a-thumb.webp",
+    "renderNote": "Audi A6 C5 Avant · 3D render",
+    "alt": "Blue Audi A6 C5 Avant in the garage, exterior-a view"
+  },
+  "exterior-b": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0.2085081549748636,
+      "y0": 0.3184686387734639,
+      "x1": 0.8684902210797588,
+      "y1": 0.8623764895466373
+    },
+    "hotspots": [
+      {
+        "partId": "hood",
+        "x": 0.6881946960418346,
+        "y": 0.5135050499178865
+      },
+      {
+        "partId": "front-bumper",
+        "x": 0.7312820485201125,
+        "y": 0.6623695620425725
+      },
+      {
+        "partId": "wheels",
+        "x": 0.5708881225714805,
+        "y": 0.6792771638885218
+      },
+      {
+        "partId": "brake-kit",
+        "x": 0.5789433610903085,
+        "y": 0.6722771310803772
+      },
+      {
+        "partId": "side-skirts",
+        "x": 0.4217853412089759,
+        "y": 0.6461910494351942
+      }
+    ],
+    "src": "/assets/car/a6-c5/exterior-b.webp",
+    "original": "/assets/car/a6-c5/exterior-b.webp",
+    "thumb": "/assets/car/a6-c5/exterior-b-thumb.webp",
+    "renderNote": "Audi A6 C5 Avant · 3D render",
+    "alt": "Blue Audi A6 C5 Avant in the garage, exterior-b view",
+    "partThumbnails": {
+      "hood": "/assets/car/a6-c5/parts/hood.webp"
+    }
+  },
+  "front": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0.3301754977920003,
+      "y0": 0.33093647017863725,
+      "x1": 0.6698324698073216,
+      "y1": 0.7774809796360972
+    },
+    "hotspots": [
+      {
+        "partId": "hood",
+        "x": 0.5,
+        "y": 0.5107137524494366
+      },
+      {
+        "partId": "front-bumper",
+        "x": 0.4392459118106196,
+        "y": 0.6308327009730371
+      }
+    ],
+    "src": "/assets/car/a6-c5/front.webp",
+    "original": "/assets/car/a6-c5/front.webp",
+    "thumb": "/assets/car/a6-c5/front-thumb.webp",
+    "renderNote": "Audi A6 C5 Avant · 3D render",
+    "alt": "Blue Audi A6 C5 Avant in the garage, front view",
+    "partThumbnails": {
+      "front-bumper": "/assets/car/a6-c5/parts/front-bumper.webp"
+    }
+  },
+  "side-a": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0.220583904185593,
+      "y0": 0.34982607663233856,
+      "x1": 0.7787136326233869,
+      "y1": 0.6972317089130099
+    },
+    "hotspots": [
+      {
+        "partId": "hood",
+        "x": 0.6649253195943985,
+        "y": 0.4911938648891311
+      },
+      {
+        "partId": "wheels",
+        "x": 0.6478291387121546,
+        "y": 0.6005114068455126
+      },
+      {
+        "partId": "brake-kit",
+        "x": 0.6464604265213891,
+        "y": 0.596426550178425
+      },
+      {
+        "partId": "side-skirts",
+        "x": 0.49698138695208594,
+        "y": 0.6117293434107258
+      }
+    ],
+    "src": "/assets/car/a6-c5/side-a.webp",
+    "original": "/assets/car/a6-c5/side-a.webp",
+    "thumb": "/assets/car/a6-c5/side-a-thumb.webp",
+    "renderNote": "Audi A6 C5 Avant · 3D render",
+    "alt": "Blue Audi A6 C5 Avant in the garage, side-a view",
+    "partThumbnails": {
+      "wheels": "/assets/car/a6-c5/parts/wheels.webp",
+      "side-skirts": "/assets/car/a6-c5/parts/side-skirts.webp"
+    }
+  },
+  "side-b": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0.2212847212222754,
+      "y0": 0.34982578516347207,
+      "x1": 0.7794178624195854,
+      "y1": 0.6972332735042516
+    },
+    "hotspots": [
+      {
+        "partId": "hood",
+        "x": 0.33507468040560157,
+        "y": 0.4911938648891311
+      },
+      {
+        "partId": "wheels",
+        "x": 0.35217086128784547,
+        "y": 0.6005114068455126
+      },
+      {
+        "partId": "brake-kit",
+        "x": 0.3535395734786109,
+        "y": 0.5964265501784252
+      },
+      {
+        "partId": "side-skirts",
+        "x": 0.5030186130479141,
+        "y": 0.6117293434107259
+      }
+    ],
+    "src": "/assets/car/a6-c5/side-b.webp",
+    "original": "/assets/car/a6-c5/side-b.webp",
+    "thumb": "/assets/car/a6-c5/side-b-thumb.webp",
+    "renderNote": "Audi A6 C5 Avant · 3D render",
+    "alt": "Blue Audi A6 C5 Avant in the garage, side-b view",
+    "partThumbnails": {
+      "brake-kit": "/assets/car/a6-c5/parts/brake-kit.webp"
+    }
+  },
+  "rear-quarter-a": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0.2361971554457967,
+      "y0": 0.35792893958806216,
+      "x1": 0.7286753918235822,
+      "y1": 0.7379293682849538
+    },
+    "hotspots": [
+      {
+        "partId": "wheels",
+        "x": 0.64267506078039,
+        "y": 0.5733691093535338
+      },
+      {
+        "partId": "brake-kit",
+        "x": 0.6371905347245364,
+        "y": 0.5701814155387132
+      },
+      {
+        "partId": "side-skirts",
+        "x": 0.5499724390069025,
+        "y": 0.60374559261051
+      },
+      {
+        "partId": "rear-bumper",
+        "x": 0.3358334881941345,
+        "y": 0.581305097155885
+      }
+    ],
+    "src": "/assets/car/a6-c5/rear-quarter-a.webp",
+    "original": "/assets/car/a6-c5/rear-quarter-a.webp",
+    "thumb": "/assets/car/a6-c5/rear-quarter-a-thumb.webp",
+    "renderNote": "Audi A6 C5 Avant · 3D render",
+    "alt": "Blue Audi A6 C5 Avant in the garage, rear-quarter-a view"
+  },
+  "rear-quarter-b": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0.2713208923469885,
+      "y0": 0.3579289933909444,
+      "x1": 0.7638005531660131,
+      "y1": 0.7379311692864587
+    },
+    "hotspots": [
+      {
+        "partId": "wheels",
+        "x": 0.35732493921960995,
+        "y": 0.5733691093535338
+      },
+      {
+        "partId": "brake-kit",
+        "x": 0.36280946527546376,
+        "y": 0.5701814155387132
+      },
+      {
+        "partId": "side-skirts",
+        "x": 0.4500275609930975,
+        "y": 0.6037455926105099
+      },
+      {
+        "partId": "rear-bumper",
+        "x": 0.7060033292546832,
+        "y": 0.5662273585128081
+      }
+    ],
+    "src": "/assets/car/a6-c5/rear-quarter-b.webp",
+    "original": "/assets/car/a6-c5/rear-quarter-b.webp",
+    "thumb": "/assets/car/a6-c5/rear-quarter-b-thumb.webp",
+    "renderNote": "Audi A6 C5 Avant · 3D render",
+    "alt": "Blue Audi A6 C5 Avant in the garage, rear-quarter-b view"
+  },
+  "rear": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0.3301618912314149,
+      "y0": 0.3346510941992249,
+      "x1": 0.6698301408590493,
+      "y1": 0.7806700827676104
+    },
+    "hotspots": [
+      {
+        "partId": "rear-bumper",
+        "x": 0.5596402502991804,
+        "y": 0.6076850192978139
+      }
+    ],
+    "src": "/assets/car/a6-c5/rear.webp",
+    "original": "/assets/car/a6-c5/rear.webp",
+    "thumb": "/assets/car/a6-c5/rear-thumb.webp",
+    "renderNote": "Audi A6 C5 Avant · 3D render",
+    "alt": "Blue Audi A6 C5 Avant in the garage, rear view",
+    "partThumbnails": {
+      "rear-bumper": "/assets/car/a6-c5/parts/rear-bumper.webp"
+    }
+  },
+  "interior": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0,
+      "y0": 0,
+      "x1": 1,
+      "y1": 1
+    },
+    "hotspots": [],
+    "src": "/assets/car/a6-c5/interior.webp",
+    "original": "/assets/car/a6-c5/interior.webp",
+    "thumb": "/assets/car/a6-c5/interior-thumb.webp",
+    "renderNote": "Audi A6 C5 Avant · 3D render",
+    "alt": "Blue Audi A6 C5 Avant in the garage, interior view"
+  },
+  "engine": {
+    "width": 1672,
+    "height": 941,
+    "focus": {
+      "x0": 0,
+      "y0": 0,
+      "x1": 1,
+      "y1": 1
+    },
+    "hotspots": [],
+    "src": "/assets/car/a6-c5/engine.webp",
+    "original": "/assets/car/a6-c5/engine.webp",
+    "thumb": "/assets/car/a6-c5/engine-thumb.webp",
+    "renderNote": "2.7 V6 biturbo · 3D model",
+    "alt": "Reference-built Audi 2.7 V6 biturbo fitted beneath the open bonnet"
+  }
+}

@@ -9,7 +9,7 @@ export function assetBaseUrl(input) {
 const base=assetBaseUrl(configured);
 // The refined car is released with the app so an older hosted v1 car cannot
 // silently replace it. The measured garage and its lighting remain on the CDN.
-export const CAR_RELEASE='imported-v4';
+export const CAR_RELEASE='a6-c5-v5-original-glass';
 export const modelUrl=(filename)=>filename==='s6-c5.glb'?`/car-releases/${CAR_RELEASE}/${filename}`:base?`${base}/${filename}`:`/models/${filename}`;
 export const lightingUrl=()=>base?`${base}/garage-lighting.hdr`:'/textures/garage-lighting.hdr';
 // The copies bundled under public/ stay as a fallback, so a paused storage

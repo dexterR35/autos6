@@ -18,12 +18,26 @@ describe('view configuration', () => {
   });
 
   it('missing reference angles are configured but unavailable (no fabricated images)', () => {
-    for (const id of ['interior', 'engine', 'top-view']) {
+    for (const id of ['top-view']) {
       const v = views.find((x) => x.id === id);
       expect(v.available).toBe(false);
       expect(v.src).toBeUndefined();
       expect(getView(id)).toBeNull();
     }
+  });
+
+  it('offers a real interior image and camera preset without exterior dots', () => {
+    const interior = getView('interior');
+    expect(interior.available).toBe(true);
+    expect(interior.src).toContain('/a6-c5/interior.webp');
+    expect(interior.hotspots).toEqual([]);
+  });
+
+  it('offers an engine bay image with its own camera option', () => {
+    const engine = getView('engine');
+    expect(engine.available).toBe(true);
+    expect(engine.src).toContain('/a6-c5/engine.webp');
+    expect(engine.hotspots).toEqual([]);
   });
 
   it('hotspots are normalized, unique and reference known parts', () => {
@@ -48,7 +62,9 @@ describe('view configuration', () => {
     expect(front).toEqual(expect.arrayContaining(['hood', 'front-bumper']));
     expect(front).not.toContain('rear-bumper');
     expect(front).not.toContain('exhaust');
-    expect(rear).toEqual(expect.arrayContaining(['rear-bumper', 'exhaust']));
+    expect(rear).toContain('rear-bumper');
+    // The supplied A6 has no visible exhaust tip behind its bumper.
+    expect(rear).not.toContain('exhaust');
     expect(rear).not.toContain('hood');
     expect(rear).not.toContain('front-bumper');
   });

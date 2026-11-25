@@ -1,0 +1,37 @@
+{
+  "story": "Garage loads the supplied blue A6; controls articulate its panels and axles and preserve wheel customization.",
+  "checks": [
+    "Only the new versioned A6 is requested and rendered",
+    "All four door hinges, bonnet and tailgate respond independently",
+    "Keyboard sliders steer both front axles 30 degrees and rotate all four wheels 90 degrees",
+    "Reset closes all panels and restores neutral axles",
+    "Original A6 rims/calipers and alternative tyres remain configurable and persist after reload",
+    "390px and 320px phones can operate panels and all eight toolbar controls have 44px touch targets"
+  ],
+  "assets": [
+    {
+      "url": "http://127.0.0.1:5173/car-releases/a6-c5-v5-original-glass/s6-c5.glb",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:5173/models/garage.glb",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:5173/car-releases/a6-c5-v5-original-glass/s6-c5.glb",
+      "status": 200
+    },
+    {
+      "url": "http://127.0.0.1:5173/models/garage.glb",
+      "status": 200
+    }
+  ],
+  "runtimeErrors": [],
+  "screenshots": [
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\car-refinement\\a6-c5-v1\\browser-check\\desktop-assembled.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\car-refinement\\a6-c5-v1\\browser-check\\desktop-controls.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\car-refinement\\a6-c5-v1\\browser-check\\desktop-open-panels.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\car-refinement\\a6-c5-v1\\browser-check\\mobile-390.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\car-refinement\\a6-c5-v1\\browser-check\\mobile-320.png"
+  ]
+}

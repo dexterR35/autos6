@@ -1,0 +1,46 @@
+{
+  "checks": [
+    "Engine camera opens the real bonnet and frames the fitted V6 biturbo",
+    "Manual bonnet closure works; re-entering Engine reopens it, with close zoom available",
+    "Mobile engine camera uses the wider inspection lens",
+    "Engine image fallback and camera thumbnail match the new model",
+    "Geometry rays confirm the open engine, opaque closed bonnet, fixed engine assembly and positive bonnet clearance",
+    "Upper grille and rings follow the bonnet; headlights and fitted bay panels remain on the body",
+    "Telescoping gas support stays attached to the bonnet when open and closed"
+  ],
+  "runtimeErrors": [],
+  "screenshots": [
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\car-refinement\\a6-c5-v1\\engine-check\\desktop-engine-camera.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\car-refinement\\a6-c5-v1\\engine-check\\bonnet-closed-over-engine.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\car-refinement\\a6-c5-v1\\engine-check\\mobile-engine-camera.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\car-refinement\\a6-c5-v1\\engine-check\\engine-bay-detail.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\car-refinement\\a6-c5-v1\\engine-check\\engine-bay-left.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\car-refinement\\a6-c5-v1\\engine-check\\engine-bay-right.png",
+    "C:\\Users\\marian.iordache\\Desktop\\projects\\autos6\\output\\car-refinement\\a6-c5-v1\\engine-check\\bonnet-underside-detail.png"
+  ],
+  "geometry": {
+    "openHit": "V6_|_black_vent_insert",
+    "openEngine": true,
+    "closedHit": "A6hood_|_body_color_1_|_G-Object061",
+    "closedPart": "hood",
+    "engineStayedFixed": true,
+    "grilleFollowsBonnet": true,
+    "headlightsStayFixed": true,
+    "bayPanelsStayFixed": true,
+    "strutSamples": [
+      {
+        "length": 0.5267747891269099,
+        "error": 0
+      },
+      {
+        "length": 0.7141804727096367,
+        "error": 0
+      },
+      {
+        "length": 0.5267747891269099,
+        "error": 0
+      }
+    ],
+    "clearance": 0.014897465705871582
+  }
+}
